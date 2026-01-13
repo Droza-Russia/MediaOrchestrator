@@ -1,0 +1,39 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <IncludeSymbols>true</IncludeSymbols>
+    <PackageId>Xabe.FFMpeg.Custom</PackageId>
+    <Version>1.0.2</Version>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+    <DebugType>portable</DebugType>
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <AssemblyName>Xabe.FFmpeg</AssemblyName>
+    <RootNamespace>Xabe.FFmpeg</RootNamespace>
+    <Authors>Xabe</Authors>
+    <Company>Xabe Tomasz Żmuda feat FTSoft</Company>
+    <Description>Cross-platform wrapper for FFmpeg with MacOS Silicon FFMpeg Fix</Description>
+    <Copyright>Copyright 2017-2025 (c) Xabe Tomasz Zmuda.</Copyright>
+    <PackageLicenseUrl>https://ffmpeg.xabe.net/license.html</PackageLicenseUrl>
+    <PackageProjectUrl>https://ffmpeg.xabe.net/index.html</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/tomaszzmuda/Xabe.FFmpeg</RepositoryUrl>
+    <RepositoryType>Dependency</RepositoryType>
+    <PackageTags>media converter audio ffmpeg wrapper core video encode decode</PackageTags>
+    <PackageReleaseNotes></PackageReleaseNotes>
+    <SignAssembly>false</SignAssembly>
+    <DelaySign>false</DelaySign>
+    <PackageRequireLicenseAcceptance>true</PackageRequireLicenseAcceptance>
+    
+    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="System.Text.Json" Version="[9.0.0,)">
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+  </ItemGroup>
+
+  <PropertyGroup>
+    <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
+  </PropertyGroup>
+
+</Project>
