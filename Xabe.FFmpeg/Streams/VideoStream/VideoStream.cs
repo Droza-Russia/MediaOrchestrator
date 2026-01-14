@@ -68,10 +68,10 @@ namespace Xabe.FFmpeg
         public int? Rotation { get; internal set; }
 
         /// <summary>
-        ///     Create parameters string
+        ///     Создает строку параметров
         /// </summary>
-        /// <param name="forPosition">Position for parameters</param>
-        /// <returns>Parameters</returns>
+        /// <param name="forPosition">Позиция для параметров</param>
+        /// <returns>Параметры</returns>
         public string BuildParameters(ParameterPosition forPosition)
         {
             IEnumerable<ConversionParameter> parameters = _parameters?.Where(x => x.Position == forPosition);

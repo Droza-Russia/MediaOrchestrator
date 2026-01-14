@@ -447,15 +447,15 @@ namespace Xabe.FFmpeg
         }
 
         /// <summary>
-        ///     Create map for included streams, including the InputBuilder if required
+        ///     Создает карту для включенных потоков, включая InputBuilder при необходимости
         /// </summary>
-        /// <returns>Map argument</returns>
+        /// <returns>Аргумент карты</returns>
         private string GetMap()
         {
             var builder = new StringBuilder();
             foreach (IStream stream in _streams)
             {
-                if (_hasInputBuilder) // If we have an input builder we always want to map the first video stream as it will be created by our input builder
+                if (_hasInputBuilder) // Если у нас есть построитель входных данных, мы всегда хотим сопоставить первый видеопоток, так как он будет создан нашим построителем входных данных
                 {
                     builder.Append($"-map 0:0 ");
                 }
@@ -464,7 +464,7 @@ namespace Xabe.FFmpeg
                 {
                     if (_hasInputBuilder)
                     {
-                        // If we have an input builder we need to add one to the input file index to account for the input created by our input builder.
+                        // Если у нас есть построитель входных данных, нам нужно добавить единицу к индексу входного файла, чтобы учесть вход, созданный нашим построителем входных данных.
                         builder.Append($"-map {_inputFileMap[source] + 1}:{stream.Index} ");
                     }
                     else
@@ -478,10 +478,10 @@ namespace Xabe.FFmpeg
         }
 
         /// <summary>
-        ///     Create parameters string
+        ///     Создает строку параметров
         /// </summary>
-        /// <param name="forPosition">Position for parameters</param>
-        /// <returns>Parameters</returns>
+        /// <param name="forPosition">Позиция для параметров</param>
+        /// <returns>Параметры</returns>
         private string GetParameters(ParameterPosition forPosition)
         {
             IEnumerable<ConversionParameter> parameters = _parameters?.Where(x => x.Position == forPosition);
@@ -497,9 +497,9 @@ namespace Xabe.FFmpeg
         }
 
         /// <summary>
-        ///     Create input string for all streams
+        ///     Создает строку входных данных для всех потоков
         /// </summary>
-        /// <returns>Input argument</returns>
+        /// <returns>Аргумент входных данных</returns>
         private string GetInputs()
         {
             var builder = new StringBuilder();

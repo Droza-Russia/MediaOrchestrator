@@ -16,7 +16,7 @@ namespace Xabe.FFmpeg
 
     /// <inheritdoc />
     /// <summary>
-    ///     Wrapper for FFmpeg
+    ///     Обертка для FFmpeg
     /// </summary>
     internal class FFmpegWrapper : FFmpeg
     {
@@ -27,17 +27,17 @@ namespace Xabe.FFmpeg
         private bool _wasKilled = false;
 
         /// <summary>
-        ///     Fires when FFmpeg progress changes
+        ///     Срабатывает при изменении прогресса FFmpeg
         /// </summary>
         internal event ConversionProgressEventHandler OnProgress;
 
         /// <summary>
-        ///     Fires when FFmpeg process print something
+        ///     Срабатывает, когда процесс FFmpeg выводит что-либо
         /// </summary>
         internal event DataReceivedEventHandler OnDataReceived;
 
         /// <summary>
-        ///     Fires when FFmpeg process writes video data to stdout
+        ///     Срабатывает, когда процесс FFmpeg записывает видеоданные в stdout
         /// </summary>
         internal event VideoDataEventHandler OnVideoDataReceived;
 
@@ -90,7 +90,7 @@ namespace Xabe.FFmpeg
                             processEnded.SetSafeWaitHandle(new SafeWaitHandle(process.Handle, false));
                             var index = WaitHandle.WaitAny(new[] { processEnded, cancellationToken.WaitHandle });
 
-                            // If the signal came from the caller cancellation token close the window
+                            // Если сигнал пришел от токена отмены вызывающей стороны, закрываем окно
                             if (index == 1
                                 && !process.HasExited)
                             {
@@ -100,7 +100,7 @@ namespace Xabe.FFmpeg
                             }
                             else if (index == 0 && !process.HasExited)
                             {
-                                // Workaround for linux: https://github.com/dotnet/corefx/issues/35544
+                                // Обходной путь для Linux: https://github.com/dotnet/corefx/issues/35544
                                 process.WaitForExit();
                             }
                         }

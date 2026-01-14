@@ -8,23 +8,23 @@ using Xabe.FFmpeg.Streams.SubtitleStream;
 namespace Xabe.FFmpeg
 {
     /// <summary> 
-    ///     Wrapper for FFmpeg
+    ///     Обертка для FFmpeg
     /// </summary>
     public abstract partial class FFmpeg
     {
         /// <summary>
-        ///     Directory containing FFmpeg and FFprobe
+        ///     Директория, содержащая FFmpeg и FFprobe
         /// </summary>
         public static string ExecutablesPath { get; private set; }
 
         /// <summary>
-        ///     Filtering method for FFmpeg and FFprobe file lookup
+        ///     Метод фильтрации для поиска файлов FFmpeg и FFprobe
         /// </summary>
         public static FileNameFilterMethod FilterMethod { get; private set; }
 
         /// <summary>
-        ///     Select if filtering method shuld be case sensitive
-        ///     This will be used to compare file names
+        ///     Выбирает, должен ли метод фильтрации учитывать регистр
+        ///     Это будет использоваться для сравнения имен файлов
         /// </summary>
         public static IFormatProvider FormatProvider { get; private set; }
 
@@ -35,9 +35,9 @@ namespace Xabe.FFmpeg
         public static Conversions Conversions = new Conversions();
 
         /// <summary>
-        ///     Get MediaInfo from file
+        ///     Получает MediaInfo из файла
         /// </summary>
-        /// <param name="filePath">FullPath to file</param>
+        /// <param name="filePath">Полный путь к файлу</param>
         /// <exception cref="ArgumentException">Файл не существует</exception>
         public static async Task<IMediaInfo> GetMediaInfo(string fileName)
         {
@@ -45,10 +45,10 @@ namespace Xabe.FFmpeg
         }
 
         /// <summary>
-        ///     Get MediaInfo from file
+        ///     Получает MediaInfo из файла
         /// </summary>
-        /// <param name="filePath">FullPath to file</param>
-        /// <param name="cancellationToken">Cancellation token</param>
+        /// <param name="filePath">Полный путь к файлу</param>
+        /// <param name="cancellationToken">Токен отмены</param>
         /// <exception cref="ArgumentException">Файл не существует</exception>
         /// <exception cref="TaskCanceledException">Операция занимает слишком много времени</exception>
         public static async Task<IMediaInfo> GetMediaInfo(string fileName, CancellationToken token)
@@ -57,13 +57,13 @@ namespace Xabe.FFmpeg
         }
 
         /// <summary>
-        ///     Set path to irectory containing FFmpeg and FFprobe
+        ///     Устанавливает путь к директории, содержащей FFmpeg и FFprobe
         /// </summary>
         /// <param name="directoryWithFFmpegAndFFprobe"></param>
-        /// <param name="ffmpegExeutableName">Name of FFmpeg executable name</param>
-        /// <param name="ffprobeExecutableName">Name of FFprobe executable name</param>
-        /// <param name="filteringMethod">Select method to compare file names</param>
-        /// <param name="filteringMethodCaseSensitive">Select if filter shuld be Case Sensitive</param>
+        /// <param name="ffmpegExeutableName">Имя исполняемого файла FFmpeg</param>
+        /// <param name="ffprobeExecutableName">Имя исполняемого файла FFprobe</param>
+        /// <param name="filteringMethod">Выбирает метод сравнения имен файлов</param>
+        /// <param name="filteringMethodCaseSensitive">Выбирает, должен ли фильтр учитывать регистр</param>
         public static void SetExecutablesPath(string directoryWithFFmpegAndFFprobe, string ffmpegExeutableName = "ffmpeg", string ffprobeExecutableName = "ffprobe", FileNameFilterMethod filteringMethod = FileNameFilterMethod.Contains, IFormatProvider formatprovider = null)
         {
             ExecutablesPath = directoryWithFFmpegAndFFprobe == null ? null : new DirectoryInfo(directoryWithFFmpegAndFFprobe).FullName;
@@ -74,9 +74,9 @@ namespace Xabe.FFmpeg
         }
 
         /// <summary>
-        ///     Get available audio and video devices (like cams or mics)
+        ///     Получает доступные аудио и видео устройства (например, камеры или микрофоны)
         /// </summary>
-        /// <returns>List of available devices</returns>
+        /// <returns>Список доступных устройств</returns>
         internal static async Task<Device[]> GetAvailableDevices()
         {
             return await Conversion.GetAvailableDevices();
@@ -114,121 +114,121 @@ namespace Xabe.FFmpeg
         }
 
         /// <summary>
-        ///     Extract audio from file
+        ///     Извлекает аудио из файла
         /// </summary>
-        /// <param name="inputPath">Input path</param>
-        /// <param name="outputPath">Output video stream</param>
-        /// <returns>Conversion result</returns>
+        /// <param name="inputPath">Входной путь</param>
+        /// <param name="outputPath">Выходной видеопоток</param>
+        /// <returns>Результат конвертации</returns>
         public async Task<IConversion> ExtractAudio(string inputPath, string outputPath)
         {
             return await Conversion.ExtractAudio(inputPath, outputPath);
         }
 
         /// <summary>
-        ///     Add audio stream to video file
+        ///     Добавляет аудиопоток к видеофайлу
         /// </summary>
-        /// <param name="videoPath">Video</param>
-        /// <param name="audioPath">Audio</param>
-        /// <param name="outputPath">Output file</param>
-        /// <returns>Conversion result</returns>
+        /// <param name="videoPath">Видео</param>
+        /// <param name="audioPath">Аудио</param>
+        /// <param name="outputPath">Выходной файл</param>
+        /// <returns>Результат конвертации</returns>
         public async Task<IConversion> AddAudio(string videoPath, string audioPath, string outputPath)
         {
             return await Conversion.AddAudio(videoPath, audioPath, outputPath);
         }
 
         /// <summary>
-        ///     Convert file to MP4
+        ///     Конвертирует файл в MP4
         /// </summary>
-        /// <param name="inputPath">Input path</param>
-        /// <param name="outputPath">Destination file</param>
-        /// <returns>Conversion result</returns>
+        /// <param name="inputPath">Входной путь</param>
+        /// <param name="outputPath">Выходной файл</param>
+        /// <returns>Результат конвертации</returns>
         public async Task<IConversion> ToMp4(string inputPath, string outputPath)
         {
             return await Conversion.ToMp4(inputPath, outputPath);
         }
 
         /// <summary>
-        ///     Convert file to TS
+        ///     Конвертирует файл в TS
         /// </summary>
-        /// <param name="inputPath">Input path</param>
-        /// <param name="outputPath">Destination file</param>
-        /// <returns>Conversion result</returns>
+        /// <param name="inputPath">Входной путь</param>
+        /// <param name="outputPath">Выходной файл</param>
+        /// <returns>Результат конвертации</returns>
         public async Task<IConversion> ToTs(string inputPath, string outputPath)
         {
             return await Conversion.ToTs(inputPath, outputPath);
         }
 
         /// <summary>
-        ///     Convert file to OGV
+        ///     Конвертирует файл в OGV
         /// </summary>
-        /// <param name="inputPath">Input path</param>
-        /// <param name="outputPath">Destination file</param>
-        /// <returns>Conversion result</returns>
+        /// <param name="inputPath">Входной путь</param>
+        /// <param name="outputPath">Выходной файл</param>
+        /// <returns>Результат конвертации</returns>
         public async Task<IConversion> ToOgv(string inputPath, string outputPath)
         {
             return await Conversion.ToOgv(inputPath, outputPath);
         }
 
         /// <summary>
-        ///     Convert file to WebM
+        ///     Конвертирует файл в WebM
         /// </summary>
-        /// <param name="inputPath">Input path</param>
-        /// <param name="outputPath">Destination file</param>
-        /// <returns>Conversion result</returns>
+        /// <param name="inputPath">Входной путь</param>
+        /// <param name="outputPath">Выходной файл</param>
+        /// <returns>Результат конвертации</returns>
         public async Task<IConversion> ToWebM(string inputPath, string outputPath)
         {
             return await Conversion.ToWebM(inputPath, outputPath);
         }
 
         /// <summary>
-        ///     Convert image video stream to gif
+        ///     Конвертирует видеопоток изображений в gif
         /// </summary>
-        /// <param name="inputPath">Input path</param>
-        /// <param name="outputPath">Output path</param>
-        /// <param name="loop">Number of repeats</param>
-        /// <param name="delay">Delay between repeats (in seconds)</param>
-        /// <returns>Conversion result</returns>
+        /// <param name="inputPath">Входной путь</param>
+        /// <param name="outputPath">Выходной путь</param>
+        /// <param name="loop">Количество повторов</param>
+        /// <param name="delay">Задержка между повторами (в секундах)</param>
+        /// <returns>Результат конвертации</returns>
         public async Task<IConversion> ToGif(string inputPath, string outputPath, int loop, int delay = 0)
         {
             return await Conversion.ToGif(inputPath, outputPath, loop, delay);
         }
 
         /// <summary>
-        ///     Convert one file to another with destination format using hardware acceleration (if possible). Using cuvid. Works only on Windows/Linux with NVidia GPU.
+        ///     Конвертирует один файл в другой с целевым форматом, используя аппаратное ускорение (если возможно). Использует cuvid. Работает только на Windows/Linux с видеокартой NVidia.
         /// </summary>
-        /// <param name="inputFilePath">Path to file</param>
-        /// <param name="outputFilePath">Path to file</param>
-        /// <param name="hardwareAccelerator">Hardware accelerator. List of all acceclerators available for your system - "ffmpeg -hwaccels"</param>
-        /// <param name="decoder">Codec using to decoding input video (e.g. h264_cuvid)</param>
-        /// <param name="encoder">Codec using to encode output video (e.g. h264_nvenc)</param>
-        /// <param name="device">Number of device (0 = default video card) if more than one video card.</param>
-        /// <returns>IConversion object</returns>
+        /// <param name="inputFilePath">Путь к файлу</param>
+        /// <param name="outputFilePath">Путь к файлу</param>
+        /// <param name="hardwareAccelerator">Аппаратный ускоритель. Список всех доступных ускорителей для вашей системы - "ffmpeg -hwaccels"</param>
+        /// <param name="decoder">Кодек, используемый для декодирования входного видео (например, h264_cuvid)</param>
+        /// <param name="encoder">Кодек, используемый для кодирования выходного видео (например, h264_nvenc)</param>
+        /// <param name="device">Номер устройства (0 = видеокарта по умолчанию), если видеокарт больше одной.</param>
+        /// <returns>Объект IConversion</returns>
         public async Task<IConversion> ConvertWithHardware(string inputFilePath, string outputFilePath, HardwareAccelerator hardwareAccelerator, VideoCodec decoder, VideoCodec encoder, int device = 0)
         {
             return await Conversion.ConvertWithHardwareAsync(inputFilePath, outputFilePath, hardwareAccelerator, decoder, encoder, device);
         }
 
         /// <summary>
-        ///     Add subtitles to video stream
+        ///     Добавляет субтитры к видеопотоку
         /// </summary>
-        /// <param name="inputPath">Video</param>
-        /// <param name="outputPath">Output file</param>
-        /// <param name="subtitlesPath">Subtitles</param>
-        /// <returns>Conversion result</returns>
+        /// <param name="inputPath">Видео</param>
+        /// <param name="outputPath">Выходной файл</param>
+        /// <param name="subtitlesPath">Субтитры</param>
+        /// <returns>Результат конвертации</returns>
         public async Task<IConversion> BurnSubtitle(string inputPath, string outputPath, string subtitlesPath)
         {
             return await Conversion.AddSubtitlesAsync(inputPath, outputPath, subtitlesPath);
         }
 
         /// <summary>
-        ///     Add subtitle to file. It will be added as new stream so if you want to burn subtitles into video you should use
-        ///     BurnSubtitle method.
+        ///     Добавляет субтитры к файлу. Они будут добавлены как новый поток, поэтому если вы хотите встроить субтитры в видео, используйте
+        ///     метод BurnSubtitle.
         /// </summary>
-        /// <param name="inputPath">Input path</param>
-        /// <param name="outputPath">Output path</param>
-        /// <param name="subtitlePath">Path to subtitle file in .srt format</param>
-        /// <param name="language">Language code in ISO 639. Example: "eng", "pol", "pl", "de", "ger"</param>
-        /// <returns>Conversion result</returns>
+        /// <param name="inputPath">Входной путь</param>
+        /// <param name="outputPath">Выходной путь</param>
+        /// <param name="subtitlePath">Путь к файлу субтитров в формате .srt</param>
+        /// <param name="language">Код языка в ISO 639. Пример: "eng", "pol", "pl", "de", "ger"</param>
+        /// <returns>Результат конвертации</returns>
         public async Task<IConversion> AddSubtitle(string inputPath, string outputPath, string subtitlePath, string language = null)
         {
             return await Conversion.AddSubtitleAsync(inputPath, outputPath, subtitlePath, language);
@@ -241,7 +241,7 @@ namespace Xabe.FFmpeg
         /// <param name="inputPath">Input path</param>
         /// <param name="outputPath">Output path</param>
         /// <param name="subtitlePath">Path to subtitle file in .srt format</param>
-        /// <param name="subtitleCodec">The Subtitle Codec to Use to Encode the Subtitles</param>
+        /// <param name="subtitleCodec">Кодек субтитров для кодирования субтитров</param>
         /// <param name="language">Language code in ISO 639. Example: "eng", "pol", "pl", "de", "ger"</param>
         /// <returns>Conversion result</returns>
         public async Task<IConversion> AddSubtitle(string inputPath, string outputPath, string subtitlePath, SubtitleCodec subtitleCodec, string language = null)
@@ -250,49 +250,49 @@ namespace Xabe.FFmpeg
         }
 
         /// <summary>
-        ///     Melt watermark into video
+        ///     Встраивает водяной знак в видео
         /// </summary>
-        /// <param name="inputPath">Input video path</param>
-        /// <param name="outputPath">Output file</param>
-        /// <param name="inputImage">Watermark</param>
-        /// <param name="position">Position of watermark</param>
-        /// <returns>Conversion result</returns>
+        /// <param name="inputPath">Входной путь к видео</param>
+        /// <param name="outputPath">Выходной файл</param>
+        /// <param name="inputImage">Водяной знак</param>
+        /// <param name="position">Позиция водяного знака</param>
+        /// <returns>Результат конвертации</returns>
         public async Task<IConversion> SetWatermark(string inputPath, string outputPath, string inputImage, Position position)
         {
             return await Conversion.SetWatermarkAsync(inputPath, outputPath, inputImage, position);
         }
 
         /// <summary>
-        ///     Extract video from file
+        ///     Извлекает видео из файла
         /// </summary>
-        /// <param name="inputPath">Input path</param>
-        /// <param name="outputPath">Output audio stream</param>
-        /// <returns>Conversion result</returns>
+        /// <param name="inputPath">Входной путь</param>
+        /// <param name="outputPath">Выходной аудиопоток</param>
+        /// <returns>Результат конвертации</returns>
         public async Task<IConversion> ExtractVideo(string inputPath, string outputPath)
         {
             return await Conversion.ExtractVideoAsync(inputPath, outputPath);
         }
 
         /// <summary>
-        ///     Saves snapshot of video
+        ///     Сохраняет снимок видео
         /// </summary>
-        /// <param name="inputPath">Video</param>
-        /// <param name="outputPath">Output file</param>
-        /// <param name="captureTime">TimeSpan of snapshot</param>
-        /// <returns>Conversion result</returns>
+        /// <param name="inputPath">Видео</param>
+        /// <param name="outputPath">Выходной файл</param>
+        /// <param name="captureTime">Временной интервал снимка</param>
+        /// <returns>Результат конвертации</returns>
         public async Task<IConversion> Snapshot(string inputPath, string outputPath, TimeSpan captureTime)
         {
             return await Conversion.SnapshotAsync(inputPath, outputPath, captureTime);
         }
 
         /// <summary>
-        ///     Change video size
+        ///     Изменяет размер видео
         /// </summary>
-        /// <param name="inputPath">Input path</param>
-        /// <param name="outputPath">Output path</param>
-        /// <param name="width">Expected width</param>
-        /// <param name="height">Expected height</param>
-        /// <returns>Conversion result</returns>
+        /// <param name="inputPath">Входной путь</param>
+        /// <param name="outputPath">Выходной путь</param>
+        /// <param name="width">Ожидаемая ширина</param>
+        /// <param name="height">Ожидаемая высота</param>
+        /// <returns>Результат конвертации</returns>
         public async Task<IConversion> ChangeSize(string inputPath, string outputPath, int width, int height)
         {
             return await Conversion.ChangeSizeAsync(inputPath, outputPath, width, height);
@@ -303,7 +303,7 @@ namespace Xabe.FFmpeg
         /// </summary>
         /// <param name="inputPath">Input path</param>
         /// <param name="outputPath">Output path</param>
-        /// <param name="size">Expected size</param>
+        /// <param name="size">Ожидаемый размер</param>
         /// <returns>Conversion result</returns>
         public async Task<IConversion> ChangeSize(string inputPath, string outputPath, VideoSize size)
         {
@@ -311,79 +311,79 @@ namespace Xabe.FFmpeg
         }
 
         /// <summary>
-        ///     Get part of video
+        ///     Получает часть видео
         /// </summary>
-        /// <param name="inputPath">Video</param>
-        /// <param name="outputPath">Output file</param>
-        /// <param name="startTime">Start point</param>
-        /// <param name="duration">Duration of new video</param>
-        /// <returns>Conversion result</returns>
+        /// <param name="inputPath">Видео</param>
+        /// <param name="outputPath">Выходной файл</param>
+        /// <param name="startTime">Начальная точка</param>
+        /// <param name="duration">Длительность нового видео</param>
+        /// <returns>Результат конвертации</returns>
         public async Task<IConversion> Split(string inputPath, string outputPath, TimeSpan startTime, TimeSpan duration)
         {
             return await Conversion.SplitAsync(inputPath, outputPath, startTime, duration);
         }
 
         /// <summary>
-        /// Save M3U8 stream
+        /// Сохраняет поток M3U8
         /// </summary>
-        /// <param name="uri">Uri to stream</param>
-        /// <param name="outputPath">Output path</param>
-        /// <param name="duration">Duration of stream</param>
-        /// <returns>Conversion result</returns>
+        /// <param name="uri">Uri потока</param>
+        /// <param name="outputPath">Выходной путь</param>
+        /// <param name="duration">Длительность потока</param>
+        /// <returns>Результат конвертации</returns>
         public async Task<IConversion> SaveM3U8Stream(Uri uri, string outputPath, TimeSpan? duration = null)
         {
             return await Conversion.SaveM3U8StreamAsync(uri, outputPath, duration);
         }
 
         /// <summary>
-        ///     Concat multiple inputVideos.
+        ///     Объединяет несколько входных видео.
         /// </summary>
-        /// <param name="output">Concatenated inputVideos</param>
-        /// <param name="inputVideos">Videos to add</param>
-        /// <returns>Conversion result</returns>
+        /// <param name="output">Объединенные входные видео</param>
+        /// <param name="inputVideos">Видео для добавления</param>
+        /// <returns>Результат конвертации</returns>
         public async Task<IConversion> Concatenate(string output, params string[] inputVideos)
         {
             return await Conversion.Concatenate(output, inputVideos);
         }
 
         /// <summary>
-        ///     Convert one file to another with destination format.
+        ///     Конвертирует один файл в другой с целевым форматом.
         /// </summary>
-        /// <param name="inputFilePath">Path to file</param>
-        /// <param name="outputFilePath">Path to file</param>
-        /// <param name="keepSubtitles">Whether to Keep Subtitles in the output video</param>
-        /// <returns>IConversion object</returns>
+        /// <param name="inputFilePath">Путь к файлу</param>
+        /// <param name="outputFilePath">Путь к файлу</param>
+        /// <param name="keepSubtitles">Сохранять ли субтитры в выходном видео</param>
+        /// <returns>Объект IConversion</returns>
         public async Task<IConversion> Convert(string inputFilePath, string outputFilePath, bool keepSubtitles = false)
         {
             return await Conversion.ConvertAsync(inputFilePath, outputFilePath, keepSubtitles);
         }
 
         /// <summary>
-        ///     Transcode one file to another with destination format and codecs.
+        ///     Транскодирует один файл в другой с целевым форматом и кодеками.
         /// </summary>
-        /// <param name="inputFilePath">Path to file</param>
-        /// <param name="outputFilePath">Path to file</param>
-        /// <param name="audioCodec"> The Audio Codec to Transcode the input to</param>
-        /// <param name="videoCodec"> The Video Codec to Transcode the input to</param>
-        /// <param name="videoCodec"> The Subtitle Codec to Transcode the input to</param>
-        /// <param name="keepSubtitles">Whether to Keep Subtitles in the output video</param>
-        /// <returns>IConversion object</returns>
+        /// <param name="inputFilePath">Путь к файлу</param>
+        /// <param name="outputFilePath">Путь к файлу</param>
+        /// <param name="audioCodec">Аудиокодек для транскодирования входа</param>
+        /// <param name="videoCodec">Видеокодек для транскодирования входа</param>
+        /// <param name="videoCodec">Кодек субтитров для транскодирования входа</param>
+        /// <param name="keepSubtitles">Сохранять ли субтитры в выходном видео</param>
+        /// <returns>Объект IConversion</returns>
         public async Task<IConversion> Transcode(string inputFilePath, string outputFilePath, VideoCodec videoCodec, AudioCodec audioCodec, SubtitleCodec subtitleCodec, bool keepSubtitles = false)
         {
             return await Conversion.TranscodeAsync(inputFilePath, outputFilePath, videoCodec, audioCodec, subtitleCodec, keepSubtitles);
         }
 
         /// <summary>
-        /// Generates a visualisation of an audio stream using the 'showfreqs' filter
+        /// Генерирует визуализацию аудиопотока с использованием фильтра 'showfreqs'
         /// </summary>
-        /// <param name="inputPath">Path to the input file containing the audio stream to visualise</param>
-        /// <param name="outputPath">Path to output the visualised audio stream to</param>
-        /// <param name="size">The Size of the outputted video stream</param>
-        /// <param name="pixelFormat">The output pixel format (default is yuv420p)</param>
-        /// <param name="mode">The visualisation mode (default is bar)</param>
-        /// <param name="amplitudeScale">The frequency scale (default is lin)</param>
-        /// <param name="frequencyScale">The amplitude scale (default is log)</param>
-        /// <returns>IConversion object</returns>
+        /// <param name="inputPath">Путь к входному файлу, содержащему аудиопоток для визуализации</param>
+        /// <param name="outputPath">Путь для вывода визуализированного аудиопотока</param>
+        /// <param name="size">Размер выходного видеопотока</param>
+        /// <param name="pixelFormat">Формат пикселей выхода (по умолчанию yuv420p)</param>
+        /// <param name="mode">Режим визуализации (по умолчанию bar)</param>
+        /// <param name="amplitudeScale">Шкала частоты (по умолчанию lin)</param>
+        /// <param name="frequencyScale">Шкала амплитуды (по умолчанию log)</param>
+        /// <returns>Объект IConversion</returns>
         public async Task<IConversion> VisualiseAudio(string inputPath, string outputPath, VideoSize size,
             PixelFormat pixelFormat = PixelFormat.yuv420p,
             VisualisationMode mode = VisualisationMode.bar,
@@ -394,21 +394,21 @@ namespace Xabe.FFmpeg
         }
 
         /// <summary>
-        ///     Loop file infinitely to rtsp streams with some default parameters like: -re, -preset ultrafast
+        ///     Зацикливает файл бесконечно в потоки RTSP с некоторыми параметрами по умолчанию, такими как: -re, -preset ultrafast
         /// </summary>
-        /// <param name="inputFilePath">Path to file</param>
-        /// <param name="rtspServerUri">Uri of RTSP Server in format: rtsp://127.0.0.1:8554/name</param>
-        /// <returns>IConversion object</returns>
+        /// <param name="inputFilePath">Путь к файлу</param>
+        /// <param name="rtspServerUri">Uri RTSP сервера в формате: rtsp://127.0.0.1:8554/name</param>
+        /// <returns>Объект IConversion</returns>
         public async Task<IConversion> SendToRtspServer(string inputFilePath, Uri rtspServerUri)
         {
             return await Conversion.SendToRtspServer(inputFilePath, rtspServerUri);
         }
 
         /// <summary>
-        ///     Send desktop infinitely to rtsp streams with some default parameters like: -re, -preset ultrafast
+        ///     Отправляет рабочий стол бесконечно в потоки RTSP с некоторыми параметрами по умолчанию, такими как: -re, -preset ultrafast
         /// </summary>
-        /// <param name="rtspServerUri">Uri of RTSP Server in format: rtsp://127.0.0.1:8554/name</param>
-        /// <returns>IConversion object</returns>
+        /// <param name="rtspServerUri">Uri RTSP сервера в формате: rtsp://127.0.0.1:8554/name</param>
+        /// <returns>Объект IConversion</returns>
         public async Task<IConversion> SendDesktopToRtspServer(Uri rtspServerUri)
         {
             return Conversion.SendDesktopToRtspServer(rtspServerUri);

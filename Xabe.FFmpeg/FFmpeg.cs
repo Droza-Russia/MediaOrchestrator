@@ -16,7 +16,7 @@ namespace Xabe.FFmpeg
     }
 
     /// <summary> 
-    ///     Wrapper for FFmpeg
+    ///     Обертка для FFmpeg
     /// </summary>
     public abstract partial class FFmpeg
     {
@@ -30,7 +30,7 @@ namespace Xabe.FFmpeg
         private static string _ffprobeExecutableName = "ffprobe";
 
         /// <summary>
-        ///     Initalize new FFmpeg. Search FFmpeg and FFprobe in PATH
+        ///     Инициализирует новый FFmpeg. Ищет FFmpeg и FFprobe в PATH
         /// </summary>
         /// 
         protected FFmpeg()
@@ -107,7 +107,7 @@ namespace Xabe.FFmpeg
         }
 
         /// <summary>
-        ///     FilePath to FFmpeg
+        ///     Путь к исполняемому файлу FFmpeg
         /// </summary>
         protected string FFmpegPath
         {
@@ -129,7 +129,7 @@ namespace Xabe.FFmpeg
         }
 
         /// <summary>
-        ///     FilePath to FFprobe
+        ///     Путь к исполняемому файлу FFprobe
         /// </summary>
         protected string FFprobePath
         {
@@ -204,7 +204,7 @@ namespace Xabe.FFmpeg
             }
             catch (Exception)
             {
-                //??
+                // Игнорируем ошибки при проверке файла
             }
 
             return false;
@@ -231,14 +231,14 @@ namespace Xabe.FFmpeg
         }
 
         /// <summary>
-        ///     Run conversion
+        ///     Запускает конвертацию
         /// </summary>
-        /// <param name="args">Arguments</param>
-        /// <param name="processPath">FilePath to executable (FFmpeg, ffprobe)</param>
-        /// <param name="priority">Process priority to run executables</param>
-        /// <param name="standardInput">Should redirect standard input</param>
-        /// <param name="standardOutput">Should redirect standard output</param>
-        /// <param name="standardError">Should redirect standard error</param>
+        /// <param name="args">Аргументы</param>
+        /// <param name="processPath">Путь к исполняемому файлу (FFmpeg, ffprobe)</param>
+        /// <param name="priority">Приоритет процесса для запуска исполняемых файлов</param>
+        /// <param name="standardInput">Следует ли перенаправлять стандартный ввод</param>
+        /// <param name="standardOutput">Следует ли перенаправлять стандартный вывод</param>
+        /// <param name="standardError">Следует ли перенаправлять стандартный вывод ошибок</param>
         /// <exception cref="InvalidOperationException"></exception>
         /// <exception cref="ObjectDisposedException"></exception>
         protected Process RunProcess(
