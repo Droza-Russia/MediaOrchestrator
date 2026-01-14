@@ -77,7 +77,7 @@ namespace Xabe.FFmpeg
         /// </summary>
         /// <param name="multiplicator">Speed value. (0.5 - 2.0). To double the speed set this to 2.0</param>
         /// <returns>IVideoStream</returns>
-        /// <exception cref="ArgumentOutOfRangeException">When speed isn't between 0.5 - 2.0.</exception>
+        /// <exception cref="ArgumentOutOfRangeException">Когда скорость не находится в диапазоне от 0.5 до 2.0.</exception>
         IVideoStream ChangeSpeed(double multiplicator);
 
         /// <summary>

@@ -16,7 +16,7 @@ namespace Xabe.FFmpeg.Extensions
 
             if (!source.CanRead)
             {
-                throw new ArgumentException("Has to be readable", nameof(source));
+                throw new ArgumentException("Поток должен быть доступен для чтения", nameof(source));
             }
 
             if (destination == null)
@@ -26,7 +26,7 @@ namespace Xabe.FFmpeg.Extensions
 
             if (!destination.CanWrite)
             {
-                throw new ArgumentException("Has to be writable", nameof(destination));
+                throw new ArgumentException("Поток должен быть доступен для записи", nameof(destination));
             }
 
             if (bufferSize < 0)

@@ -97,7 +97,7 @@ namespace Xabe.FFmpeg
         {
             if (multiplication < 0.5 || multiplication > 2.0)
             {
-                throw new ArgumentOutOfRangeException(nameof(multiplication), "Value has to be greater than 0.5 and less than 2.0.");
+                throw new ArgumentOutOfRangeException(nameof(multiplication), "Значение должно быть больше 0.5 и меньше 2.0.");
             }
 
             var videoMultiplicator = multiplication >= 1 ? 1 - ((multiplication - 1) / 2) : 1 + ((multiplication - 1) * -2);
@@ -288,7 +288,7 @@ namespace Xabe.FFmpeg
             {
                 if (seek > Duration)
                 {
-                    throw new ArgumentException("Seek can not be greater than video duration. Seek: " + seek.TotalSeconds + " Duration: " + Duration.TotalSeconds);
+                    throw new ArgumentException("Позиция поиска не может быть больше длительности видео. Позиция: " + seek.TotalSeconds + " Длительность: " + Duration.TotalSeconds);
                 }
 
                 _parameters.Add(new ConversionParameter($"-ss {seek.ToFFmpeg()}", ParameterPosition.PreInput));

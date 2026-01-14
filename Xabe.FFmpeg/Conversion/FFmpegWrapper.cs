@@ -108,7 +108,7 @@ namespace Xabe.FFmpeg
                         cancellationToken.ThrowIfCancellationRequested();
                         if (_wasKilled)
                         {
-                            throw new ConversionException("Cannot stop process. Killed it.", args);
+                            throw new ConversionException("Не удалось остановить процесс. Процесс был принудительно завершен.", args);
                         }
 
                         if (cancellationToken.IsCancellationRequested)

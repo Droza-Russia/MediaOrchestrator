@@ -14,7 +14,7 @@ namespace Xabe.FFmpeg.Exceptions
         }
 
         /// <summary>
-        /// Checks outputlog and throws Exception - some errors are only fatal if the text "Output file is empty" is found in the log
+        /// Проверяет журнал вывода и выбрасывает исключение - некоторые ошибки являются критическими только если в журнале найдено сообщение "Output file is empty"
         /// </summary>
         /// <param name="log"></param>
         internal bool CheckLog(string log)
