@@ -241,8 +241,8 @@ namespace Xabe.FFmpeg
         ///     Start conversion
         /// </summary>
         /// <returns>Conversion result</returns>
-        /// <exception cref="ConversionException">Occurs when FFmpeg process return error.</exception>
-        /// <exception cref="ArgumentException">Occurs when no FFmpeg executables were found.</exception>
+        /// <exception cref="ConversionException">Возникает, когда процесс FFmpeg возвращает ошибку.</exception>
+        /// <exception cref="ArgumentException">Возникает, когда исполняемые файлы FFmpeg не найдены.</exception>
         /// <exception cref="InvalidOperationException"></exception>
         /// <exception cref="ObjectDisposedException"></exception>
         Task<IConversionResult> Start();
@@ -252,11 +252,11 @@ namespace Xabe.FFmpeg
         /// </summary>
         /// <param name="cancellationToken">Cancellation token</param>
         /// <returns>Conversion result</returns>
-        /// <exception cref="ConversionException">Occurs when FFmpeg process return error.</exception>
-        /// <exception cref="ArgumentException">Occurs when no FFmpeg executables were found.</exception>
+        /// <exception cref="ConversionException">Возникает, когда процесс FFmpeg возвращает ошибку.</exception>
+        /// <exception cref="ArgumentException">Возникает, когда исполняемые файлы FFmpeg не найдены.</exception>
         /// <exception cref="InvalidOperationException"></exception>
         /// <exception cref="ObjectDisposedException"></exception>
-        /// <exception cref="TaskCanceledException">Occurs when task was cancalled.</exception>
+        /// <exception cref="TaskCanceledException">Возникает, когда задача была отменена.</exception>
         Task<IConversionResult> Start(CancellationToken cancellationToken);
 
         /// <summary>
@@ -264,8 +264,8 @@ namespace Xabe.FFmpeg
         /// </summary>
         /// <param name="parameters">FFmpeg parameters eg. "-i sample.mp4 -v 0 -vcodec mpeg4 -f mpegts udp://127.0.0.1:23000"</param>
         /// <returns>Conversion result</returns>
-        /// <exception cref="ConversionException">Occurs when FFmpeg process return error.</exception>
-        /// <exception cref="ArgumentException">Occurs when no FFmpeg executables were found.</exception>
+        /// <exception cref="ConversionException">Возникает, когда процесс FFmpeg возвращает ошибку.</exception>
+        /// <exception cref="ArgumentException">Возникает, когда исполняемые файлы FFmpeg не найдены.</exception>
         /// <exception cref="InvalidOperationException"></exception>
         /// <exception cref="ObjectDisposedException"></exception>
         Task<IConversionResult> Start(string parameters);
@@ -276,11 +276,11 @@ namespace Xabe.FFmpeg
         /// <param name="parameters">FFmpeg parameters eg. "-i sample.mp4 -v 0 -vcodec mpeg4 -f mpegts udp://127.0.0.1:23000"</param>
         /// <param name="cancellationToken">Cancellation token</param>
         /// <returns>Conversion result</returns>
-        /// <exception cref="ConversionException">Occurs when FFmpeg process return error.</exception>
-        /// <exception cref="ArgumentException">Occurs when no FFmpeg executables were found.</exception>
+        /// <exception cref="ConversionException">Возникает, когда процесс FFmpeg возвращает ошибку.</exception>
+        /// <exception cref="ArgumentException">Возникает, когда исполняемые файлы FFmpeg не найдены.</exception>
         /// <exception cref="InvalidOperationException"></exception>
         /// <exception cref="ObjectDisposedException"></exception>
-        /// <exception cref="TaskCanceledException">Occurs when task was cancalled.</exception>
+        /// <exception cref="TaskCanceledException">Возникает, когда задача была отменена.</exception>
         Task<IConversionResult> Start(string parameters, CancellationToken cancellationToken);
 
         /// <summary>
