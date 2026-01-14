@@ -114,7 +114,7 @@ namespace Xabe.FFmpeg
         {
             if (_ffmpeg != null)
             {
-                throw new InvalidOperationException("Conversion has already been started. ");
+                throw new InvalidOperationException("Конвертация уже была запущена. ");
             }
 
             DateTime startTime = DateTime.Now;

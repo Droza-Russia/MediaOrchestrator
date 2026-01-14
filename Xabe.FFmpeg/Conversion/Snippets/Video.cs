@@ -162,7 +162,7 @@ namespace Xabe.FFmpeg
         {
             if (inputVideos.Length <= 1)
             {
-                throw new ArgumentException("You must provide at least 2 files for the concatenation to work", "inputVideos");
+                throw new ArgumentException("Для объединения необходимо указать как минимум 2 файла", "inputVideos");
             }
 
             var mediaInfos = new List<IMediaInfo>();
