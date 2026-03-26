@@ -1,17 +1,17 @@
 ﻿namespace Xabe.FFmpeg
 {
     /// <summary>
-    ///     Position of input parameter
+    ///     Позиция параметра относительно входных файлов.
     /// </summary>
     public enum ParameterPosition
     {
         /// <summary>
-        ///     Parameter before input config
+        ///     Параметр, вставляемый перед настройкой входа.
         /// </summary>
         PreInput,
 
         /// <summary>
-        ///     Parameter after input config
+        ///     Параметр, вставляемый после описания входных файлов.
         /// </summary>
         PostInput,
     }

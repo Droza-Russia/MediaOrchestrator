@@ -1,47 +1,47 @@
 ﻿namespace Xabe.FFmpeg
 {
     /// <summary>
-    ///     Hardware accelerators ("ffmpeg -hwaccels")
+    ///     Аппаратные ускорители (посмотреть `ffmpeg -hwaccels`).
     /// </summary>
     public enum HardwareAccelerator
     {
         /// <summary>
-        ///     d3d11va
+        ///     Включает ускорение через d3d11va.
         /// </summary>
         d3d11va,
 
         /// <summary>
-        ///     Automatically select the hardware acceleration method.
+        ///     Автоматический выбор доступного ускорителя.
         /// </summary>
         auto,
 
         /// <summary>
-        ///     Use DXVA2 (DirectX Video Acceleration) hardware acceleration.
+        ///     Использует DXVA2 (DirectX Video Acceleration).
         /// </summary>
         dxva2,
 
         /// <summary>
-        ///     Use the Intel QuickSync Video acceleration for video transcoding.
+        ///     Активирует Intel QuickSync Video для перекодировки.
         /// </summary>
         qsv,
 
         /// <summary>
-        ///     cuvid
+        ///     Использует cuvid.
         /// </summary>
         cuvid,
 
         /// <summary>
-        ///     Use VDPAU (Video Decode and Presentation API for Unix) hardware acceleration.
+        ///     Применяет VDPAU (API декодирования/вывода для Unix).
         /// </summary>
         vdpau,
 
         /// <summary>
-        ///     Use VAAPI (Video Acceleration API) hardware acceleration.
+        ///     Использует VAAPI (Video Acceleration API).
         /// </summary>
         vaapi,
 
         /// <summary>
-        ///     
+        ///     Включает ускорение через libmfx.
         /// </summary>
         libmfx
     }
