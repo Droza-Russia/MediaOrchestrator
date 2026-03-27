@@ -15,7 +15,7 @@ namespace Xabe.FFmpeg
         {
             if (maxFrequency <= 0)
             {
-                throw new ArgumentOutOfRangeException(nameof(maxFrequency), "Частота должна быть больше 0.");
+                throw new ArgumentOutOfRangeException(nameof(maxFrequency), ErrorMessages.FrequencyMustBeGreaterThanZero);
             }
 
             return _conversion.AddParameter($"-af \"lowpass=f={maxFrequency}\"");
@@ -25,7 +25,7 @@ namespace Xabe.FFmpeg
         {
             if (minFrequency <= 0)
             {
-                throw new ArgumentOutOfRangeException(nameof(minFrequency), "Частота должна быть больше 0.");
+                throw new ArgumentOutOfRangeException(nameof(minFrequency), ErrorMessages.FrequencyMustBeGreaterThanZero);
             }
 
             return _conversion.AddParameter($"-af \"highpass=f={minFrequency}\"");
@@ -35,7 +35,7 @@ namespace Xabe.FFmpeg
         {
             if (sampleRate <= 0)
             {
-                throw new ArgumentOutOfRangeException(nameof(sampleRate), "Частота дискретизации должна быть больше 0.");
+                throw new ArgumentOutOfRangeException(nameof(sampleRate), ErrorMessages.SampleRateMustBeGreaterThanZeroForSettings);
             }
 
             return _conversion.AddParameter($"-ar {sampleRate}");
@@ -45,7 +45,7 @@ namespace Xabe.FFmpeg
         {
             if (channels <= 0)
             {
-                throw new ArgumentOutOfRangeException(nameof(channels), "Количество каналов должно быть больше 0.");
+                throw new ArgumentOutOfRangeException(nameof(channels), ErrorMessages.ChannelsMustBeGreaterThanZero);
             }
 
             return _conversion.AddParameter($"-ac {channels}");

@@ -144,6 +144,26 @@ namespace Xabe.FFmpeg
         }
 
         /// <summary>
+        ///     Извлекает аудио из файла с обязательной проверкой наличия аудиодорожки.
+        ///     Входной файл может не содержать видеопоток.
+        /// </summary>
+        /// <param name="inputPath">Входной путь</param>
+        /// <param name="outputPath">Выходной путь аудио</param>
+        /// <param name="audioCodec">Кодек выхода (по умолчанию mp3)</param>
+        /// <param name="bitrate">Опциональный битрейт в битах</param>
+        /// <param name="sampleRate">Опциональная частота дискретизации в Гц</param>
+        /// <returns>Результат конвертации</returns>
+        public async Task<IConversion> ExtractAudio(
+            string inputPath,
+            string outputPath,
+            AudioCodec audioCodec = AudioCodec.mp3,
+            long? bitrate = null,
+            int? sampleRate = null)
+        {
+            return await Conversion.ExtractAudio(inputPath, outputPath, audioCodec, bitrate, sampleRate);
+        }
+
+        /// <summary>
         ///     Добавляет аудиопоток к видеофайлу
         /// </summary>
         /// <param name="videoPath">Видео</param>

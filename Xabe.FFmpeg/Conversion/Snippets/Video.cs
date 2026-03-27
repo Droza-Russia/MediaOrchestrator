@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -162,7 +162,7 @@ namespace Xabe.FFmpeg
         {
             if (inputVideos.Length <= 1)
             {
-                throw new ArgumentException("Для объединения необходимо указать как минимум 2 файла", "inputVideos");
+                throw new ArgumentException(ErrorMessages.ConcatAtLeastTwoFiles, "inputVideos");
             }
 
             var mediaInfos = new List<IMediaInfo>();

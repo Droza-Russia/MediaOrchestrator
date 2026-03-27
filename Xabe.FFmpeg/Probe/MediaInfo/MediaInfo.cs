@@ -100,7 +100,7 @@ namespace Xabe.FFmpeg
         {
             if (!File.Exists(fileInfo.FullName))
             {
-                throw new InvalidInputException($"Входной файл {fileInfo.FullName} не существует.");
+                throw new InvalidInputException(string.Format(ErrorMessages.InputFileDoesNotExist, fileInfo.FullName));
             }
 
             return await Get(fileInfo.FullName);

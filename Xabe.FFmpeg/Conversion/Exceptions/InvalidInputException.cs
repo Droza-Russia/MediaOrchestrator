@@ -1,17 +1,17 @@
-﻿using System.IO;
+using System.IO;
 
 namespace Xabe.FFmpeg.Exceptions
 {
     /// <inheritdoc />
     /// <summary>
-    ///     The exception that is thrown when input does not exists.
+    ///     Исключение, выбрасываемое, когда входной файл не существует.
     /// </summary>
     public class InvalidInputException : FileNotFoundException
     {
         /// <summary>
-        ///     The exception that is thrown when input does not exists.
+        ///     Исключение, выбрасываемое, когда входной файл не существует.
         /// </summary>
-        /// <param name="msg"></param>
+        /// <param name="msg">Текст сообщения об ошибке.</param>
         public InvalidInputException(string msg) : base(msg)
         {
         }

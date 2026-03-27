@@ -1,17 +1,17 @@
-﻿namespace Xabe.FFmpeg.Exceptions
+namespace Xabe.FFmpeg.Exceptions
 {
     /// <inheritdoc />
     /// <summary>
-    ///     The exception that is thrown when a FFmpeg process cannot find suitable output format.
+    ///     Исключение, выбрасываемое, когда FFmpeg не может применить указанный bitstream filter.
     /// </summary>
     public class InvalidBitstreamFilterException : ConversionException
     {
         /// <inheritdoc />
         /// <summary>
-        ///     The exception that is thrown when a FFmpeg process cannot find suitable output format.
+        ///     Исключение, выбрасываемое, когда FFmpeg не может применить указанный bitstream filter.
         /// </summary>
-        /// <param name="errorMessage">FFmpeg error output</param>
-        /// <param name="inputParameters">FFmpeg error output</param>
+        /// <param name="errorMessage">Текст ошибки FFmpeg.</param>
+        /// <param name="inputParameters">Входные параметры FFmpeg.</param>
         internal InvalidBitstreamFilterException(string errorMessage, string inputParameters) : base(errorMessage, inputParameters)
         {
         }

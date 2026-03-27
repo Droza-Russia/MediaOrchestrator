@@ -147,7 +147,7 @@ namespace Xabe.FFmpeg
             ProbeModel.Stream[] streams = await GetStreams(path, cancellationToken);
             if (!streams.Any())
             {
-                throw new ArgumentException($"Неверный файл. Не удалось загрузить файл {path}");
+                throw new ArgumentException(string.Format(ErrorMessages.InvalidFileUnableToLoad, path));
             }
 
             var infos = await GetInfos(path, cancellationToken);

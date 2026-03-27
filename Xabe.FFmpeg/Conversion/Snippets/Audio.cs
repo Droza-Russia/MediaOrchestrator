@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+using Xabe.FFmpeg.Exceptions;
 
 namespace Xabe.FFmpeg
 {
@@ -19,10 +20,55 @@ namespace Xabe.FFmpeg
             IMediaInfo info = await FFmpeg.GetMediaInfo(inputPath);
 
             IAudioStream audioStream = info.AudioStreams.FirstOrDefault();
+            if (audioStream == null)
+            {
+                throw new AudioStreamNotFoundException(ErrorMessages.InputFileDoesNotContainAudioStream, nameof(inputPath));
+            }
 
             return New()
                 .AddStream(audioStream)
                 .SetAudioBitrate(audioStream.Bitrate)
+                .SetOutput(outputPath);
+        }
+
+        /// <summary>
+        ///     Extract audio from media file with mandatory audio track validation.
+        ///     File may not contain video stream.
+        /// </summary>
+        /// <param name="inputPath">Input path</param>
+        /// <param name="outputPath">Output audio path</param>
+        /// <param name="audioCodec">Audio codec for output (default is mp3)</param>
+        /// <param name="bitrate">Optional output bitrate in bits</param>
+        /// <param name="sampleRate">Optional output sample rate in Hz</param>
+        /// <returns>Conversion result</returns>
+        internal static async Task<IConversion> ExtractAudio(
+            string inputPath,
+            string outputPath,
+            AudioCodec audioCodec = AudioCodec.mp3,
+            long? bitrate = null,
+            int? sampleRate = null)
+        {
+            IMediaInfo info = await FFmpeg.GetMediaInfo(inputPath);
+            IAudioStream audioStream = info.AudioStreams.FirstOrDefault();
+            if (audioStream == null)
+            {
+                throw new AudioStreamNotFoundException(ErrorMessages.InputFileDoesNotContainAudioStream, nameof(inputPath));
+            }
+
+            audioStream.SetCodec(audioCodec);
+
+            if (bitrate.HasValue)
+            {
+                audioStream.SetBitrate(bitrate.Value);
+            }
+
+            if (sampleRate.HasValue)
+            {
+                audioStream.SetSampleRate(sampleRate.Value);
+            }
+
+            return New()
+                .AddStream(audioStream)
                 .SetOutput(outputPath);
         }
 
@@ -102,19 +148,19 @@ namespace Xabe.FFmpeg
 
             if (bitrate <= 0)
             {
-                throw new ArgumentOutOfRangeException(nameof(bitrate), "Bitrate must be greater than 0.");
+                throw new ArgumentOutOfRangeException(nameof(bitrate), ErrorMessages.BitrateMustBeGreaterThanZero);
             }
 
             if (sampleRate <= 0)
             {
-                throw new ArgumentOutOfRangeException(nameof(sampleRate), "Sample rate must be greater than 0.");
+                throw new ArgumentOutOfRangeException(nameof(sampleRate), ErrorMessages.SampleRateMustBeGreaterThanZero);
             }
 
             IMediaInfo info = await FFmpeg.GetMediaInfo(inputPath);
             IAudioStream sourceAudio = info.AudioStreams.FirstOrDefault();
             if (sourceAudio == null)
             {
-                throw new ArgumentException("Input file does not contain an audio stream.", nameof(inputPath));
+                throw new AudioStreamNotFoundException(ErrorMessages.InputFileDoesNotContainAudioStream, nameof(inputPath));
             }
 
             var boundaries = timecodes
@@ -134,14 +180,14 @@ namespace Xabe.FFmpeg
 
             if (boundaries.Count < 2)
             {
-                throw new ArgumentException("At least two time boundaries are required.", nameof(timecodes));
+                throw new ArgumentException(ErrorMessages.AtLeastTwoTimeBoundaries, nameof(timecodes));
             }
 
             foreach (TimeSpan timecode in boundaries)
             {
                 if (timecode < TimeSpan.Zero || timecode > info.Duration)
                 {
-                    throw new ArgumentOutOfRangeException(nameof(timecodes), $"Timecode {timecode} is out of media duration range.");
+                    throw new ArgumentOutOfRangeException(nameof(timecodes), string.Format(ErrorMessages.TimecodeOutOfRange, timecode));
                 }
             }
 
@@ -157,7 +203,7 @@ namespace Xabe.FFmpeg
                 TimeSpan duration = end - start;
                 if (duration <= TimeSpan.Zero)
                 {
-                    throw new ArgumentException("Timecodes must define increasing ranges.", nameof(timecodes));
+                    throw new ArgumentException(ErrorMessages.TimecodesMustDefineIncreasingRanges, nameof(timecodes));
                 }
 
                 string outputPath = Path.Combine(outputDirectory, $"{fileName}_{i + 1:D3}.{extension}");

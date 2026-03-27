@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -108,7 +108,7 @@ namespace Xabe.FFmpeg
                         cancellationToken.ThrowIfCancellationRequested();
                         if (_wasKilled)
                         {
-                            throw new ConversionException("Не удалось остановить процесс. Процесс был принудительно завершен.", args);
+                            throw new ConversionException(ErrorMessages.FailedToStopProcess, args);
                         }
 
                         if (cancellationToken.IsCancellationRequested)
