@@ -70,6 +70,7 @@ namespace Xabe.FFmpeg
         /// <param name="cancellationToken">Cancellation token</param>
         internal static async Task<IMediaInfo> Get(string filePath, CancellationToken cancellationToken)
         {
+            MediaFileSignatureValidator.ValidateOrThrow(filePath);
             var cacheKey = BuildCacheKey(filePath);
             IMediaInfo cached;
             if (FFmpeg.MediaInfoCacheEnabled && TryGetFromCache(cacheKey, out cached))

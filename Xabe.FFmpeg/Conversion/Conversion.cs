@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
@@ -33,8 +34,19 @@ namespace Xabe.FFmpeg
         private Func<string, string> _buildInputFileName = null;
         private Func<string, string> _buildOutputFileName = null;
 
+        private readonly bool _suppressGlobalOutputLimits;
+        private readonly bool _suppressAutoHardwareAcceleration;
+        private bool _manualHardwareAcceleration;
+
         public Conversion()
+            : this(suppressGlobalOutputLimits: false, suppressAutoHardwareAcceleration: false)
         {
+        }
+
+        internal Conversion(bool suppressGlobalOutputLimits, bool suppressAutoHardwareAcceleration = false)
+        {
+            _suppressGlobalOutputLimits = suppressGlobalOutputLimits;
+            _suppressAutoHardwareAcceleration = suppressAutoHardwareAcceleration;
             _userDefinedParameters[ParameterPosition.PostInput] = new List<string>();
             _userDefinedParameters[ParameterPosition.PreInput] = new List<string>();
             _audioSettings = new AudioConversionSettings(this);
@@ -56,6 +68,8 @@ namespace Xabe.FFmpeg
                     _buildOutputFileName = (number) => { return _output; };
                 }
 
+                ApplyAutoHardwareDecodeAcceleration();
+
                 builder.Append(string.Join(" ", _userDefinedParameters[ParameterPosition.PreInput].Select(x => x.Trim())) + " ");
                 builder.Append(GetParameters(ParameterPosition.PreInput));
                 builder.Append(GetStreamsPreInputs());
@@ -74,6 +88,7 @@ namespace Xabe.FFmpeg
                 builder.Append(GetStreamsPostInputs());
                 builder.Append(GetFilters());
                 builder.Append(GetMap());
+                builder.Append(GetGlobalOutputLimitParameters());
                 builder.Append(GetParameters(ParameterPosition.PostInput));
                 builder.Append(string.Join(" ", _userDefinedParameters[ParameterPosition.PostInput].Select(x => x.Trim())) + " ");
                 builder.Append(_buildOutputFileName("_%03d"));
@@ -692,11 +707,226 @@ namespace Xabe.FFmpeg
             return false;
         }
 
-        internal static IConversion New()
+        internal static IConversion New(bool suppressGlobalOutputLimits = false, bool suppressAutoHardwareAcceleration = false)
         {
-            var conversion = new Conversion();
+            var conversion = new Conversion(suppressGlobalOutputLimits, suppressAutoHardwareAcceleration);
             return conversion
                 .SetOverwriteOutput(false);
+        }
+
+        private void ApplyAutoHardwareDecodeAcceleration()
+        {
+            if (_suppressAutoHardwareAcceleration)
+            {
+                return;
+            }
+
+            if (_manualHardwareAcceleration)
+            {
+                return;
+            }
+
+            if (!FFmpeg.ApplyAutoHardwareAccelerationToConversions)
+            {
+                return;
+            }
+
+            var profile = FFmpeg.AutoDetectedHardwareAccelerationProfile;
+            if (profile == null)
+            {
+                return;
+            }
+
+            if (ConversionUsesStreamCopy())
+            {
+                return;
+            }
+
+            if (!HasExplicitVideoReencode())
+            {
+                return;
+            }
+
+            if (ConversionAlreadyHasHwaccel())
+            {
+                return;
+            }
+
+            if (!AllVideoOutputsAreH264HevcOrCompatibleHwEncoder())
+            {
+                return;
+            }
+
+            _parameters.Add(new ConversionParameter($"-hwaccel {profile.Hwaccel}", ParameterPosition.PreInput));
+            UseMultiThread(false);
+        }
+
+        private bool AllVideoOutputsAreH264HevcOrCompatibleHwEncoder()
+        {
+            var anyVideoEncode = false;
+            foreach (IVideoStream stream in _streams.OfType<IVideoStream>())
+            {
+                if (!(stream is VideoStream vs) || vs.IsOutputCodecCopy)
+                {
+                    continue;
+                }
+
+                var post = vs.BuildParameters(ParameterPosition.PostInput) ?? string.Empty;
+                if (post.IndexOf("-c:v", StringComparison.Ordinal) < 0)
+                {
+                    continue;
+                }
+
+                anyVideoEncode = true;
+                if (!TryGetLastVideoEncoderNameFromStreamParams(post, out var enc) ||
+                    !IsH264HevcOrHardwareEncoderFamily(enc))
+                {
+                    return false;
+                }
+            }
+
+            return anyVideoEncode;
+        }
+
+        private static bool TryGetLastVideoEncoderNameFromStreamParams(string post, out string encoder)
+        {
+            encoder = null;
+            if (string.IsNullOrEmpty(post))
+            {
+                return false;
+            }
+
+            var parts = post.Split(new[] { "-c:v" }, StringSplitOptions.None);
+            if (parts.Length < 2)
+            {
+                return false;
+            }
+
+            var tail = parts[parts.Length - 1].TrimStart();
+            if (tail.Length == 0)
+            {
+                return false;
+            }
+
+            var end = tail.IndexOfAny(new[] { ' ', '\t', '\"' });
+            encoder = end < 0 ? tail : tail.Substring(0, end);
+            return encoder.Length > 0;
+        }
+
+        private static bool IsH264HevcOrHardwareEncoderFamily(string encoder)
+        {
+            var c = encoder.ToLowerInvariant();
+            return c.Contains("h264") || c.Contains("hevc") || c.Contains("x264") || c.Contains("x265") ||
+                   c.Contains("nvenc") || c.Contains("qsv") || c.Contains("vaapi") || c.Contains("amf") ||
+                   c.Contains("videotoolbox") || c.Contains("cuvid");
+        }
+
+        private bool ConversionAlreadyHasHwaccel()
+        {
+            foreach (ConversionParameter p in _parameters)
+            {
+                if (p.Position == ParameterPosition.PreInput && p.Parameter != null &&
+                    p.Parameter.IndexOf("-hwaccel", StringComparison.Ordinal) >= 0)
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private bool ConversionUsesStreamCopy()
+        {
+            foreach (string p in _userDefinedParameters[ParameterPosition.PostInput])
+            {
+                if (p != null &&
+                    p.IndexOf("copy", StringComparison.OrdinalIgnoreCase) >= 0 &&
+                    p.IndexOf("-c", StringComparison.Ordinal) >= 0)
+                {
+                    return true;
+                }
+            }
+
+            foreach (ConversionParameter p in _parameters)
+            {
+                if (p.Parameter != null &&
+                    p.Parameter.IndexOf("copy", StringComparison.OrdinalIgnoreCase) >= 0 &&
+                    p.Parameter.IndexOf("-c", StringComparison.Ordinal) >= 0)
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private bool HasExplicitVideoReencode()
+        {
+            foreach (IVideoStream stream in _streams.OfType<IVideoStream>())
+            {
+                if (!(stream is VideoStream vs))
+                {
+                    continue;
+                }
+
+                var post = vs.BuildParameters(ParameterPosition.PostInput) ?? string.Empty;
+                if (post.IndexOf("-c:v", StringComparison.Ordinal) < 0)
+                {
+                    continue;
+                }
+
+                if (vs.IsOutputCodecCopy)
+                {
+                    continue;
+                }
+
+                return true;
+            }
+
+            return false;
+        }
+
+        private string GetGlobalOutputLimitParameters()
+        {
+            if (_suppressGlobalOutputLimits)
+            {
+                return string.Empty;
+            }
+
+            var maxFps = FFmpeg.MaxOutputVideoFrameRate;
+            var maxAr = FFmpeg.MaxOutputAudioSampleRate;
+            var maxAc = FFmpeg.MaxOutputAudioChannels;
+            if (!maxFps.HasValue && !maxAr.HasValue && !maxAc.HasValue)
+            {
+                return string.Empty;
+            }
+
+            var sb = new StringBuilder();
+            var videos = _streams.OfType<IVideoStream>().ToList();
+            var audios = _streams.OfType<IAudioStream>().ToList();
+
+            if (maxFps is double capFps && capFps > 0 && videos.Count > 0)
+            {
+                var maxSrcFps = videos.Where(v => v.Framerate > 0.01).Select(v => v.Framerate).DefaultIfEmpty(capFps).Max();
+                var targetFps = Math.Min(maxSrcFps, capFps);
+                sb.Append($" -r {targetFps.ToString(CultureInfo.InvariantCulture)} ");
+            }
+
+            if (maxAr is int capAr && capAr > 0 && audios.Count > 0)
+            {
+                var maxSrcRate = audios.Where(a => a.SampleRate > 0).Select(a => a.SampleRate).DefaultIfEmpty(capAr).Max();
+                var targetAr = Math.Min(maxSrcRate, capAr);
+                sb.Append($" -ar {targetAr.ToString(CultureInfo.InvariantCulture)} ");
+            }
+
+            if (maxAc is int capAc && capAc > 0 && audios.Count > 0)
+            {
+                var maxSrcCh = audios.Where(a => a.Channels > 0).Select(a => a.Channels).DefaultIfEmpty(capAc).Max();
+                var targetAc = Math.Min(maxSrcCh, capAc);
+                sb.Append($" -ac {targetAc.ToString(CultureInfo.InvariantCulture)} ");
+            }
+
+            return sb.ToString();
         }
 
         /// <summary>
@@ -722,6 +952,7 @@ namespace Xabe.FFmpeg
         /// <returns>Текущий объект IConversion.</returns>
         public IConversion UseHardwareAcceleration(string hardwareAccelerator, string decoder, string encoder, int device = 0)
         {
+            _manualHardwareAcceleration = true;
             _parameters.Add(new ConversionParameter($"-hwaccel {hardwareAccelerator}", ParameterPosition.PreInput));
             _parameters.Add(new ConversionParameter($"-c:v {decoder}", ParameterPosition.PreInput));
 

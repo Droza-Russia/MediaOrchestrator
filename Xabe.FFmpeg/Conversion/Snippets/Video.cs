@@ -30,6 +30,84 @@ namespace Xabe.FFmpeg
                 .SetOutput(outputPath);
         }
 
+        internal static async Task<IConversion> BurnRightSideTextLabelAsync(
+            string inputPath,
+            string outputPath,
+            string text,
+            string fontColor = "white",
+            int fontSize = 24,
+            int marginRight = 20,
+            int marginY = 16,
+            DrawTextVerticalAlign verticalAlign = DrawTextVerticalAlign.Center,
+            string fontFilePath = null)
+        {
+            IMediaInfo info = await FFmpeg.GetMediaInfo(inputPath);
+            IVideoStream videoStream = info.VideoStreams.FirstOrDefault()
+                                       ?.SetRightSideDrawText(text, fontColor, fontSize, marginRight, marginY, verticalAlign, fontFilePath);
+            if (videoStream == null)
+            {
+                throw new ArgumentException(ErrorMessages.InputFileDoesNotContainVideoStream, nameof(inputPath));
+            }
+
+            return New()
+                .AddStream(videoStream)
+                .AddStream(info.AudioStreams.ToArray())
+                .SetOutput(outputPath);
+        }
+
+        internal static async Task<IConversion> BurnRightSidePtsTimeLabelAsync(
+            string inputPath,
+            string outputPath,
+            string prefix = null,
+            string suffix = null,
+            bool useLocalWallClock = false,
+            string fontColor = "white",
+            int fontSize = 24,
+            int marginRight = 20,
+            int marginY = 16,
+            DrawTextVerticalAlign verticalAlign = DrawTextVerticalAlign.Center,
+            string fontFilePath = null)
+        {
+            IMediaInfo info = await FFmpeg.GetMediaInfo(inputPath);
+            IVideoStream videoStream = info.VideoStreams.FirstOrDefault()
+                                       ?.SetRightSidePtsTimeOverlay(prefix, suffix, useLocalWallClock, fontColor, fontSize, marginRight, marginY, verticalAlign, fontFilePath);
+            if (videoStream == null)
+            {
+                throw new ArgumentException(ErrorMessages.InputFileDoesNotContainVideoStream, nameof(inputPath));
+            }
+
+            return New()
+                .AddStream(videoStream)
+                .AddStream(info.AudioStreams.ToArray())
+                .SetOutput(outputPath);
+        }
+
+        internal static async Task<IConversion> BurnRightSideSmpteTimecodeAsync(
+            string inputPath,
+            string outputPath,
+            string startTimecode = "00:00:00:00",
+            double frameRate = 25,
+            string fontColor = "white",
+            int fontSize = 24,
+            int marginRight = 20,
+            int marginY = 16,
+            DrawTextVerticalAlign verticalAlign = DrawTextVerticalAlign.Center,
+            string fontFilePath = null)
+        {
+            IMediaInfo info = await FFmpeg.GetMediaInfo(inputPath);
+            IVideoStream videoStream = info.VideoStreams.FirstOrDefault()
+                                       ?.SetRightSideSmpteTimecodeOverlay(startTimecode, frameRate, fontColor, fontSize, marginRight, marginY, verticalAlign, fontFilePath);
+            if (videoStream == null)
+            {
+                throw new ArgumentException(ErrorMessages.InputFileDoesNotContainVideoStream, nameof(inputPath));
+            }
+
+            return New()
+                .AddStream(videoStream)
+                .AddStream(info.AudioStreams.ToArray())
+                .SetOutput(outputPath);
+        }
+
         /// <summary>
         ///     Extract video from file
         /// </summary>
@@ -210,7 +288,7 @@ namespace Xabe.FFmpeg
         {
             IMediaInfo info = await FFmpeg.GetMediaInfo(inputFilePath);
 
-            var conversion = New().SetOutput(outputFilePath);
+            var conversion = New(suppressGlobalOutputLimits: !info.VideoStreams.Any()).SetOutput(outputFilePath);
 
             foreach (var stream in info.Streams)
             {
@@ -246,18 +324,18 @@ namespace Xabe.FFmpeg
         {
             IMediaInfo info = await FFmpeg.GetMediaInfo(inputFilePath);
 
-            var conversion = New().SetOutput(outputFilePath);
+            var conversion = New(suppressGlobalOutputLimits: !info.VideoStreams.Any()).SetOutput(outputFilePath);
 
             foreach (var stream in info.Streams)
             {
                 if (stream is IVideoStream videoStream)
                 {
                     // PR #268 We have to force the framerate here due to an FFmpeg bug with videos > 100fps from android devices
-                    conversion.AddStream(videoStream.SetCodec(videoCodec).SetFramerate(videoStream.Framerate));
+                    conversion.AddStream(videoStream.SetCodec(FFmpeg.ResolveTranscodeVideoCodecToString(videoCodec)).SetFramerate(videoStream.Framerate));
                 }
                 else if (stream is IAudioStream audioStream)
                 {
-                    conversion.AddStream(audioStream.SetCodec(audioCodec));
+                    conversion.AddStream(audioStream.SetCodec(FFmpeg.ResolveTranscodeAudioCodecToString(audioCodec)));
                 }
                 else if (stream is ISubtitleStream subtitleStream && keepSubtitles)
                 {

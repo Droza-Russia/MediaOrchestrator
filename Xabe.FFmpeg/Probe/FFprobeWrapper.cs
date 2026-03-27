@@ -68,7 +68,7 @@ namespace Xabe.FFmpeg
 
         private async Task<FormatModel.Root> GetInfos(string videoPath, CancellationToken cancellationToken)
         {
-            var stringResult = await Start($"-v panic -print_format json=c=1 -show_entries format=size,duration,bit_rate:format_tags=creation_time {videoPath}", cancellationToken);
+            var stringResult = await Start($"-v panic -print_format json=c=1 -show_entries format=format_name,size,duration,bit_rate:format_tags=creation_time {videoPath}", cancellationToken);
 
             return JsonSerializer.Deserialize<FormatModel.Root>(stringResult, _defaultSerializerOptions);
         }
@@ -151,6 +151,7 @@ namespace Xabe.FFmpeg
             }
 
             var infos = await GetInfos(path, cancellationToken);
+            MediaFileSignatureValidator.ValidateDeclaredFormatOrThrow(mediaInfo.Path, infos?.format?.format_name);
             if (infos.format.size != null)
             {
                 mediaInfo.Size = long.Parse(infos.format.size);

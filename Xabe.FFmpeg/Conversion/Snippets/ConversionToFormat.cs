@@ -17,9 +17,9 @@ namespace Xabe.FFmpeg
             IMediaInfo info = await FFmpeg.GetMediaInfo(inputPath);
 
             IStream videoStream = info.VideoStreams.FirstOrDefault()
-                                      ?.SetCodec(VideoCodec.h264);
+                                      ?.SetCodec(FFmpeg.ResolveTranscodeVideoCodecToString(VideoCodec.h264));
             IStream audioStream = info.AudioStreams.FirstOrDefault()
-                                      ?.SetCodec(AudioCodec.aac);
+                                      ?.SetCodec(FFmpeg.ResolveTranscodeAudioCodecToString(AudioCodec.aac));
 
             return New()
                 .AddStream(videoStream, audioStream)
@@ -57,9 +57,9 @@ namespace Xabe.FFmpeg
             IMediaInfo info = await FFmpeg.GetMediaInfo(inputPath);
 
             IStream videoStream = info.VideoStreams.FirstOrDefault()
-                                      ?.SetCodec(VideoCodec.theora);
+                                      ?.SetCodec(FFmpeg.ResolveTranscodeVideoCodecToString(VideoCodec.theora));
             IStream audioStream = info.AudioStreams.FirstOrDefault()
-                                      ?.SetCodec(AudioCodec.libvorbis);
+                                      ?.SetCodec(FFmpeg.ResolveTranscodeAudioCodecToString(AudioCodec.libvorbis));
 
             return New()
                 .AddStream(videoStream, audioStream)
@@ -77,9 +77,9 @@ namespace Xabe.FFmpeg
             IMediaInfo info = await FFmpeg.GetMediaInfo(inputPath);
 
             IStream videoStream = info.VideoStreams.FirstOrDefault()
-                                      ?.SetCodec(VideoCodec.vp8);
+                                      ?.SetCodec(FFmpeg.ResolveTranscodeVideoCodecToString(VideoCodec.vp8));
             IStream audioStream = info.AudioStreams.FirstOrDefault()
-                                      ?.SetCodec(AudioCodec.libvorbis);
+                                      ?.SetCodec(FFmpeg.ResolveTranscodeAudioCodecToString(AudioCodec.libvorbis));
 
             return New()
                 .AddStream(videoStream, audioStream)
@@ -95,6 +95,7 @@ namespace Xabe.FFmpeg
         /// <returns>Conversion result</returns>
         internal static Task<IConversion> RemuxToWebM(string inputPath, string outputPath, bool keepSubtitles = false)
         {
+            MediaFileSignatureValidator.ValidateOrThrow(inputPath);
             var conversion = New()
                 .AddParameter($"-i {inputPath.Escape()}", ParameterPosition.PreInput)
                 .AddParameter("-map 0")

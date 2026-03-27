@@ -22,10 +22,10 @@ namespace Xabe.FFmpeg
             IAudioStream audioStream = info.AudioStreams.FirstOrDefault();
             if (audioStream == null)
             {
-                throw new AudioStreamNotFoundException(ErrorMessages.InputFileDoesNotContainAudioStream, nameof(inputPath));
+                throw new AudioStreamNotFoundException(global::Xabe.FFmpeg.ErrorMessages.InputFileDoesNotContainAudioStream, nameof(inputPath));
             }
 
-            return New()
+            return New(suppressGlobalOutputLimits: true)
                 .AddStream(audioStream)
                 .SetAudioBitrate(audioStream.Bitrate)
                 .SetOutput(outputPath);
@@ -52,10 +52,10 @@ namespace Xabe.FFmpeg
             IAudioStream audioStream = info.AudioStreams.FirstOrDefault();
             if (audioStream == null)
             {
-                throw new AudioStreamNotFoundException(ErrorMessages.InputFileDoesNotContainAudioStream, nameof(inputPath));
+                throw new AudioStreamNotFoundException(global::Xabe.FFmpeg.ErrorMessages.InputFileDoesNotContainAudioStream, nameof(inputPath));
             }
 
-            audioStream.SetCodec(audioCodec);
+            audioStream.SetCodec(FFmpeg.ResolveTranscodeAudioCodecToString(audioCodec));
 
             if (bitrate.HasValue)
             {
@@ -67,9 +67,37 @@ namespace Xabe.FFmpeg
                 audioStream.SetSampleRate(sampleRate.Value);
             }
 
-            return New()
+            return New(suppressGlobalOutputLimits: true)
                 .AddStream(audioStream)
                 .SetOutput(outputPath);
+        }
+
+        /// <summary>
+        ///     Быстрый экспорт аудиодорожки в WAV (pcm_s16le) без лишнего ffprobe и без глобальных лимитов выхода.
+        /// </summary>
+        internal static Task<IConversion> ConvertToWavFastAsync(string inputPath, string outputPath, int sampleRate = 16000, int channels = 1)
+        {
+            if (sampleRate <= 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(sampleRate), ErrorMessages.SampleRateMustBeGreaterThanZero);
+            }
+
+            if (channels <= 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(channels), ErrorMessages.ChannelsMustBeGreaterThanZero);
+            }
+
+            MediaFileSignatureValidator.ValidateOrThrow(inputPath);
+            var conversion = New(suppressGlobalOutputLimits: true)
+                .AddParameter($"-i {inputPath.Escape()}", ParameterPosition.PreInput)
+                .AddParameter("-map 0:a:0", ParameterPosition.PostInput)
+                .AddParameter("-c:a pcm_s16le", ParameterPosition.PostInput)
+                .AddParameter($"-ar {sampleRate}", ParameterPosition.PostInput)
+                .AddParameter($"-ac {channels}", ParameterPosition.PostInput)
+                .AddParameter("-f wav", ParameterPosition.PostInput)
+                .SetOutput(outputPath);
+
+            return Task.FromResult<IConversion>(conversion);
         }
 
         /// <summary>
@@ -115,7 +143,7 @@ namespace Xabe.FFmpeg
 
             var filter = $"\"[0:a]showfreqs=mode={mode}:fscale={frequencyScale}:ascale={amplitudeScale},format={pixelFormat},scale={size.ToFFmpegFormat()} [v]\"";
 
-            return New()
+            return New(suppressGlobalOutputLimits: true)
                 .AddStream(audioStream)
                 .AddParameter($"-filter_complex {filter}")
                 .AddParameter("-map [v]")
@@ -160,7 +188,7 @@ namespace Xabe.FFmpeg
             IAudioStream sourceAudio = info.AudioStreams.FirstOrDefault();
             if (sourceAudio == null)
             {
-                throw new AudioStreamNotFoundException(ErrorMessages.InputFileDoesNotContainAudioStream, nameof(inputPath));
+                throw new AudioStreamNotFoundException(global::Xabe.FFmpeg.ErrorMessages.InputFileDoesNotContainAudioStream, nameof(inputPath));
             }
 
             var boundaries = timecodes
@@ -209,11 +237,11 @@ namespace Xabe.FFmpeg
                 string outputPath = Path.Combine(outputDirectory, $"{fileName}_{i + 1:D3}.{extension}");
                 IAudioStream outputStream = sourceAudio
                     .Split(start, duration)
-                    .SetCodec(audioCodec)
+                    .SetCodec(FFmpeg.ResolveTranscodeAudioCodecToString(audioCodec))
                     .SetBitrate(bitrate)
                     .SetSampleRate(sampleRate);
 
-                result.Add(New()
+                result.Add(New(suppressGlobalOutputLimits: true)
                     .AddStream(outputStream)
                     .SetOutput(outputPath));
             }

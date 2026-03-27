@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
+using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 using Xabe.FFmpeg.Streams.SubtitleStream;
@@ -74,14 +75,88 @@ namespace Xabe.FFmpeg
         /// <param name="ffmpegExeutableName">Имя исполняемого файла FFmpeg</param>
         /// <param name="ffprobeExecutableName">Имя исполняемого файла FFprobe</param>
         /// <param name="filteringMethod">Выбирает метод сравнения имен файлов</param>
-        /// <param name="filteringMethodCaseSensitive">Выбирает, должен ли фильтр учитывать регистр</param>
-        public static void SetExecutablesPath(string directoryWithFFmpegAndFFprobe, string ffmpegExeutableName = "ffmpeg", string ffprobeExecutableName = "ffprobe", FileNameFilterMethod filteringMethod = FileNameFilterMethod.Contains, IFormatProvider formatprovider = null)
+        /// <param name="formatprovider">Провайдер формата для сравнения строк</param>
+        /// <param name="language">Язык локализации сообщений исключений</param>
+        /// <param name="maxOutputVideoFrameRate">Необязательный лимит частоты кадров выходного видео (максимум).</param>
+        /// <param name="maxOutputAudioSampleRate">Необязательный лимит частоты дискретизации выходного аудио в Гц (максимум).</param>
+        /// <param name="maxOutputAudioChannels">Необязательный лимит числа каналов выходного аудио (максимум).</param>
+        /// <param name="tryDetectHardwareAcceleration">Если true — выполняется <c>ffmpeg -hwaccels</c> и выбирается ускоритель с учётом ОС (NVIDIA, Intel QSV, AMD AMF через D3D11, VAAPI, Video Toolbox).</param>
+        public static void SetExecutablesPath(
+            string directoryWithFFmpegAndFFprobe,
+            string ffmpegExeutableName = "ffmpeg",
+            string ffprobeExecutableName = "ffprobe",
+            FileNameFilterMethod filteringMethod = FileNameFilterMethod.Contains,
+            IFormatProvider formatprovider = null,
+            LocalizationLanguage language = LocalizationLanguage.Russian,
+            double? maxOutputVideoFrameRate = null,
+            int? maxOutputAudioSampleRate = null,
+            int? maxOutputAudioChannels = null,
+            bool tryDetectHardwareAcceleration = false)
         {
             ExecutablesPath = directoryWithFFmpegAndFFprobe == null ? null : new DirectoryInfo(directoryWithFFmpegAndFFprobe).FullName;
             FilterMethod = filteringMethod;
             FormatProvider = formatprovider ?? CultureInfo.CurrentCulture;
             _ffmpegExecutableName = ffmpegExeutableName;
             _ffprobeExecutableName = ffprobeExecutableName;
+            LocalizationManager.Initialize(language);
+            if (maxOutputVideoFrameRate != null || maxOutputAudioSampleRate != null || maxOutputAudioChannels != null)
+            {
+                SetGlobalOutputLimits(maxOutputVideoFrameRate, maxOutputAudioSampleRate, maxOutputAudioChannels);
+            }
+
+            if (tryDetectHardwareAcceleration)
+            {
+                string ffmpegPath = null;
+                if (ExecutablesPath != null)
+                {
+                    ffmpegPath = Path.Combine(ExecutablesPath, ffmpegExeutableName);
+                    if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows) &&
+                        !ffmpegPath.EndsWith(".exe", StringComparison.OrdinalIgnoreCase) &&
+                        !File.Exists(ffmpegPath))
+                    {
+                        ffmpegPath = Path.Combine(ExecutablesPath, ffmpegExeutableName + ".exe");
+                    }
+                }
+
+                RefreshAutoHardwareAccelerationProfile(ffmpegPath != null && File.Exists(ffmpegPath) ? ffmpegPath : null, true);
+            }
+        }
+
+        /// <summary>
+        ///     Задаёт глобальные лимиты параметров выхода (без смены пути к FFmpeg). Null сбрасывает соответствующий лимит.
+        /// </summary>
+        /// <param name="maxOutputVideoFrameRate">Максимальная частота кадров видео.</param>
+        /// <param name="maxOutputAudioSampleRate">Максимальная частота дискретизации аудио (Гц).</param>
+        /// <param name="maxOutputAudioChannels">Максимальное число каналов аудио.</param>
+        public static void SetGlobalOutputLimits(double? maxOutputVideoFrameRate = null, int? maxOutputAudioSampleRate = null, int? maxOutputAudioChannels = null)
+        {
+            if (maxOutputVideoFrameRate.HasValue && maxOutputVideoFrameRate.Value <= 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(maxOutputVideoFrameRate));
+            }
+
+            if (maxOutputAudioSampleRate.HasValue && maxOutputAudioSampleRate.Value <= 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(maxOutputAudioSampleRate));
+            }
+
+            if (maxOutputAudioChannels.HasValue && maxOutputAudioChannels.Value <= 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(maxOutputAudioChannels));
+            }
+
+            MaxOutputVideoFrameRate = maxOutputVideoFrameRate;
+            MaxOutputAudioSampleRate = maxOutputAudioSampleRate;
+            MaxOutputAudioChannels = maxOutputAudioChannels;
+        }
+
+        /// <summary>
+        ///     Устанавливает язык локализации сообщений исключений.
+        /// </summary>
+        /// <param name="language">Язык локализации.</param>
+        public static void SetLocalizationLanguage(LocalizationLanguage language = LocalizationLanguage.Russian)
+        {
+            LocalizationManager.Initialize(language);
         }
 
         /// <summary>
@@ -161,6 +236,19 @@ namespace Xabe.FFmpeg
             int? sampleRate = null)
         {
             return await Conversion.ExtractAudio(inputPath, outputPath, audioCodec, bitrate, sampleRate);
+        }
+
+        /// <summary>
+        ///     Быстро сохраняет первую аудиодорожку входа в WAV (PCM s16le). Глобальные лимиты выхода не применяются.
+        /// </summary>
+        /// <param name="inputPath">Аудио- или видеофайл (берётся первая аудиодорожка).</param>
+        /// <param name="outputPath">Путь к .wav.</param>
+        /// <param name="sampleRate">Частота дискретизации (по умолчанию 16000 Гц).</param>
+        /// <param name="channels">Число каналов (по умолчанию 1 — моно).</param>
+        /// <returns>Объект конвертации.</returns>
+        public Task<IConversion> ConvertToWav(string inputPath, string outputPath, int sampleRate = 16000, int channels = 1)
+        {
+            return Conversion.ConvertToWavFastAsync(inputPath, outputPath, sampleRate, channels);
         }
 
         /// <summary>
@@ -336,6 +424,94 @@ namespace Xabe.FFmpeg
         }
 
         /// <summary>
+        ///     Вшивает в видео текстовую подпись у правого края кадра (drawtext).
+        /// </summary>
+        /// <param name="inputPath">Входной путь к видео.</param>
+        /// <param name="outputPath">Выходной файл.</param>
+        /// <param name="text">Текст подписи.</param>
+        /// <param name="fontColor">Цвет шрифта.</param>
+        /// <param name="fontSize">Размер шрифта.</param>
+        /// <param name="marginRight">Отступ справа в пикселях.</param>
+        /// <param name="marginY">Отступ сверху или снизу (см. <see cref="DrawTextVerticalAlign"/>).</param>
+        /// <param name="verticalAlign">Вертикальное положение у правого края.</param>
+        /// <param name="fontFilePath">Необязательный путь к шрифту (TTF/OTF).</param>
+        /// <returns>Результат конвертации.</returns>
+        public async Task<IConversion> BurnRightSideTextLabel(
+            string inputPath,
+            string outputPath,
+            string text,
+            string fontColor = "white",
+            int fontSize = 24,
+            int marginRight = 20,
+            int marginY = 16,
+            DrawTextVerticalAlign verticalAlign = DrawTextVerticalAlign.Center,
+            string fontFilePath = null)
+        {
+            return await Conversion.BurnRightSideTextLabelAsync(inputPath, outputPath, text, fontColor, fontSize, marginRight, marginY, verticalAlign, fontFilePath);
+        }
+
+        /// <summary>
+        ///     Вшивает у правого края динамическое время: по умолчанию по PTS (ЧЧ:ММ:СС), опционально локальное время системы.
+        ///     Для таймкода с полем «кадр» и заданным fps используйте <see cref="BurnRightSideSmpteTimecode"/>.
+        /// </summary>
+        /// <param name="inputPath">Входной путь к видео.</param>
+        /// <param name="outputPath">Выходной файл.</param>
+        /// <param name="prefix">Текст перед временем.</param>
+        /// <param name="suffix">Текст после времени.</param>
+        /// <param name="useLocalWallClock">True — %{localtime}, false — %{pts:hms}.</param>
+        /// <param name="fontColor">Цвет шрифта.</param>
+        /// <param name="fontSize">Размер шрифта.</param>
+        /// <param name="marginRight">Отступ справа.</param>
+        /// <param name="marginY">Отступ сверху/снизу.</param>
+        /// <param name="verticalAlign">Вертикальное выравнивание.</param>
+        /// <param name="fontFilePath">Необязательный путь к шрифту.</param>
+        /// <returns>Результат конвертации.</returns>
+        public async Task<IConversion> BurnRightSidePtsTimeLabel(
+            string inputPath,
+            string outputPath,
+            string prefix = null,
+            string suffix = null,
+            bool useLocalWallClock = false,
+            string fontColor = "white",
+            int fontSize = 24,
+            int marginRight = 20,
+            int marginY = 16,
+            DrawTextVerticalAlign verticalAlign = DrawTextVerticalAlign.Center,
+            string fontFilePath = null)
+        {
+            return await Conversion.BurnRightSidePtsTimeLabelAsync(inputPath, outputPath, prefix, suffix, useLocalWallClock, fontColor, fontSize, marginRight, marginY, verticalAlign, fontFilePath);
+        }
+
+        /// <summary>
+        ///     Вшивает у правого края таймкод в стиле SMPTE (drawtext timecode/rate): поля ЧЧ:ММ:СС:кадр с заданным fps.
+        /// </summary>
+        /// <param name="inputPath">Входной путь к видео.</param>
+        /// <param name="outputPath">Выходной файл.</param>
+        /// <param name="startTimecode">Начальное значение (например 00:00:00:00).</param>
+        /// <param name="frameRate">Частота кадров (25, 29.97 и т.д.).</param>
+        /// <param name="fontColor">Цвет шрифта.</param>
+        /// <param name="fontSize">Размер шрифта.</param>
+        /// <param name="marginRight">Отступ справа.</param>
+        /// <param name="marginY">Отступ сверху/снизу.</param>
+        /// <param name="verticalAlign">Вертикальное выравнивание.</param>
+        /// <param name="fontFilePath">Необязательный путь к шрифту.</param>
+        /// <returns>Результат конвертации.</returns>
+        public async Task<IConversion> BurnRightSideSmpteTimecode(
+            string inputPath,
+            string outputPath,
+            string startTimecode = "00:00:00:00",
+            double frameRate = 25,
+            string fontColor = "white",
+            int fontSize = 24,
+            int marginRight = 20,
+            int marginY = 16,
+            DrawTextVerticalAlign verticalAlign = DrawTextVerticalAlign.Center,
+            string fontFilePath = null)
+        {
+            return await Conversion.BurnRightSideSmpteTimecodeAsync(inputPath, outputPath, startTimecode, frameRate, fontColor, fontSize, marginRight, marginY, verticalAlign, fontFilePath);
+        }
+
+        /// <summary>
         ///     Извлекает видео из файла
         /// </summary>
         /// <param name="inputPath">Входной путь</param>
@@ -447,6 +623,18 @@ namespace Xabe.FFmpeg
         }
 
         /// <summary>
+        ///     Транскодирует файл с кодеками по умолчанию (<see cref="FFmpeg.DefaultTranscodeVideoCodec"/>, <see cref="FFmpeg.DefaultTranscodeAudioCodec"/>, mov_text для субтитров).
+        /// </summary>
+        /// <param name="inputFilePath">Путь к входному файлу.</param>
+        /// <param name="outputFilePath">Путь к выходному файлу.</param>
+        /// <param name="keepSubtitles">Сохранять ли субтитры.</param>
+        /// <returns>Объект IConversion.</returns>
+        public async Task<IConversion> Transcode(string inputFilePath, string outputFilePath, bool keepSubtitles = false)
+        {
+            return await Conversion.TranscodeAsync(inputFilePath, outputFilePath, FFmpeg.DefaultTranscodeVideoCodec, FFmpeg.DefaultTranscodeAudioCodec, SubtitleCodec.mov_text, keepSubtitles);
+        }
+
+        /// <summary>
         /// Генерирует визуализацию аудиопотока с использованием фильтра 'showfreqs'
         /// </summary>
         /// <param name="inputPath">Путь к входному файлу, содержащему аудиопоток для визуализации</param>
@@ -482,9 +670,9 @@ namespace Xabe.FFmpeg
         /// </summary>
         /// <param name="rtspServerUri">Uri RTSP сервера в формате: rtsp://127.0.0.1:8554/name</param>
         /// <returns>Объект IConversion</returns>
-        public async Task<IConversion> SendDesktopToRtspServer(Uri rtspServerUri)
+        public Task<IConversion> SendDesktopToRtspServer(Uri rtspServerUri)
         {
-            return Conversion.SendDesktopToRtspServer(rtspServerUri);
+            return Task.FromResult(Conversion.SendDesktopToRtspServer(rtspServerUri));
         }
     }
 }

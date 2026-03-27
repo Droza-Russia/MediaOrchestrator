@@ -89,6 +89,78 @@ namespace Xabe.FFmpeg
         IVideoStream SetWatermark(string imagePath, Position position);
 
         /// <summary>
+        ///     Накладывает на видео текст у правого края кадра (фильтр drawtext).
+        /// </summary>
+        /// <param name="text">Текст подписи.</param>
+        /// <param name="fontColor">Цвет шрифта (например white, yellow или 0xFFFFFF).</param>
+        /// <param name="fontSize">Размер шрифта.</param>
+        /// <param name="marginRight">Отступ от правого края в пикселях.</param>
+        /// <param name="marginY">
+        ///     Для <see cref="DrawTextVerticalAlign.Top"/> — отступ сверху; для <see cref="DrawTextVerticalAlign.Bottom"/> — отступ снизу;
+        ///     для <see cref="DrawTextVerticalAlign.Center"/> не используется.
+        /// </param>
+        /// <param name="verticalAlign">Вертикальное положение у правой кромки.</param>
+        /// <param name="fontFilePath">Необязательный путь к TTF/OTF (если не задан — шрифт по умолчанию FFmpeg).</param>
+        /// <returns>Текущий видеопоток.</returns>
+        IVideoStream SetRightSideDrawText(
+            string text,
+            string fontColor = "white",
+            int fontSize = 24,
+            int marginRight = 20,
+            int marginY = 16,
+            DrawTextVerticalAlign verticalAlign = DrawTextVerticalAlign.Center,
+            string fontFilePath = null);
+
+        /// <summary>
+        ///     Накладывает у правого края динамическое время по меткам PTS в формате ЧЧ:ММ:СС (выражение drawtext %{pts:hms}).
+        ///     Для таймкода с фиксированным fps и полем «кадр» (SMPTE-подобный) используйте <see cref="SetRightSideSmpteTimecodeOverlay"/>.
+        /// </summary>
+        /// <param name="prefix">Необязательный префикс перед временем.</param>
+        /// <param name="suffix">Необязательный суффикс после времени.</param>
+        /// <param name="useLocalWallClock">
+        ///     Если true — подставляется %{localtime} (локальное время системы при кодировании), иначе — время по PTS.
+        /// </param>
+        /// <param name="fontColor">Цвет шрифта.</param>
+        /// <param name="fontSize">Размер шрифта.</param>
+        /// <param name="marginRight">Отступ от правого края в пикселях.</param>
+        /// <param name="marginY">Отступ сверху/снизу (см. <see cref="SetRightSideDrawText"/>).</param>
+        /// <param name="verticalAlign">Вертикальное выравнивание.</param>
+        /// <param name="fontFilePath">Необязательный путь к шрифту.</param>
+        /// <returns>Текущий видеопоток.</returns>
+        IVideoStream SetRightSidePtsTimeOverlay(
+            string prefix = null,
+            string suffix = null,
+            bool useLocalWallClock = false,
+            string fontColor = "white",
+            int fontSize = 24,
+            int marginRight = 20,
+            int marginY = 16,
+            DrawTextVerticalAlign verticalAlign = DrawTextVerticalAlign.Center,
+            string fontFilePath = null);
+
+        /// <summary>
+        ///     Накладывает у правого края SMPTE-подобный таймкод (опции drawtext timecode/rate), считая от заданного старта и с заданным fps.
+        /// </summary>
+        /// <param name="startTimecode">Начальное значение, обычно HH:MM:SS:ff (четверка полей через двоеточие).</param>
+        /// <param name="frameRate">Частота кадров для инкремента кадрового поля (например 25 или 29.97).</param>
+        /// <param name="fontColor">Цвет шрифта.</param>
+        /// <param name="fontSize">Размер шрифта.</param>
+        /// <param name="marginRight">Отступ от правого края.</param>
+        /// <param name="marginY">Отступ сверху/снизу.</param>
+        /// <param name="verticalAlign">Вертикальное выравнивание.</param>
+        /// <param name="fontFilePath">Необязательный путь к шрифту.</param>
+        /// <returns>Текущий видеопоток.</returns>
+        IVideoStream SetRightSideSmpteTimecodeOverlay(
+            string startTimecode = "00:00:00:00",
+            double frameRate = 25,
+            string fontColor = "white",
+            int fontSize = 24,
+            int marginRight = 20,
+            int marginY = 16,
+            DrawTextVerticalAlign verticalAlign = DrawTextVerticalAlign.Center,
+            string fontFilePath = null);
+
+        /// <summary>
         ///     Обращает видео
         /// </summary>
         /// <returns>IVideoStream</returns>
