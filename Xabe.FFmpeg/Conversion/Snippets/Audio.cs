@@ -93,11 +93,11 @@ namespace Xabe.FFmpeg
             MediaFileSignatureValidator.ValidateOrThrow(inputPath);
             var conversion = New(suppressGlobalOutputLimits: true)
                 .AddParameter($"-i {inputPath.Escape()}", ParameterPosition.PreInput)
-                .AddParameter("-map 0:a:0", ParameterPosition.PostInput)
-                .AddParameter("-c:a pcm_s16le", ParameterPosition.PostInput)
-                .AddParameter($"-ar {sampleRate}", ParameterPosition.PostInput)
-                .AddParameter($"-ac {channels}", ParameterPosition.PostInput)
-                .AddParameter("-f wav", ParameterPosition.PostInput)
+                .MapAudioStream()
+                .SetAudioCodec(AudioCodec.pcm_s16le)
+                .SetAudioSampleRate(sampleRate)
+                .SetAudioChannels(channels)
+                .AddParameter(FFmpegContainerArguments.SetOutputFormat(Format.wav), ParameterPosition.PostInput)
                 .SetOutput(outputPath);
 
             return Task.FromResult<IConversion>(conversion);
@@ -144,13 +144,12 @@ namespace Xabe.FFmpeg
             IMediaInfo inputInfo = await FFmpeg.GetMediaInfo(inputPath, cancellationToken);
             IAudioStream audioStream = inputInfo.AudioStreams.FirstOrDefault();
             IVideoStream videoStream = inputInfo.VideoStreams.FirstOrDefault();
-
-            var filter = $"\"[0:a]showfreqs=mode={mode}:fscale={frequencyScale}:ascale={amplitudeScale},format={pixelFormat},scale={size.ToFFmpegFormat()} [v]\"";
+            var graph = FFmpegFilterGraphs.BuildAudioVisualisation(mode, frequencyScale, amplitudeScale, pixelFormat, size);
 
             return New(suppressGlobalOutputLimits: true)
                 .AddStream(audioStream)
-                .AddParameter($"-filter_complex {filter}")
-                .AddParameter("-map [v]")
+                .UseFilterGraph(graph)
+                .MapFilterOutputs(graph.Outputs.ToArray())
                 .SetFrameRate(videoStream != null ? videoStream.Framerate : 30) // Pin framerate at the original rate or 30 fps to stop dropped or duplicated frames
                 .SetOutput(outputPath);
         }

@@ -60,7 +60,7 @@ namespace Xabe.FFmpeg
             cancellationToken.ThrowIfCancellationRequested();
             var conversion = FFmpeg.Conversions.New()
                                                .AddDesktopStream("800x600", 30, 0, 0)
-                                               .AddParameter("-tune zerolatency")
+                                               .SetTune(ConversionTune.ZeroLatency)
                                                .SetOutputFormat(Format.rtsp)
                                                .SetOutput(rtspServerUri.OriginalString);
 

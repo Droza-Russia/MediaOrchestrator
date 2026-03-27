@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using Xabe.FFmpeg.Events;
@@ -114,6 +115,13 @@ namespace Xabe.FFmpeg
         IConversion SetPreset(ConversionPreset preset);
 
         /// <summary>
+        ///     Устанавливает профиль настройки кодировщика FFmpeg (`-tune`).
+        /// </summary>
+        /// <param name="tune">Выбранный профиль.</param>
+        /// <returns>Текущий объект IConversion.</returns>
+        IConversion SetTune(ConversionTune tune);
+
+        /// <summary>
         ///     Задает формат хеша для вывода.
         /// </summary>
         /// <param name="format">Желаемый формат хеширования.</param>
@@ -168,6 +176,14 @@ namespace Xabe.FFmpeg
         /// <param name="descriptor">Выбранный дескриптор pipe.</param>
         /// <returns>Текущий объект IConversion.</returns>
         IConversion PipeOutput(PipeDescriptor descriptor = PipeDescriptor.stdout);
+
+        /// <summary>
+        ///     Передаёт входной поток в FFmpeg через pipe.
+        /// </summary>
+        /// <param name="inputStream">Поток, из которого читаются данные.</param>
+        /// <param name="inputSpecifier">Спецификатор pipe (по умолчанию pipe:0).</param>
+        /// <returns>Текущий объект IConversion.</returns>
+        IConversion PipeInput(Stream inputStream, string inputSpecifier = "pipe:0");
 
         /// <summary>
         ///     Определяет поведение перезаписи выходного файла.
@@ -288,6 +304,143 @@ namespace Xabe.FFmpeg
         /// <param name="parameterPosition">Позиция параметра относительно входа.</param>
         /// <returns>Текущий объект IConversion.</returns>
         IConversion AddParameter(string parameter, ParameterPosition parameterPosition = ParameterPosition.PostInput);
+
+        /// <summary>
+        ///     Отключает видеовывод (-vn).
+        /// </summary>
+        /// <returns>Текущий объект IConversion.</returns>
+        IConversion DisableVideo();
+
+        /// <summary>
+        ///     Сопоставляет все входные потоки (`-map 0`).
+        /// </summary>
+        /// <returns>Текущий объект IConversion.</returns>
+        IConversion MapAllStreams();
+
+        /// <summary>
+        ///     Сопоставляет все аудиопотоки входа (`-map 0:a?`).
+        /// </summary>
+        /// <returns>Текущий объект IConversion.</returns>
+        IConversion MapAudioStreams();
+
+        /// <summary>
+        ///     Сопоставляет аудиопоток входа по индексам.
+        /// </summary>
+        /// <param name="inputIndex">Индекс входа.</param>
+        /// <param name="audioStreamIndex">Индекс аудиопотока.</param>
+        /// <returns>Текущий объект IConversion.</returns>
+        IConversion MapAudioStream(int inputIndex = 0, int audioStreamIndex = 0);
+
+        /// <summary>
+        ///     Включает копирование всех кодеков (`-c copy`).
+        /// </summary>
+        /// <returns>Текущий объект IConversion.</returns>
+        IConversion CopyAllCodecs();
+
+        /// <summary>
+        ///     Включает копирование аудиокодека (`-c:a copy`).
+        /// </summary>
+        /// <returns>Текущий объект IConversion.</returns>
+        IConversion CopyAudioCodec();
+
+        /// <summary>
+        ///     Устанавливает аудиокодек выхода.
+        /// </summary>
+        /// <param name="codec">Кодек аудио.</param>
+        /// <returns>Текущий объект IConversion.</returns>
+        IConversion SetAudioCodec(AudioCodec codec);
+
+        /// <summary>
+        ///     Устанавливает частоту дискретизации аудио.
+        /// </summary>
+        /// <param name="sampleRate">Частота дискретизации в Гц.</param>
+        /// <returns>Текущий объект IConversion.</returns>
+        IConversion SetAudioSampleRate(int sampleRate);
+
+        /// <summary>
+        ///     Устанавливает число аудиоканалов.
+        /// </summary>
+        /// <param name="channels">Количество каналов.</param>
+        /// <returns>Текущий объект IConversion.</returns>
+        IConversion SetAudioChannels(int channels);
+
+        /// <summary>
+        ///     Отключает субтитры в выходном файле (-sn).
+        /// </summary>
+        /// <returns>Текущий объект IConversion.</returns>
+        IConversion DisableSubtitles();
+
+        /// <summary>
+        ///     Указывает входной файл напрямую как параметр `-i`.
+        /// </summary>
+        /// <param name="inputPath">Путь или URI ко входу.</param>
+        /// <returns>Текущий объект IConversion.</returns>
+        IConversion AddInput(string inputPath);
+
+        /// <summary>
+        ///     Добавляет типизированный источник входа.
+        /// </summary>
+        /// <param name="inputSource">Описание входного источника.</param>
+        /// <returns>Текущий объект IConversion.</returns>
+        IConversion AddInput(InputSource inputSource);
+
+        /// <summary>
+        ///     Включает перечисление доступных устройств захвата (`-list_devices true`).
+        /// </summary>
+        /// <returns>Текущий объект IConversion.</returns>
+        IConversion EnableDeviceListing();
+
+        /// <summary>
+        ///     Добавляет входной источник lavfi.
+        /// </summary>
+        /// <param name="filterGraph">Граф фильтра для lavfi.</param>
+        /// <param name="inputDuration">Необязательная длительность входа.</param>
+        /// <returns>Текущий объект IConversion.</returns>
+        IConversion AddLavfiInput(string filterGraph, TimeSpan? inputDuration = null);
+
+        /// <summary>
+        ///     Добавляет `-filter_complex` с указанным графом.
+        /// </summary>
+        /// <param name="filterGraph">Тело графа фильтров.</param>
+        /// <returns>Текущий объект IConversion.</returns>
+        [Obsolete("Use UseFilterGraph(FilterGraph) to avoid raw string filter graphs.", false)]
+        IConversion SetFilterComplex(string filterGraph);
+
+        /// <summary>
+        ///     Добавляет `-filter_complex` из типизированного графа.
+        /// </summary>
+        /// <param name="filterGraph">Граф фильтров.</param>
+        /// <returns>Текущий объект IConversion.</returns>
+        IConversion UseFilterGraph(FilterGraph filterGraph);
+
+        /// <summary>
+        ///     Сопоставляет именованный выход фильтра.
+        /// </summary>
+        /// <param name="label">Метка выхода, например `v`.</param>
+        /// <returns>Текущий объект IConversion.</returns>
+        [Obsolete("Use MapFilterOutput(FilterLabel) to avoid raw string filter labels.", false)]
+        IConversion MapFilterOutput(string label);
+
+        /// <summary>
+        ///     Сопоставляет выход типизированного фильтра.
+        /// </summary>
+        /// <param name="label">Метка выхода фильтра.</param>
+        /// <returns>Текущий объект IConversion.</returns>
+        IConversion MapFilterOutput(FilterLabel label);
+
+        /// <summary>
+        ///     Сопоставляет несколько типизированных выходов фильтра.
+        /// </summary>
+        /// <param name="labels">Метки выходов фильтра.</param>
+        /// <returns>Текущий объект IConversion.</returns>
+        IConversion MapFilterOutputs(params FilterLabel[] labels);
+
+        /// <summary>
+        ///     Устанавливает aspect ratio выхода.
+        /// </summary>
+        /// <param name="ratio">Строковое значение aspect ratio.</param>
+        /// <returns>Текущий объект IConversion.</returns>
+        IConversion SetAspectRatio(string ratio);
 
         /// <summary>
         ///     Добавляет один или несколько потоков в выходной файл.

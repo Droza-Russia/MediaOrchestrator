@@ -13,23 +13,31 @@
     <Company>Xabe Tomasz Żmuda feat FTSoft</Company>
     <Description>Cross-platform wrapper for FFmpeg with MacOS Silicon FFMpeg Fix</Description>
     <Copyright>Copyright 2017-2025 (c) Xabe Tomasz Zmuda.</Copyright>
-    <PackageLicenseUrl>https://ffmpeg.xabe.net/license.html</PackageLicenseUrl>
+    <PackageLicenseFile>LICENSE.md</PackageLicenseFile>
     <PackageProjectUrl>https://ffmpeg.xabe.net/index.html</PackageProjectUrl>
     <RepositoryUrl>https://github.com/tomaszzmuda/Xabe.FFmpeg</RepositoryUrl>
     <RepositoryType>Dependency</RepositoryType>
     <PackageTags>media converter audio ffmpeg wrapper core video encode decode</PackageTags>
     <PackageReleaseNotes></PackageReleaseNotes>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
     <SignAssembly>false</SignAssembly>
     <DelaySign>false</DelaySign>
     <PackageRequireLicenseAcceptance>true</PackageRequireLicenseAcceptance>
     
-    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+    <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
   </PropertyGroup>
 
   <ItemGroup>
     <PackageReference Include="System.Text.Json" Version="[9.0.0,)">
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="..\LICENSE.md" Pack="true" PackagePath="\" Link="LICENSE.md" />
+    <None Include="..\README.md" Pack="true" PackagePath="\" Link="README.md" />
+    <Compile Remove="Examples/**/*.cs" />
+    <None Include="Examples/**/*.cs" />
   </ItemGroup>
 
   <PropertyGroup>

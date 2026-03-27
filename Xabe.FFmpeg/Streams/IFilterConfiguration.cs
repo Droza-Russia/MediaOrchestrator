@@ -13,6 +13,11 @@ namespace Xabe.FFmpeg
         string FilterType { get; }
 
         /// <summary>
+        ///     Тип блока фильтра в типизированном виде.
+        /// </summary>
+        FilterBlockType FilterBlockType { get; }
+
+        /// <summary>
         ///     Номер потока для фильтрации.
         /// </summary>
         int StreamNumber { get; }

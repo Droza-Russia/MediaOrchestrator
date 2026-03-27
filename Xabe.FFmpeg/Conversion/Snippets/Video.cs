@@ -261,29 +261,19 @@ namespace Xabe.FFmpeg
                 IMediaInfo mediaInfo = await FFmpeg.GetMediaInfo(inputVideo, cancellationToken);
 
                 mediaInfos.Add(mediaInfo);
-                conversion.AddParameter($"-i {inputVideo.Escape()} ");
+                conversion.AddInput(inputVideo);
             }
 
-            conversion.AddParameter($"-t 1 -f lavfi -i anullsrc=r=48000:cl=stereo");
-            conversion.AddParameter($"-filter_complex \"");
+            conversion.AddInput(InputSource.Lavfi("anullsrc=r=48000:cl=stereo", TimeSpan.FromSeconds(1)));
 
             IVideoStream maxResolutionMedia = mediaInfos.Select(x => x.VideoStreams.OrderByDescending(z => z.Width)
                                                                       .First())
                                                         .OrderByDescending(x => x.Width)
                                                         .First();
-            for (var i = 0; i < mediaInfos.Count; i++)
-            {
-                conversion.AddParameter(
-                    $"[{i}:v]scale={maxResolutionMedia.Width}:{maxResolutionMedia.Height},setdar={maxResolutionMedia.Ratio},setpts=PTS-STARTPTS[v{i}]; ");
-            }
-
-            for (var i = 0; i < mediaInfos.Count; i++)
-            {
-                conversion.AddParameter(!mediaInfos[i].AudioStreams.Any() ? $"[v{i}]" : $"[v{i}][{i}:a]");
-            }
-
-            conversion.AddParameter($"concat=n={inputVideos.Length}:v=1:a=1 [v] [a]\" -map \"[v]\" -map \"[a]\"");
-            conversion.AddParameter($"-aspect {maxResolutionMedia.Ratio}");
+            var graph = FFmpegFilterGraphs.BuildConcatGraph(mediaInfos, maxResolutionMedia);
+            conversion.UseFilterGraph(graph);
+            conversion.MapFilterOutputs(graph.Outputs.ToArray());
+            conversion.SetAspectRatio(maxResolutionMedia.Ratio);
             return conversion.SetOutput(output);
         }
 

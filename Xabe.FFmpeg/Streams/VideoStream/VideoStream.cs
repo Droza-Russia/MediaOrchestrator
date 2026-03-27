@@ -11,9 +11,10 @@ namespace Xabe.FFmpeg
     public class VideoStream : IVideoStream, IFilterable
     {
         private readonly ParametersList<ConversionParameter> _parameters = new ParametersList<ConversionParameter>();
-        private readonly Dictionary<string, string> _videoFilters = new Dictionary<string, string>();
+        private readonly Dictionary<StreamFilterName, string> _videoFilters = new Dictionary<StreamFilterName, string>();
         private string _watermarkSource;
         private bool _outputUsesCopyCodec;
+        private string _selectedOutputCodec;
 
         internal VideoStream()
         {
@@ -27,9 +28,9 @@ namespace Xabe.FFmpeg
             {
                 yield return new FilterConfiguration
                 {
-                    FilterType = "-filter_complex",
+                    FilterBlockType = FilterBlockType.ComplexFilter,
                     StreamNumber = Index,
-                    Filters = _videoFilters
+                    TypedFilters = _videoFilters
                 };
             }
         }
@@ -92,7 +93,7 @@ namespace Xabe.FFmpeg
         /// <inheritdoc />
         public IVideoStream ChangeSpeed(double multiplication)
         {
-            _videoFilters["setpts"] = GetVideoSpeedFilter(multiplication);
+            _videoFilters[StreamFilterName.SetPts] = GetVideoSpeedFilter(multiplication);
             return this;
         }
 
@@ -110,16 +111,16 @@ namespace Xabe.FFmpeg
         /// <inheritdoc />
         public IVideoStream Rotate(RotateDegrees rotateDegrees)
         {
-            var rotate = rotateDegrees == RotateDegrees.Invert ? "-vf \"transpose=2,transpose=2\" " : $"-vf \"transpose={(int)rotateDegrees}\" ";
-            _parameters.Add(new ConversionParameter(rotate));
+            _parameters.Add(new ConversionParameter(FFmpegVideoStreamArguments.SetVideoFilter(
+                FFmpegVideoFilterExpressions.Rotate(rotateDegrees))));
             return this;
         }
 
         /// <inheritdoc />
         public IVideoStream Pad(int width, int height)
         {
-            var vfParameter = $"-vf \"scale={width}:{height}:force_original_aspect_ratio=decrease,pad={width}:{height}:-1:-1:color=black\"";
-            _parameters.Add(new ConversionParameter(vfParameter));
+            _parameters.Add(new ConversionParameter(FFmpegVideoStreamArguments.SetVideoFilter(
+                FFmpegVideoFilterExpressions.PadToFit(width, height))));
             return this;
         }
 
@@ -138,13 +139,15 @@ namespace Xabe.FFmpeg
 
         internal bool IsOutputCodecCopy => _outputUsesCopyCodec;
 
+        internal string SelectedOutputCodec => _selectedOutputCodec;
+
         /// <inheritdoc />
         public IVideoStream SetLoop(int count, int delay)
         {
-            _parameters.Add(new ConversionParameter($"-loop {count}"));
+            _parameters.Add(new ConversionParameter(FFmpegVideoStreamArguments.SetLoop(count)));
             if (delay > 0)
             {
-                _parameters.Add(new ConversionParameter($"-final_delay {delay / 100}"));
+                _parameters.Add(new ConversionParameter(FFmpegVideoStreamArguments.SetFinalDelay(delay / 100)));
             }
 
             return this;
@@ -164,46 +167,30 @@ namespace Xabe.FFmpeg
 
         private IVideoStream BuildSubtitleFilter(string subtitlePath, VideoSize? originalSize, string encode, string style)
         {
-            var filter = $"'{subtitlePath}'".Replace("\\", "\\\\")
-                                               .Replace(":", "\\:");
-            if (!string.IsNullOrEmpty(encode))
-            {
-                filter += $":charenc={encode}";
-            }
-
-            if (!string.IsNullOrEmpty(style))
-            {
-                filter += $":force_style=\'{style}\'";
-            }
-
-            if (originalSize != null)
-            {
-                filter += $":original_size={originalSize.Value.ToFFmpegFormat()}";
-            }
-
-            _videoFilters.Add("subtitles", filter);
+            _videoFilters[StreamFilterName.Subtitles] = FFmpegVideoFilterExpressions.BuildSubtitles(subtitlePath, originalSize, encode, style);
             return this;
         }
 
         /// <inheritdoc />
         public IVideoStream Reverse()
         {
-            _parameters.Add(new ConversionParameter($"-vf reverse"));
+            _parameters.Add(new ConversionParameter(FFmpegVideoStreamArguments.SetVideoFilter(
+                FFmpegVideoFilterExpressions.Reverse())));
             return this;
         }
 
         /// <inheritdoc />
         public IVideoStream SetBitrate(long bitrate)
         {
-            _parameters.Add(new ConversionParameter($"-b:v {bitrate}"));
+            _parameters.Add(new ConversionParameter(FFmpegVideoStreamArguments.SetBitrate(bitrate)));
             return this;
         }
 
         public IVideoStream SetBitrate(long minBitrate, long maxBitrate, long bufferSize)
         {
-            _parameters.Add(new ConversionParameter($"-b:v {minBitrate}"));
-            _parameters.Add(new ConversionParameter($"-maxrate {maxBitrate}"));
-            _parameters.Add(new ConversionParameter($"-bufsize {bufferSize}"));
+            _parameters.Add(new ConversionParameter(FFmpegVideoStreamArguments.SetBitrate(minBitrate)));
+            _parameters.Add(new ConversionParameter(FFmpegVideoStreamArguments.SetMaxRate(maxBitrate)));
+            _parameters.Add(new ConversionParameter(FFmpegVideoStreamArguments.SetBufferSize(bufferSize)));
             return this;
         }
 
@@ -222,28 +209,28 @@ namespace Xabe.FFmpeg
                 input = "+" + input;
             }
 
-            _parameters.Add(new ConversionParameter($"-flags {input}"));
+            _parameters.Add(new ConversionParameter(FFmpegVideoStreamArguments.SetFlags(input)));
             return this;
         }
 
         /// <inheritdoc />
         public IVideoStream SetFramerate(double framerate)
         {
-            _parameters.Add(new ConversionParameter($"-r {framerate.ToFFmpegFormat(3)}"));
+            _parameters.Add(new ConversionParameter(FFmpegVideoStreamArguments.SetFrameRate(framerate)));
             return this;
         }
 
         /// <inheritdoc />
         public IVideoStream SetSize(VideoSize size)
         {
-            _parameters.Add(new ConversionParameter($"-s {size.ToFFmpegFormat()}"));
+            _parameters.Add(new ConversionParameter(FFmpegVideoStreamArguments.SetSize(size)));
             return this;
         }
 
         /// <inheritdoc />
         public IVideoStream SetSize(int width, int height)
         {
-            _parameters.Add(new ConversionParameter($"-s {width}x{height}"));
+            _parameters.Add(new ConversionParameter(FFmpegVideoStreamArguments.SetSize(width, height)));
             return this;
         }
 
@@ -271,7 +258,8 @@ namespace Xabe.FFmpeg
         public IVideoStream SetCodec(string codec)
         {
             _outputUsesCopyCodec = string.Equals(codec, "copy", StringComparison.OrdinalIgnoreCase);
-            _parameters.Add(new ConversionParameter($"-c:v {codec}"));
+            _selectedOutputCodec = codec;
+            _parameters.Add(new ConversionParameter(FFmpegVideoStreamArguments.SetCodec(codec)));
             return this;
         }
 
@@ -284,7 +272,7 @@ namespace Xabe.FFmpeg
         /// <inheritdoc />
         public IVideoStream SetBitstreamFilter(string filter)
         {
-            _parameters.Add(new ConversionParameter($"-bsf:v {filter}"));
+            _parameters.Add(new ConversionParameter(FFmpegVideoStreamArguments.SetBitstreamFilter(filter)));
             return this;
         }
 
@@ -298,7 +286,7 @@ namespace Xabe.FFmpeg
                     throw new ArgumentException(string.Format(ErrorMessages.SeekCannotExceedDuration, seek.TotalSeconds, Duration.TotalSeconds));
                 }
 
-                _parameters.Add(new ConversionParameter($"-ss {seek.ToFFmpeg()}", ParameterPosition.PreInput));
+                _parameters.Add(new ConversionParameter(FFmpegVideoStreamArguments.SetSeek(seek), ParameterPosition.PreInput));
             }
 
             return this;
@@ -307,7 +295,7 @@ namespace Xabe.FFmpeg
         /// <inheritdoc />
         public IVideoStream SetOutputFramesCount(int number)
         {
-            _parameters.Add(new ConversionParameter($"-frames:v {number}"));
+            _parameters.Add(new ConversionParameter(FFmpegVideoStreamArguments.SetOutputFramesCount(number)));
             return this;
         }
 
@@ -315,39 +303,7 @@ namespace Xabe.FFmpeg
         public IVideoStream SetWatermark(string imagePath, Position position)
         {
             _watermarkSource = imagePath;
-            var argument = string.Empty;
-            switch (position)
-            {
-                case Position.Bottom:
-                    argument += "(main_w-overlay_w)/2:main_h-overlay_h";
-                    break;
-                case Position.Center:
-                    argument += "x=(main_w-overlay_w)/2:y=(main_h-overlay_h)/2";
-                    break;
-                case Position.BottomLeft:
-                    argument += "5:main_h-overlay_h";
-                    break;
-                case Position.UpperLeft:
-                    argument += "5:5";
-                    break;
-                case Position.BottomRight:
-                    argument += "(main_w-overlay_w):main_h-overlay_h";
-                    break;
-                case Position.UpperRight:
-                    argument += "(main_w-overlay_w):5";
-                    break;
-                case Position.Left:
-                    argument += "5:(main_h-overlay_h)/2";
-                    break;
-                case Position.Right:
-                    argument += "(main_w-overlay_w-5):(main_h-overlay_h)/2";
-                    break;
-                case Position.Up:
-                    argument += "(main_w-overlay_w)/2:5";
-                    break;
-            }
-
-            _videoFilters["overlay"] = argument;
+            _videoFilters[StreamFilterName.Overlay] = FFmpegVideoFilterExpressions.BuildOverlayPosition(position);
             return this;
         }
 
@@ -366,8 +322,15 @@ namespace Xabe.FFmpeg
                 throw new ArgumentNullException(nameof(text));
             }
 
-            var textClause = $"text='{EscapeDrawTextQuotedContent(text)}'";
-            _videoFilters["drawtext"] = BuildDrawTextFilterBody(textClause, fontColor, fontSize, marginRight, marginY, verticalAlign, fontFilePath);
+            var textClause = FFmpegVideoFilterExpressions.BuildDrawTextClause(text);
+            _videoFilters[StreamFilterName.DrawText] = FFmpegVideoFilterExpressions.BuildDrawText(
+                textClause,
+                fontColor,
+                fontSize,
+                marginRight,
+                marginY,
+                verticalAlign,
+                fontFilePath);
             return this;
         }
 
@@ -383,21 +346,15 @@ namespace Xabe.FFmpeg
             DrawTextVerticalAlign verticalAlign = DrawTextVerticalAlign.Center,
             string fontFilePath = null)
         {
-            var inner = new StringBuilder();
-            if (!string.IsNullOrEmpty(prefix))
-            {
-                inner.Append(EscapeDrawTextQuotedContent(prefix));
-            }
-
-            inner.Append(useLocalWallClock ? "%{localtime}" : "%{pts\\:hms}");
-
-            if (!string.IsNullOrEmpty(suffix))
-            {
-                inner.Append(EscapeDrawTextQuotedContent(suffix));
-            }
-
-            var textClause = $"text='{inner}'";
-            _videoFilters["drawtext"] = BuildDrawTextFilterBody(textClause, fontColor, fontSize, marginRight, marginY, verticalAlign, fontFilePath);
+            var textClause = FFmpegVideoFilterExpressions.BuildPtsTimeClause(prefix, suffix, useLocalWallClock);
+            _videoFilters[StreamFilterName.DrawText] = FFmpegVideoFilterExpressions.BuildDrawText(
+                textClause,
+                fontColor,
+                fontSize,
+                marginRight,
+                marginY,
+                verticalAlign,
+                fontFilePath);
             return this;
         }
 
@@ -412,77 +369,23 @@ namespace Xabe.FFmpeg
             DrawTextVerticalAlign verticalAlign = DrawTextVerticalAlign.Center,
             string fontFilePath = null)
         {
-            if (frameRate <= 0)
-            {
-                throw new ArgumentOutOfRangeException(nameof(frameRate));
-            }
-
-            var tc = string.IsNullOrWhiteSpace(startTimecode) ? "00:00:00:00" : startTimecode.Trim();
-            var escapedTc = EscapeTimecodeColonsForDrawText(tc);
-            var rateStr = frameRate.ToString(CultureInfo.InvariantCulture);
-            var timecodeClause = $"timecode='{escapedTc}':rate={rateStr}";
-            _videoFilters["drawtext"] = BuildDrawTextFilterBody(timecodeClause, fontColor, fontSize, marginRight, marginY, verticalAlign, fontFilePath);
+            var timecodeClause = FFmpegVideoFilterExpressions.BuildSmpteTimecodeClause(startTimecode, frameRate);
+            _videoFilters[StreamFilterName.DrawText] = FFmpegVideoFilterExpressions.BuildDrawText(
+                timecodeClause,
+                fontColor,
+                fontSize,
+                marginRight,
+                marginY,
+                verticalAlign,
+                fontFilePath);
             return this;
-        }
-
-        private static string BuildDrawTextFilterBody(
-            string textOrTimecodeClause,
-            string fontColor,
-            int fontSize,
-            int marginRight,
-            int marginY,
-            DrawTextVerticalAlign verticalAlign,
-            string fontFilePath)
-        {
-            var x = $"w-tw-{marginRight.ToString(CultureInfo.InvariantCulture)}";
-            var y = BuildDrawTextYExpression(verticalAlign, marginY);
-            var font = BuildFontFileClause(fontFilePath);
-            return $"{textOrTimecodeClause}:fontcolor={fontColor}:fontsize={fontSize.ToString(CultureInfo.InvariantCulture)}:x={x}:y={y}{font}";
-        }
-
-        private static string BuildDrawTextYExpression(DrawTextVerticalAlign align, int marginY)
-        {
-            switch (align)
-            {
-                case DrawTextVerticalAlign.Top:
-                    return marginY.ToString(CultureInfo.InvariantCulture);
-                case DrawTextVerticalAlign.Bottom:
-                    return $"h-th-{marginY.ToString(CultureInfo.InvariantCulture)}";
-                default:
-                    return "(h-th)/2";
-            }
-        }
-
-        private static string BuildFontFileClause(string fontFilePath)
-        {
-            if (string.IsNullOrWhiteSpace(fontFilePath))
-            {
-                return string.Empty;
-            }
-
-            var full = global::System.IO.Path.GetFullPath(fontFilePath);
-            var escaped = full.Replace("\\", "/").Replace(":", "\\:").Replace("'", "\\'");
-            return $":fontfile='{escaped}'";
-        }
-
-        private static string EscapeDrawTextQuotedContent(string text)
-        {
-            return text
-                .Replace("\\", "\\\\")
-                .Replace("'", "\\'")
-                .Replace(":", "\\:");
-        }
-
-        private static string EscapeTimecodeColonsForDrawText(string timecode)
-        {
-            return timecode.Replace(":", "\\:").Replace("'", "\\'");
         }
 
         /// <inheritdoc />
         public IVideoStream Split(TimeSpan startTime, TimeSpan duration)
         {
-            _parameters.Add(new ConversionParameter($"-ss {startTime.ToFFmpeg()}"));
-            _parameters.Add(new ConversionParameter($"-t {duration.ToFFmpeg()}"));
+            _parameters.Add(new ConversionParameter(FFmpegVideoStreamArguments.SetSeek(startTime)));
+            _parameters.Add(new ConversionParameter(FFmpegVideoStreamArguments.SetDuration(duration)));
             return this;
         }
 
@@ -525,7 +428,7 @@ namespace Xabe.FFmpeg
         {
             if (format != null)
             {
-                _parameters.Add(new ConversionParameter($"-f {format}", ParameterPosition.PreInput));
+                _parameters.Add(new ConversionParameter(FFmpegVideoStreamArguments.SetInputFormat(format), ParameterPosition.PreInput));
             }
 
             return this;
@@ -541,14 +444,14 @@ namespace Xabe.FFmpeg
         /// <inheritdoc />
         public IVideoStream UseNativeInputRead(bool readInputAtNativeFrameRate)
         {
-            _parameters.Add(new ConversionParameter("-re", ParameterPosition.PreInput));
+            _parameters.Add(new ConversionParameter(FFmpegVideoStreamArguments.UseNativeInputRead(), ParameterPosition.PreInput));
             return this;
         }
 
         /// <inheritdoc />
         public IVideoStream SetStreamLoop(int loopCount)
         {
-            _parameters.Add(new ConversionParameter($"-stream_loop {loopCount}", ParameterPosition.PreInput));
+            _parameters.Add(new ConversionParameter(FFmpegVideoStreamArguments.SetStreamLoop(loopCount), ParameterPosition.PreInput));
             return this;
         }
     }

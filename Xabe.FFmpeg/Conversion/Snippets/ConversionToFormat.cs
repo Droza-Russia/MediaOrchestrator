@@ -100,15 +100,15 @@ namespace Xabe.FFmpeg
             cancellationToken.ThrowIfCancellationRequested();
             MediaFileSignatureValidator.ValidateOrThrow(inputPath);
             var conversion = New()
-                .AddParameter($"-i {inputPath.Escape()}", ParameterPosition.PreInput)
-                .AddParameter("-map 0")
-                .AddParameter("-c copy")
+                .AddInput(inputPath)
+                .MapAllStreams()
+                .CopyAllCodecs()
                 .SetOutputFormat(Format.webm)
                 .SetOutput(outputPath);
 
             if (!keepSubtitles)
             {
-                conversion.AddParameter("-sn");
+                conversion.DisableSubtitles();
             }
 
             return Task.FromResult(conversion);

@@ -44,13 +44,35 @@ namespace Xabe.FFmpeg
         internal Task<bool> RunProcess(
             string args,
             CancellationToken cancellationToken,
-            ProcessPriorityClass? priority)
+            ProcessPriorityClass? priority,
+            Stream inputStream = null)
         {
             return Task.Factory.StartNew(() =>
             {
                 _outputLog = new List<string>();
                 var pipedOutput = OnVideoDataReceived != null;
-                var process = RunProcess(args, FFmpegPath, priority, true, pipedOutput, true);
+                var process = RunProcess(args, FFmpegPath, priority, inputStream != null, pipedOutput, true);
+                Task inputCopyTask = null;
+                if (inputStream != null)
+                {
+                    inputCopyTask = Task.Run(async () =>
+                    {
+                        try
+                        {
+                            await inputStream.CopyToAsync(process.StandardInput.BaseStream, 81920, cancellationToken).ConfigureAwait(false);
+                        }
+                        finally
+                        {
+                            try
+                            {
+                                process.StandardInput.Close();
+                            }
+                            catch (InvalidOperationException)
+                            {
+                            }
+                        }
+                    }, cancellationToken);
+                }
                 var processId = process.Id;
                 using (process)
                 {
@@ -106,6 +128,7 @@ namespace Xabe.FFmpeg
                         }
 
                         EnsureProcessFullyExited(process);
+                        inputCopyTask?.GetAwaiter().GetResult();
 
                         cancellationToken.ThrowIfCancellationRequested();
                         if (_wasKilled)

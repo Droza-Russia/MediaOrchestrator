@@ -85,6 +85,11 @@ namespace Xabe.FFmpeg
 
             var deadlineUtc = DateTime.UtcNow + maxWait;
 
+            if (Directory.Exists(fullPath))
+            {
+                throw new InvalidInputException(string.Format(ErrorMessages.InputPathIsNotAFile, fullPath));
+            }
+
             while (!File.Exists(fullPath))
             {
                 cancellationToken.ThrowIfCancellationRequested();

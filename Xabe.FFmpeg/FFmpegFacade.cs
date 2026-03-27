@@ -256,6 +256,22 @@ namespace Xabe.FFmpeg
         {
             MediaInfo.ClearCache();
         }
+
+        /// <summary>
+        ///     Скачивает видео с видеохостинга (YouTube, RuTube и т.п.) через yt-dlp/youtube-dl.
+        /// </summary>
+        public static Task DownloadHostedVideoAsync(string url, string outputPath, HostedVideoDownloadSettings settings = null, CancellationToken cancellationToken = default)
+        {
+            return Conversion.DownloadHostedVideoAsync(url, outputPath, settings, cancellationToken);
+        }
+
+        /// <summary>
+        ///     Скачивает видео с видеохостинга по URI.
+        /// </summary>
+        public static Task DownloadHostedVideoAsync(Uri uri, string outputPath, HostedVideoDownloadSettings settings = null, CancellationToken cancellationToken = default)
+        {
+            return DownloadHostedVideoAsync(uri?.OriginalString ?? throw new ArgumentNullException(nameof(uri)), outputPath, settings, cancellationToken);
+        }
     }
 
     public class Conversions
@@ -668,6 +684,74 @@ namespace Xabe.FFmpeg
         public async Task<IConversion> SaveM3U8Stream(Uri uri, string outputPath, TimeSpan? duration = null, CancellationToken cancellationToken = default)
         {
             return await Conversion.SaveM3U8StreamAsync(uri, outputPath, duration, cancellationToken);
+        }
+
+        /// <summary>
+        ///     Сохраняет только аудиодорожку потока в файл (поддерживается HLS/RTSP/HTTP).
+        /// </summary>
+        /// <param name="inputPath">URI или путь к источнику.</param>
+        /// <param name="outputPath">Путь к выходному файлу.</param>
+        /// <param name="outputFormat">Опциональный формат выходного файла.</param>
+        /// <param name="cancellationToken">Токен отмены.</param>
+        public async Task<IConversion> SaveAudioStream(string inputPath, string outputPath, Format? outputFormat = null, CancellationToken cancellationToken = default)
+        {
+            return await Conversion.SaveAudioStreamAsync(inputPath, outputPath, outputFormat, cancellationToken);
+        }
+
+        /// <summary>
+        ///     Сохраняет аудиопоток по URI в файл.
+        /// </summary>
+        public Task<IConversion> SaveAudioStream(Uri inputUri, string outputPath, Format? outputFormat = null, CancellationToken cancellationToken = default)
+        {
+            return SaveAudioStream(inputUri?.OriginalString ?? throw new ArgumentNullException(nameof(inputUri)), outputPath, outputFormat, cancellationToken);
+        }
+
+        /// <summary>
+        ///     Ремуксит поток с заданного URI без перекодирования.
+        /// </summary>
+        /// <param name="inputPath">URI или путь к источнику.</param>
+        /// <param name="outputPath">Путь к выходному файлу.</param>
+        /// <param name="keepSubtitles">Сохранять ли субтитры.</param>
+        /// <param name="outputFormat">Желаемый формат вывода.</param>
+        /// <param name="cancellationToken">Токен отмены.</param>
+        /// <returns>Результат конвертации.</returns>
+        public async Task<IConversion> RemuxStream(string inputPath, string outputPath, bool keepSubtitles = false, Format? outputFormat = null, CancellationToken cancellationToken = default)
+        {
+            return await Conversion.RemuxStreamAsync(inputPath, outputPath, outputFormat, keepSubtitles, cancellationToken);
+        }
+
+        /// <summary>
+        ///     Ремуксит поток по Uri без перекодирования.
+        /// </summary>
+        /// <param name="inputUri">Источник потока.</param>
+        /// <param name="outputPath">Путь к выходному файлу.</param>
+        /// <param name="keepSubtitles">Сохранять ли субтитры.</param>
+        /// <param name="outputFormat">Желаемый формат вывода.</param>
+        /// <param name="cancellationToken">Токен отмены.</param>
+        /// <returns>Результат конвертации.</returns>
+        public Task<IConversion> RemuxStream(Uri inputUri, string outputPath, bool keepSubtitles = false, Format? outputFormat = null, CancellationToken cancellationToken = default)
+        {
+            return RemuxStream(inputUri?.OriginalString ?? throw new ArgumentNullException(nameof(inputUri)), outputPath, keepSubtitles, outputFormat, cancellationToken);
+        }
+
+        /// <summary>
+        ///     Подносит данные через stdin и ремуксит их на выход.
+        /// </summary>
+        /// <param name="inputStream">Поток stdin.</param>
+        /// <param name="outputPath">Путь к выходному файлу.</param>
+        /// <param name="outputFormat">Желаемый формат вывода.</param>
+        /// <returns>Результат конвертации.</returns>
+        public IConversion StreamFromStdin(Stream inputStream, string outputPath, Format? outputFormat = null)
+        {
+            return Conversion.StreamFromStdin(inputStream, outputPath, outputFormat);
+        }
+
+        /// <summary>
+        ///     Сохраняет только аудиодорожку из stdin за счёт подстановки map 0:a.
+        /// </summary>
+        public IConversion StreamAudioFromStdin(Stream inputStream, string outputPath, Format? outputFormat = null)
+        {
+            return Conversion.StreamAudioFromStdin(inputStream, outputPath, outputFormat);
         }
 
         /// <summary>

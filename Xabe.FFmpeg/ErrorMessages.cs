@@ -65,6 +65,22 @@ namespace Xabe.FFmpeg
                 "Insufficient disk space to complete the operation. Free some space or choose a different output path.",
                 "Nicht genug Speicherplatz auf dem Datenträger, um den Vorgang abzuschließen. Geben Sie Speicher frei oder wählen Sie einen anderen Ausgabepfad.");
 
+        internal static string HostedVideoDownloaderNotFound(string downloader)
+        {
+            return Get(
+                $"Загрузчик '{downloader}' не найден или не может быть запущен.",
+                $"Downloader '{downloader}' was not found or could not be started.",
+                $"Downloader '{downloader}' wurde nicht gefunden oder konnte nicht gestartet werden.");
+        }
+
+        internal static string HostedVideoDownloadFailed(string downloader, int exitCode)
+        {
+            return Get(
+                $"Загрузчик '{downloader}' завершился с кодом {exitCode}.",
+                $"Downloader '{downloader}' exited with code {exitCode}.",
+                $"Downloader '{downloader}' wurde mit Code {exitCode} beendet.");
+        }
+
         private static string Get(string russian, string english, string german)
         {
             switch (LocalizationManager.CurrentLanguage)
