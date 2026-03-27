@@ -30,6 +30,17 @@ namespace Xabe.FFmpeg
             Get("Неверный файл. Не удалось загрузить файл {0}", "Invalid file. Unable to load file {0}", "Ungültige Datei. Datei {0} konnte nicht geladen werden.");
         internal static string InputFileDoesNotExist =>
             Get("Входной файл {0} не существует.", "Input file {0} does not exist.", "Die Eingabedatei {0} existiert nicht.");
+        internal static string InputPathIsNotAFile =>
+            Get("Путь {0} указывает на каталог или не является обычным файлом.", "Path {0} refers to a directory or is not a regular file.", "Pfad {0} verweist auf ein Verzeichnis oder ist keine reguläre Datei.");
+        internal static string MediaFileHeaderReadFailed =>
+            Get("Не удалось прочитать начало медиафайла {0}.", "Failed to read the beginning of media file {0}.", "Der Anfang der Mediendatei {0} konnte nicht gelesen werden.");
+        internal static string MediaFileHeaderReadTimeout =>
+            Get("Превышено время ожидания при чтении начала медиафайла {0} (возможен именованный канал или недоступный ресурс).", "Timeout while reading the beginning of media file {0} (possible named pipe or unavailable resource).", "Zeitüberschreitung beim Lesen des Anfangs der Mediendatei {0} (möglicherweise benannte Pipe oder nicht verfügbare Ressource).");
+        internal static string MediaFileStableWaitTimeout =>
+            Get(
+                "Файл {0} не стабилизировался за {1}: размер или время изменения продолжали меняться, либо файл не появился по пути.",
+                "File {0} did not stabilize within {1}: size or last write time kept changing, or the file did not appear.",
+                "Datei {0} wurde innerhalb von {1} nicht stabil: Größe oder letzte Änderung änderten sich weiter, oder die Datei ist nicht aufgetaucht.");
         internal static string InputFileDoesNotContainAudioStream =>
             Get("Входной файл не содержит аудиодорожку.", "Input file does not contain an audio stream.", "Die Eingabedatei enthält keinen Audiostream.");
         internal static string InputFileDoesNotContainVideoStream =>

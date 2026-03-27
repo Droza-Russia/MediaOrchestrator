@@ -70,7 +70,7 @@ namespace Xabe.FFmpeg
         /// <param name="cancellationToken">Cancellation token</param>
         internal static async Task<IMediaInfo> Get(string filePath, CancellationToken cancellationToken)
         {
-            MediaFileSignatureValidator.ValidateOrThrow(filePath);
+            await MediaFileSignatureValidator.ValidateOrThrowAsync(filePath, cancellationToken).ConfigureAwait(false);
             var cacheKey = BuildCacheKey(filePath);
             var cacheEnabled = FFmpeg.MediaInfoCacheEnabled;
             var cacheLifetime = FFmpeg.MediaInfoCacheLifetime;
@@ -150,8 +150,24 @@ namespace Xabe.FFmpeg
                 return $"path::{fullPath}";
             }
 
-            var fileInfo = new FileInfo(fullPath);
-            return $"file::{fullPath}::{fileInfo.Length}::{fileInfo.LastWriteTimeUtc.Ticks}";
+            try
+            {
+                var fileInfo = new FileInfo(fullPath);
+                if (!fileInfo.Exists)
+                {
+                    return $"path::{fullPath}";
+                }
+
+                return $"file::{fullPath}::{fileInfo.Length}::{fileInfo.LastWriteTimeUtc.Ticks}";
+            }
+            catch (IOException)
+            {
+                return $"path::{fullPath}";
+            }
+            catch (UnauthorizedAccessException)
+            {
+                return $"path::{fullPath}";
+            }
         }
 
         private static IMediaInfo Clone(IMediaInfo source)

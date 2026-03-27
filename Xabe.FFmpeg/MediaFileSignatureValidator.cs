@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Threading;
+using System.Threading.Tasks;
 using Xabe.FFmpeg.Exceptions;
 
 namespace Xabe.FFmpeg
@@ -8,6 +10,11 @@ namespace Xabe.FFmpeg
     internal static class MediaFileSignatureValidator
     {
         private const int HeaderReadLength = 4096;
+
+        /// <summary>
+        ///     Максимальное время чтения заголовка при отсутствии внешней отмены (защита от FIFO и зависаний).
+        /// </summary>
+        private static readonly TimeSpan DefaultHeaderReadTimeout = TimeSpan.FromSeconds(30);
 
         private static readonly Dictionary<string, MediaSignatureKind[]> ExtensionMap =
             new Dictionary<string, MediaSignatureKind[]>(StringComparer.OrdinalIgnoreCase)
@@ -55,6 +62,20 @@ namespace Xabe.FFmpeg
 
         internal static void ValidateOrThrow(string filePath)
         {
+            try
+            {
+                ValidateOrThrowAsync(filePath, CancellationToken.None).GetAwaiter().GetResult();
+            }
+            catch (OperationCanceledException)
+            {
+                var fullPath = TryGetResolvedLocalPath(filePath);
+                throw new IOException(
+                    string.Format(ErrorMessages.MediaFileHeaderReadTimeout, fullPath ?? filePath ?? string.Empty));
+            }
+        }
+
+        internal static async Task ValidateOrThrowAsync(string filePath, CancellationToken cancellationToken = default)
+        {
             if (string.IsNullOrWhiteSpace(filePath))
             {
                 return;
@@ -66,10 +87,7 @@ namespace Xabe.FFmpeg
             }
 
             var fullPath = Path.GetFullPath(filePath);
-            if (!File.Exists(fullPath))
-            {
-                throw new InvalidInputException(string.Format(ErrorMessages.InputFileDoesNotExist, fullPath));
-            }
+            EnsureLocalPathIsSafeReadableFile(fullPath);
 
             var extension = Path.GetExtension(fullPath);
             if (string.IsNullOrWhiteSpace(extension) || !ExtensionMap.TryGetValue(extension, out var expectedKinds))
@@ -77,11 +95,112 @@ namespace Xabe.FFmpeg
                 return;
             }
 
-            var detectedKind = DetectSignatureKind(fullPath);
+            using (var timeoutCts = new CancellationTokenSource(DefaultHeaderReadTimeout))
+            {
+                if (!cancellationToken.CanBeCanceled)
+                {
+                    await ValidateHeaderMatchesExtensionAsync(fullPath, extension, expectedKinds, timeoutCts.Token, cancellationToken)
+                        .ConfigureAwait(false);
+                }
+                else
+                {
+                    using (var linked = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, timeoutCts.Token))
+                    {
+                        await ValidateHeaderMatchesExtensionAsync(fullPath, extension, expectedKinds, linked.Token, cancellationToken)
+                            .ConfigureAwait(false);
+                    }
+                }
+            }
+        }
+
+        private static async Task ValidateHeaderMatchesExtensionAsync(
+            string fullPath,
+            string extension,
+            MediaSignatureKind[] expectedKinds,
+            CancellationToken readToken,
+            CancellationToken userToken)
+        {
+            MediaSignatureKind detectedKind;
+            try
+            {
+                detectedKind = await DetectSignatureKindAsync(fullPath, readToken).ConfigureAwait(false);
+            }
+            catch (OperationCanceledException)
+            {
+                if (userToken.IsCancellationRequested)
+                {
+                    throw;
+                }
+
+                throw new IOException(string.Format(ErrorMessages.MediaFileHeaderReadTimeout, fullPath));
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                throw new IOException(string.Format(ErrorMessages.MediaFileHeaderReadFailed, fullPath), ex);
+            }
+            catch (IOException ex)
+            {
+                throw new IOException(string.Format(ErrorMessages.MediaFileHeaderReadFailed, fullPath), ex);
+            }
+
             if (!Contains(expectedKinds, detectedKind))
             {
                 throw new InputFileSignatureMismatchException(
                     string.Format(ErrorMessages.InputFileSignatureMismatch, fullPath, extension));
+            }
+        }
+
+        private static string TryGetResolvedLocalPath(string filePath)
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(filePath))
+                {
+                    return null;
+                }
+
+                if (Uri.TryCreate(filePath, UriKind.Absolute, out var uri) && !uri.IsFile)
+                {
+                    return null;
+                }
+
+                return Path.GetFullPath(filePath);
+            }
+            catch
+            {
+                return null;
+            }
+        }
+
+        private static void EnsureLocalPathIsSafeReadableFile(string fullPath)
+        {
+            if (Directory.Exists(fullPath))
+            {
+                throw new InvalidInputException(string.Format(ErrorMessages.InputPathIsNotAFile, fullPath));
+            }
+
+            if (!File.Exists(fullPath))
+            {
+                throw new InvalidInputException(string.Format(ErrorMessages.InputFileDoesNotExist, fullPath));
+            }
+
+            FileAttributes attributes;
+            try
+            {
+                attributes = File.GetAttributes(fullPath);
+            }
+            catch (IOException ex)
+            {
+                throw new IOException(string.Format(ErrorMessages.MediaFileHeaderReadFailed, fullPath), ex);
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                throw new IOException(string.Format(ErrorMessages.MediaFileHeaderReadFailed, fullPath), ex);
+            }
+
+            if ((attributes & FileAttributes.Directory) == FileAttributes.Directory)
+            {
+                throw new InvalidInputException(string.Format(ErrorMessages.InputPathIsNotAFile, fullPath));
             }
         }
 
@@ -151,27 +270,38 @@ namespace Xabe.FFmpeg
             return false;
         }
 
-        private static MediaSignatureKind DetectSignatureKind(string filePath)
+        private static async Task<MediaSignatureKind> DetectSignatureKindAsync(string filePath, CancellationToken cancellationToken)
         {
             var buffer = new byte[HeaderReadLength];
             int read;
-            using (var stream = File.OpenRead(filePath))
+            using (var stream = new FileStream(
+                       filePath,
+                       FileMode.Open,
+                       FileAccess.Read,
+                       FileShare.Read,
+                       buffer.Length,
+                       FileOptions.Asynchronous | FileOptions.SequentialScan))
             {
-                read = stream.Read(buffer, 0, buffer.Length);
+                read = await stream.ReadAsync(buffer, 0, buffer.Length, cancellationToken).ConfigureAwait(false);
             }
 
-            if (IsIsoBmff(buffer, read)) return MediaSignatureKind.IsoBmff;
-            if (IsEbml(buffer, read)) return MediaSignatureKind.Ebml;
-            if (IsOgg(buffer, read)) return MediaSignatureKind.Ogg;
-            if (IsFlac(buffer, read)) return MediaSignatureKind.Flac;
-            if (IsWav(buffer, read)) return MediaSignatureKind.Wav;
-            if (IsAvi(buffer, read)) return MediaSignatureKind.Avi;
-            if (IsFlv(buffer, read)) return MediaSignatureKind.Flv;
-            if (IsAsf(buffer, read)) return MediaSignatureKind.Asf;
-            if (IsMpegPs(buffer, read)) return MediaSignatureKind.MpegPs;
-            if (IsMpegTs(buffer, read)) return MediaSignatureKind.MpegTs;
-            if (IsMp3(buffer, read)) return MediaSignatureKind.Mp3;
-            if (IsAacAdts(buffer, read)) return MediaSignatureKind.AacAdts;
+            return ClassifySignature(buffer, read);
+        }
+
+        private static MediaSignatureKind ClassifySignature(byte[] buffer, int n)
+        {
+            if (IsIsoBmff(buffer, n)) return MediaSignatureKind.IsoBmff;
+            if (IsEbml(buffer, n)) return MediaSignatureKind.Ebml;
+            if (IsOgg(buffer, n)) return MediaSignatureKind.Ogg;
+            if (IsFlac(buffer, n)) return MediaSignatureKind.Flac;
+            if (IsWav(buffer, n)) return MediaSignatureKind.Wav;
+            if (IsAvi(buffer, n)) return MediaSignatureKind.Avi;
+            if (IsFlv(buffer, n)) return MediaSignatureKind.Flv;
+            if (IsAsf(buffer, n)) return MediaSignatureKind.Asf;
+            if (IsMpegPs(buffer, n)) return MediaSignatureKind.MpegPs;
+            if (IsMpegTs(buffer, n)) return MediaSignatureKind.MpegTs;
+            if (IsMp3(buffer, n)) return MediaSignatureKind.Mp3;
+            if (IsAacAdts(buffer, n)) return MediaSignatureKind.AacAdts;
 
             return MediaSignatureKind.Unknown;
         }

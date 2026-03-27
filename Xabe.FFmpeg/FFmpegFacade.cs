@@ -89,14 +89,34 @@ namespace Xabe.FFmpeg
         public static Conversions Conversions = new Conversions();
 
         /// <summary>
-        ///     Получает MediaInfo из файла
+        ///     Получает MediaInfo из файла.
         /// </summary>
         /// <param name="fileName">Полный путь к файлу</param>
         /// <param name="cancellationToken">Токен отмены</param>
+        /// <param name="waitUntilFileStable">Если true — перед ffprobe дождаться появления и стабилизации локального файла (см. <see cref="MediaFileReadiness"/>).</param>
+        /// <param name="stabilityQuietPeriod">Интервал «тишины» при стабилизации; по умолчанию <see cref="MediaFileReadiness.DefaultStabilityQuietPeriod"/>.</param>
+        /// <param name="maximumWaitForStable">Максимальное ожидание появления/стабилизации; по умолчанию <see cref="MediaFileReadiness.DefaultMaximumWait"/>.</param>
         /// <exception cref="ArgumentException">Файл не существует</exception>
         /// <exception cref="TaskCanceledException">Операция отменена или занимает слишком много времени</exception>
-        public static async Task<IMediaInfo> GetMediaInfo(string fileName, CancellationToken cancellationToken = default)
+        /// <exception cref="TimeoutException">Истекло ожидание стабилизации при <paramref name="waitUntilFileStable"/>.</exception>
+        public static async Task<IMediaInfo> GetMediaInfo(
+            string fileName,
+            CancellationToken cancellationToken = default,
+            bool waitUntilFileStable = false,
+            TimeSpan? stabilityQuietPeriod = null,
+            TimeSpan? maximumWaitForStable = null)
         {
+            if (waitUntilFileStable)
+            {
+                await MediaFileReadiness.WaitUntilStableAsync(
+                        fileName,
+                        stabilityQuietPeriod,
+                        null,
+                        maximumWaitForStable,
+                        cancellationToken)
+                    .ConfigureAwait(false);
+            }
+
             EnsureExecutablesLocated(cancellationToken);
             return await MediaInfo.Get(fileName, cancellationToken);
         }
