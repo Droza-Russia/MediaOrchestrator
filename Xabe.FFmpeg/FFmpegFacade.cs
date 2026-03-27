@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Globalization;
 using System.IO;
 using System.Threading;
@@ -29,9 +29,9 @@ namespace Xabe.FFmpeg
         public static IFormatProvider FormatProvider { get; private set; }
 
         /// <summary>
-        ///     Get new instance of Conversion
+        ///     Получает новый экземпляр Conversion.
         /// </summary>
-        /// <returns>IConversion object</returns>
+        /// <returns>Объект IConversion.</returns>
         public static Conversions Conversions = new Conversions();
 
         /// <summary>
@@ -86,18 +86,18 @@ namespace Xabe.FFmpeg
     public class Conversions
     {
         /// <summary>
-        ///     Get new instance of Conversion
+        ///     Получает новый экземпляр Conversion.
         /// </summary>
-        /// <returns>IConversion object</returns>
+        /// <returns>Объект IConversion.</returns>
         public IConversion New()
         {
             return Conversion.New();
         }
 
         /// <summary>
-        ///     Get new instance of Conversion
+        ///     Доступ к готовым сценариям конвертации.
         /// </summary>
-        /// <returns>IConversion object</returns>
+        /// <returns>Объект Snippets.</returns>
         public readonly Snippets FromSnippet = new Snippets();
 
         internal Conversions()
@@ -235,15 +235,15 @@ namespace Xabe.FFmpeg
         }
 
         /// <summary>
-        ///     Add subtitle to file. It will be added as new stream so if you want to burn subtitles into video you should use
-        ///     BurnSubtitle method.
+        ///     Добавляет субтитры в файл как новый поток.
+        ///     Если нужно встроить субтитры в видео, используйте метод BurnSubtitle.
         /// </summary>
-        /// <param name="inputPath">Input path</param>
-        /// <param name="outputPath">Output path</param>
-        /// <param name="subtitlePath">Path to subtitle file in .srt format</param>
+        /// <param name="inputPath">Входной путь.</param>
+        /// <param name="outputPath">Выходной путь.</param>
+        /// <param name="subtitlePath">Путь к файлу субтитров в формате .srt.</param>
         /// <param name="subtitleCodec">Кодек субтитров для кодирования субтитров</param>
-        /// <param name="language">Language code in ISO 639. Example: "eng", "pol", "pl", "de", "ger"</param>
-        /// <returns>Conversion result</returns>
+        /// <param name="language">Код языка в ISO 639. Пример: "eng", "pol", "pl", "de", "ger".</param>
+        /// <returns>Результат конвертации.</returns>
         public async Task<IConversion> AddSubtitle(string inputPath, string outputPath, string subtitlePath, SubtitleCodec subtitleCodec, string language = null)
         {
             return await Conversion.AddSubtitleAsync(inputPath, outputPath, subtitlePath, subtitleCodec, language);
@@ -299,12 +299,12 @@ namespace Xabe.FFmpeg
         }
 
         /// <summary>
-        ///     Change video size
+        ///     Изменяет размер видео.
         /// </summary>
-        /// <param name="inputPath">Input path</param>
-        /// <param name="outputPath">Output path</param>
+        /// <param name="inputPath">Входной путь.</param>
+        /// <param name="outputPath">Выходной путь.</param>
         /// <param name="size">Ожидаемый размер</param>
-        /// <returns>Conversion result</returns>
+        /// <returns>Результат конвертации.</returns>
         public async Task<IConversion> ChangeSize(string inputPath, string outputPath, VideoSize size)
         {
             return await Conversion.ChangeSizeAsync(inputPath, outputPath, size);

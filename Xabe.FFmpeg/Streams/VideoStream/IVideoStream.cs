@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 
 namespace Xabe.FFmpeg
 {
@@ -139,7 +139,7 @@ namespace Xabe.FFmpeg
         IVideoStream SetSize(VideoSize size);
 
         /// <summary>
-        ///     Set size of video
+        ///     Устанавливает размер видео.
         /// </summary>
         /// <param name="width">Ширина</param>
         /// <param name="height">Высота</param>
@@ -167,9 +167,9 @@ namespace Xabe.FFmpeg
         IVideoStream CopyStream();
 
         /// <summary>
-        ///     Set filter
+        ///     Устанавливает фильтр.
         /// </summary>
-        /// <param name="filter">Filter</param>
+        /// <param name="filter">Фильтр.</param>
         /// <returns>IVideoStream</returns>
         IVideoStream SetBitstreamFilter(BitstreamFilter filter);
 
@@ -208,13 +208,13 @@ namespace Xabe.FFmpeg
         IVideoStream AddSubtitles(string subtitlePath, string encode = null, string style = null);
 
         /// <summary>
-        ///     Burn subtitle into file
+        ///     Встраивает субтитры в файл.
         /// </summary>
-        /// <param name="subtitlePath">Path to subtitle file in .srt format</param>
-        /// <param name="encode">Set subtitles input character encoding. Only useful if not UTF-8.</param>
+        /// <param name="subtitlePath">Путь к файлу субтитров в формате .srt.</param>
+        /// <param name="encode">Кодировка символов входных субтитров. Нужна только если не UTF-8.</param>
         /// <param name="style">
-        ///     Override default style or script info parameters of the subtitles. It accepts a string containing
-        ///     ASS style format KEY=VALUE couples separated by ","
+        ///     Переопределяет параметры стиля по умолчанию или script info субтитров.
+        ///     Принимает строку с парами формата ASS вида KEY=VALUE, разделенными запятыми.
         /// </param>
         /// <param name="originalSize">
         ///     Указывает размер оригинального видео, для которого был составлен ASS стиль. Это

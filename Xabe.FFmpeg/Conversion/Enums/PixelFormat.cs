@@ -1,7 +1,7 @@
-﻿namespace Xabe.FFmpeg
+namespace Xabe.FFmpeg
 {
     /// <summary>
-    ///     Pixel Format ("ffmpeg -pix_fmts")
+    ///     Формат пикселей ("ffmpeg -pix_fmts").
     /// </summary>
     public enum PixelFormat
     {

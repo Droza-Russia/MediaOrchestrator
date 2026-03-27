@@ -1,22 +1,22 @@
-﻿namespace Xabe.FFmpeg
+namespace Xabe.FFmpeg
 {
     /// <summary>
-    ///     Stream type
+    ///     Тип потока.
     /// </summary>
     public enum StreamType
     {
         /// <summary>
-        ///     Video stream
+        ///     Видеопоток.
         /// </summary>
         Video = 0,
 
         /// <summary>
-        ///     Audio stream
+        ///     Аудиопоток.
         /// </summary>
         Audio = 1,
 
         /// <summary>
-        ///     Subtitle stream
+        ///     Поток субтитров.
         /// </summary>
         Subtitle = 2
     }

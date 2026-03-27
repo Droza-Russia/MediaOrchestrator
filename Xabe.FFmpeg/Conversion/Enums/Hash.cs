@@ -1,83 +1,83 @@
-﻿namespace Xabe.FFmpeg
+namespace Xabe.FFmpeg
 {
     /// <summary>
-    /// Hash Formats ("ffmpeg -i INPUT -f hash")
+    /// Форматы хеширования ("ffmpeg -i INPUT -f hash").
     /// </summary>
     public enum Hash
     {
         /// <summary>
-        ///     MD5 Hashing Algorithm
+        ///     Алгоритм хеширования MD5.
         /// </summary>
         MD5,
 
         /// <summary>
-        ///     murmur3 Hashing Algorithm
+        ///     Алгоритм хеширования murmur3.
         /// </summary>
         murmur3,
 
         /// <summary>
-        ///     RIPEMD 128-bit Hashing Algorithm
+        ///     Алгоритм хеширования RIPEMD 128-bit.
         /// </summary>
         RIPEMD128,
 
         /// <summary>
-        ///     RIPEMD 160-bit Hashing Algorithm
+        ///     Алгоритм хеширования RIPEMD 160-bit.
         /// </summary>
         RIPEMD160,
 
         /// <summary>
-        ///     RIPEMD 256-bit Hashing Algorithm
+        ///     Алгоритм хеширования RIPEMD 256-bit.
         /// </summary>
         RIPEMD256,
 
         /// <summary>
-        ///     RIPEMD 320-bit Hashing Algorithm
+        ///     Алгоритм хеширования RIPEMD 320-bit.
         /// </summary>
         RIPEMD320,
 
         /// <summary>
-        ///     SHA 160-bit Hashing Algorithm
+        ///     Алгоритм хеширования SHA 160-bit.
         /// </summary>
         SHA160,
 
         /// <summary>
-        ///     SHA 224-bit Hashing Algorithm
+        ///     Алгоритм хеширования SHA 224-bit.
         /// </summary>
         SHA224,
 
         /// <summary>
-        ///     SHA 256-bit Hashing Algorithm
-        ///     This is the default algorithm if no -hash argument is specified
+        ///     Алгоритм хеширования SHA 256-bit.
+        ///     Используется по умолчанию, если аргумент -hash не указан.
         /// </summary>
         SHA256,
 
         /// <summary>
-        ///     SHA 512-bit/224-bit Hashing Algorithm
+        ///     Алгоритм хеширования SHA 512-bit/224-bit.
         /// </summary>
         SHA512_224,
 
         /// <summary>
-        ///     SHA 512-bit/256-bit Hashing Algorithm
+        ///     Алгоритм хеширования SHA 512-bit/256-bit.
         /// </summary>
         SHA512_256,
 
         /// <summary>
-        ///     SHA 384-bit Hashing Algorithm
+        ///     Алгоритм хеширования SHA 384-bit.
         /// </summary>
         SHA384,
 
         /// <summary>
-        ///     SHA 512-bit Hashing Algorithm
+        ///     Алгоритм хеширования SHA 512-bit.
         /// </summary>
         SHA512,
 
         /// <summary>
-        ///     CRC32 Hashing Algorithm
+        ///     Алгоритм хеширования CRC32.
         /// </summary>
         CRC32,
 
         /// <summary>
-        ///     Adler32 Hashing Algorithm
+        ///     Алгоритм хеширования Adler32.
         /// </summary>
         adler32,
     }

@@ -1,19 +1,19 @@
-﻿using System.Threading;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace Xabe.FFmpeg
 {
     /// <summary>
-    ///     Allows to prepare and start IProbe.
+    ///     Позволяет подготовить и запустить IProbe.
     /// </summary>
     public interface IProbe
     {
         /// <summary>
-        /// Start probe with result from console
+        /// Запускает probe и возвращает результат из консоли.
         /// </summary>
-        /// <param name="args">Args to pass to FFprobe</param>
-        /// <param name="cancellationToken">Cancellation token</param>
-        /// <returns>Output from console in specified format</returns>
+        /// <param name="args">Аргументы, передаваемые в FFprobe.</param>
+        /// <param name="cancellationToken">Токен отмены.</param>
+        /// <returns>Вывод консоли в заданном формате.</returns>
         Task<string> Start(string args, CancellationToken cancellationToken = default);
     }
 }
