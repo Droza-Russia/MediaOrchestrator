@@ -3,39 +3,39 @@
 namespace Xabe.FFmpeg
 {
     /// <summary>
-    ///     Base stream class
+    ///     Базовый интерфейс потока.
     /// </summary>
     public interface IStream
     {
         /// <summary>
-        ///     File source of stream
+        ///     Источник потока (файл, pipe, etc.).
         /// </summary>
         string Path { get; }
 
         /// <summary>
-        ///     Index of stream
+        ///     Индекс потока.
         /// </summary>
         int Index { get; }
 
         /// <summary>
-        ///     Format
+        ///     Используемый кодек/формат.
         /// </summary>
         string Codec { get; }
 
         /// <summary>
-        ///     Build FFmpeg arguments for input
+        ///     Составляет аргументы FFmpeg для указанной позиции.
         /// </summary>
-        /// <returns>Arguments</returns>
+        /// <returns>Строка аргументов.</returns>
         string BuildParameters(ParameterPosition forPosition);
 
         /// <summary>
-        ///     Get stream input
+        ///     Получает исходные файлы/пути для потока.
         /// </summary>
-        /// <returns>Input path</returns>
+        /// <returns>Набор путей источников.</returns>
         IEnumerable<string> GetSource();
 
         /// <summary>
-        ///     Codec type
+        ///     Тип потока (видео, аудио и т.д.).
         /// </summary>
         StreamType StreamType { get; }
     }

@@ -1,50 +1,50 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 
 namespace Xabe.FFmpeg
 {
     /// <summary>
-    ///     Information about media file
+    ///     Информация о медиафайле.
     /// </summary>
     public interface IMediaInfo
     {
         /// <summary>
-        ///     All file streams
+        ///     Все потоки файла.
         /// </summary>
         IEnumerable<IStream> Streams { get; }
 
         /// <summary>
-        ///     Source info
+        ///     Сведения об источнике.
         /// </summary>
         string Path { get; }
 
         /// <summary>
-        ///     Duration of media
+        ///     Длительность медиа.
         /// </summary>
         TimeSpan Duration { get; }
 
         /// <summary>
-        ///     Date and Time when the media was created
+        ///     Дата и время создания медиа.
         /// </summary>
         DateTime? CreationTime { get; }
 
         /// <summary>
-        ///     Size of file
+        ///     Размер файла.
         /// </summary>
         long Size { get; }
 
         /// <summary>
-        ///     Video streams
+        ///     Видеопотоки.
         /// </summary>
         IEnumerable<IVideoStream> VideoStreams { get; }
 
         /// <summary>
-        ///     Audio streams
+        ///     Аудиопотоки.
         /// </summary>
         IEnumerable<IAudioStream> AudioStreams { get; }
 
         /// <summary>
-        ///     Audio streams
+        ///     Потоки субтитров.
         /// </summary>
         IEnumerable<ISubtitleStream> SubtitleStreams { get; }
     }

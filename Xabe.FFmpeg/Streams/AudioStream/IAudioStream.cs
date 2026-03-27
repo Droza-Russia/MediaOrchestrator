@@ -1,171 +1,175 @@
-﻿using System;
+using System;
 
 namespace Xabe.FFmpeg
 {
     /// <summary>
-    ///     Audio stream
+    ///     Аудиопоток.
     /// </summary>
     public interface IAudioStream : IStream
     {
         /// <summary>
-        ///     Duration
+        ///     Длительность.
         /// </summary>
         TimeSpan Duration { get; }
 
         /// <summary>
-        ///     Bitrate
+        ///     Битрейт.
         /// </summary>
         long Bitrate { get; }
 
         /// <summary>
-        ///     Sample Rate
+        ///     Частота дискретизации.
         /// </summary>
         int SampleRate { get; }
 
         /// <summary>
-        ///     Channels
+        ///     Количество каналов.
         /// </summary>
         int Channels { get; }
 
         /// <summary>
-        /// Language 
+        /// Язык.
         /// </summary>
         string Language { get; }
 
         /// <summary>
-        /// Title
+        /// Заголовок.
         /// </summary>
         string Title { get; }
 
         /// <summary>
-        /// Default
+        /// По умолчанию.
         /// </summary>
         int? Default { get; }
 
         /// <summary>
-        /// Forced
+        /// Принудительно.
         /// </summary>
         int? Forced { get; }
 
         /// <summary>
-        ///     Set stream to copy with orginal codec
+        ///     Переводит поток в режим копирования с оригинальным кодеком.
         /// </summary>
-        /// <returns>IAudioStream</returns>
+        /// <returns>Объект IAudioStream.</returns>
         IAudioStream CopyStream();
 
         /// <summary>
-        ///     Reverse audio stream
+        ///     Разворачивает аудиопоток в обратном направлении.
         /// </summary>
-        /// <returns>IAudioStream</returns>
+        /// <returns>Объект IAudioStream.</returns>
         IAudioStream Reverse();
 
         /// <summary>
-        ///     Set audio Channels (-ac option)
+        ///     Устанавливает количество аудиоканалов (опция -ac).
         /// </summary>
-        /// <param name="channels">Number of channels to use in the output stream</param>
-        /// <returns>IAudioStream</returns>
+        /// <param name="channels">Количество каналов в выходном потоке.</param>
+        /// <returns>Объект IAudioStream.</returns>
         IAudioStream SetChannels(int channels);
 
         /// <summary>
-        ///     Set audio codec and bitrate
+        ///     Устанавливает аудиокодек.
         /// </summary>
-        /// <param name="codec">Audio odec</param>
-        /// <returns>IAudioStream</returns>
+        /// <param name="codec">Аудиокодек.</param>
+        /// <returns>Объект IAudioStream.</returns>
         IAudioStream SetCodec(AudioCodec codec);
 
         /// <summary>
-        ///     Set audio codec and bitrate
+        ///     Устанавливает аудиокодек.
         /// </summary>
-        /// <param name="codec">Audio odec</param>
-        /// <returns>IAudioStream</returns>
+        /// <param name="codec">Аудиокодек.</param>
+        /// <returns>Объект IAudioStream.</returns>
         IAudioStream SetCodec(string codec);
 
         /// <summary>
-        ///     Set filter
+        ///     Устанавливает фильтр.
         /// </summary>
-        /// <param name="filter">Filter</param>
-        /// <returns>IAudioStream</returns>
+        /// <param name="filter">Фильтр.</param>
+        /// <returns>Объект IAudioStream.</returns>
         IAudioStream SetBitstreamFilter(BitstreamFilter filter);
 
         /// <summary>
-        ///     Sets the Bitrate of the AudioStream
+        ///     Устанавливает битрейт аудиопотока.
         /// </summary>
-        /// <param name="bitRate">Bitrate for the AudioStream in bytes</param>
-        /// <returns>IAudioStream</returns>
+        /// <param name="bitRate">Битрейт аудиопотока в байтах.</param>
+        /// <returns>Объект IAudioStream.</returns>
         IAudioStream SetBitrate(long bitRate);
 
         /// <summary>
-        ///     Set Bitrate of the AudioStream
+        ///     Устанавливает диапазон битрейта аудиопотока.
         /// </summary>
-        /// <param name="minBitrate">Bitrate in bits</param>
-        /// <param name="maxBitrate">Bitrate in bits</param>
-        /// <param name="buffersize">Buffersize in bits</param>
-        /// <returns>IAudioStream</returns>
+        /// <param name="minBitrate">Минимальный битрейт в битах.</param>
+        /// <param name="maxBitrate">Максимальный битрейт в битах.</param>
+        /// <param name="buffersize">Размер буфера в битах.</param>
+        /// <returns>Объект IAudioStream.</returns>
         IAudioStream SetBitrate(long minBitrate, long maxBitrate, long bufferSize);
 
         /// <summary>
-        ///     Sets the SampleRate of the AudioStream (-ar option)
+        ///     Устанавливает частоту дискретизации аудиопотока (опция -ar).
         /// </summary>
-        /// <param name="sampleRate">SampleRate in HZ for the Audio Stream</param>
-        /// <returns>IAudioStream</returns>
+        /// <param name="sampleRate">Частота дискретизации аудиопотока в Гц.</param>
+        /// <returns>Объект IAudioStream.</returns>
         IAudioStream SetSampleRate(int sampleRate);
 
         /// <summary>
-        ///     Change speed of media
+        ///     Изменяет скорость воспроизведения.
         /// </summary>
-        /// <param name="multiplicator">Speed value. (0.5 - 2.0). To double the speed set this to 2.0</param>
-        /// <returns>IAudioStream</returns>
+        /// <param name="multiplicator">Множитель скорости (0.5 - 2.0). Для удвоения скорости установите 2.0.</param>
+        /// <returns>Объект IAudioStream.</returns>
         /// <exception cref="ArgumentOutOfRangeException">Когда скорость не находится в диапазоне от 0.5 до 2.0.</exception>
         IAudioStream ChangeSpeed(double multiplicator);
 
         /// <summary>
-        ///     Get part of audio
+        ///     Возвращает фрагмент аудио.
         /// </summary>
-        /// <param name="startTime">Start point</param>
-        /// <param name="duration">Duration of new audio</param>
-        /// <returns>IAudioStream</returns>
+        /// <param name="startTime">Начальная точка.</param>
+        /// <param name="duration">Длительность нового фрагмента.</param>
+        /// <returns>Объект IAudioStream.</returns>
         IAudioStream Split(TimeSpan startTime, TimeSpan duration);
 
         /// <summary>
-        ///     Seeks in input file to position. (-ss argument)
+        ///     Перемещает позицию чтения во входном файле (аргумент -ss).
         /// </summary>
-        /// <param name="seek">Position</param>
-        /// <returns>IAudioStream</returns>
+        /// <param name="seek">Позиция.</param>
+        /// <returns>Объект IAudioStream.</returns>
         IAudioStream SetSeek(TimeSpan? seek);
 
         /// <summary>
-        ///     Set filter
+        ///     Устанавливает фильтр.
         /// </summary>
-        /// <param name="filter">Filter</param>
-        /// <returns>IAudioStream</returns>
+        /// <param name="filter">Фильтр.</param>
+        /// <returns>Объект IAudioStream.</returns>
         IAudioStream SetBitstreamFilter(string filter);
 
         /// <summary>
-        /// Sets the format for the input file using the -f option before the input file name
+        /// Устанавливает формат входного файла через опцию -f перед именем входного файла.
         /// </summary>
-        /// <param name="inputFormat">The input format to set</param>
-        /// <returns>IConversion object</returns>
+        /// <param name="inputFormat">Формат входного файла.</param>
+        /// <returns>Объект IAudioStream.</returns>
         IAudioStream SetInputFormat(string inputFormat);
 
         /// <summary>
-        /// Sets the format for the input file using the -f option before the input file name
+        /// Устанавливает формат входного файла через опцию -f перед именем входного файла.
         /// </summary>
-        /// <param name="inputFormat">The input format to set</param>
-        /// <returns>IConversion object</returns>
+        /// <param name="inputFormat">Формат входного файла.</param>
+        /// <returns>Объект IAudioStream.</returns>
         IAudioStream SetInputFormat(Format inputFormat);
 
         /// <summary>
-        ///     "-re" parameter. Read input at native frame rate. Mainly used to simulate a grab device, or live input stream (e.g. when reading from a file). Should not be used with actual grab devices or live input streams (where it can cause packet loss). By default ffmpeg attempts to read the input(s) as fast as possible. This option will slow down the reading of the input(s) to the native frame rate of the input(s). It is useful for real-time output (e.g. live streaming).
+        ///     Параметр "-re". Читает входные данные с нативной частотой кадров.
+        ///     Обычно используется для имитации устройства захвата или live-потока (например, при чтении из файла).
+        ///     Не рекомендуется использовать с реальными устройствами захвата или live-потоками, так как это может вызывать потери пакетов.
+        ///     По умолчанию ffmpeg читает входные данные максимально быстро; эта опция замедляет чтение до нативной частоты.
+        ///     Полезно для вывода в реальном времени (например, стриминга).
         /// </summary>
-        /// <param name="readInputAtNativeFrameRate">Read input at native frame rate. False set parameter to default value.</param>
-        /// <returns>IConversion object</returns>
+        /// <param name="readInputAtNativeFrameRate">Читать вход с нативной частотой кадров. При False используется значение по умолчанию.</param>
+        /// <returns>Объект IAudioStream.</returns>
         IAudioStream UseNativeInputRead(bool readInputAtNativeFrameRate);
 
         /// <summary>
-        ///     "-stream_loop" parameter. Set number of times input stream shall be looped. 
+        ///     Параметр "-stream_loop". Устанавливает количество повторов входного потока.
         /// </summary>
-        /// <param name="loopCount">Loop 0 means no loop, loop -1 means infinite loop.</param>
-        /// <returns>IConversion object</returns>
+        /// <param name="loopCount">0 - без повтора, -1 - бесконечный повтор.</param>
+        /// <returns>Объект IAudioStream.</returns>
         IAudioStream SetStreamLoop(int loopCount);
     }
 }

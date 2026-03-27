@@ -1,269 +1,269 @@
-﻿using System;
+using System;
 
 namespace Xabe.FFmpeg
 {
     /// <summary>
-    ///     Video Stream
+    ///     Видеопоток
     /// </summary>
     public interface IVideoStream : IStream
     {
         /// <summary>
-        ///     Duration
+        ///     Длительность
         /// </summary>
         TimeSpan Duration { get; }
 
         /// <summary>
-        ///     Width
+        ///     Ширина
         /// </summary>
         int Width { get; }
 
         /// <summary>
-        ///     Height
+        ///     Высота
         /// </summary>
         int Height { get; }
 
         /// <summary>
-        ///     Frame rate
+        ///     Частота кадров
         /// </summary>
         double Framerate { get; }
 
         /// <summary>
-        ///     Screen ratio
+        ///     Соотношение сторон экрана
         /// </summary>
         string Ratio { get; }
 
         /// <summary>
-        ///     Video bitrate
+        ///     Битрейт видео
         /// </summary>
         long Bitrate { get; }
 
         /// <summary>
-        ///     Default
+        ///     По умолчанию
         /// </summary>
         int? Default { get; }
 
         /// <summary>
-        ///     Forced
+        ///     Принудительно
         /// </summary>
         int? Forced { get; }
 
         /// <summary>
-        ///     Pixel Format
+        ///     Формат пикселей
         /// </summary>
         string PixelFormat { get; }
 
         /// <summary>
-        ///     Rotation angle
+        ///     Угол поворота
         /// </summary>
         int? Rotation { get; }
 
         /// <summary>
-        ///     Rotate video
+        ///     Поворачивает видео
         /// </summary>
-        /// <param name="rotateDegrees">Rotate type</param>
+        /// <param name="rotateDegrees">Тип поворота</param>
         /// <returns>IVideoStream</returns>
         IVideoStream Rotate(RotateDegrees rotateDegrees);
 
         /// <summary>
-        ///     Pad the video to a specific height and width with black banners.
+        ///     Добавляет черные полосы к видео до указанной высоты и ширины.
         /// </summary>
-        /// <param name="width">Width</param>
-        /// <param name="height">Height</param>
+        /// <param name="width">Ширина</param>
+        /// <param name="height">Высота</param>
         /// <returns>IVideoStream</returns>
         IVideoStream Pad(int width, int height);
 
         /// <summary>
-        ///     Change speed of video
+        ///     Изменяет скорость видео
         /// </summary>
-        /// <param name="multiplicator">Speed value. (0.5 - 2.0). To double the speed set this to 2.0</param>
+        /// <param name="multiplicator">Значение скорости. (0.5 - 2.0). Чтобы удвоить скорость, установите значение 2.0</param>
         /// <returns>IVideoStream</returns>
         /// <exception cref="ArgumentOutOfRangeException">Когда скорость не находится в диапазоне от 0.5 до 2.0.</exception>
         IVideoStream ChangeSpeed(double multiplicator);
 
         /// <summary>
-        ///     Melt watermark into video
+        ///     Встраивает водяной знак в видео
         /// </summary>
-        /// <param name="imagePath">Watermark</param>
-        /// <param name="position">Position of watermark</param>
+        /// <param name="imagePath">Водяной знак</param>
+        /// <param name="position">Позиция водяного знака</param>
         /// <returns>IVideoStream</returns>
         IVideoStream SetWatermark(string imagePath, Position position);
 
         /// <summary>
-        ///     Reverse video
+        ///     Обращает видео
         /// </summary>
         /// <returns>IVideoStream</returns>
         IVideoStream Reverse();
 
         /// <summary>
-        ///     Set Flags for conversion (-flags option)
+        ///     Устанавливает флаги для конвертации (опция -flags)
         /// </summary>
-        /// <param name="flags">Flags to use</param>
+        /// <param name="flags">Флаги для использования</param>
         /// <returns>IVideoStream</returns>
         IVideoStream SetFlags(params Flag[] flags);
 
         /// <summary>
-        ///     Set Flags for conversion (-flags option)
+        ///     Устанавливает флаги для конвертации (опция -flags)
         /// </summary>
-        /// <param name="flags">Flags to use</param>
+        /// <param name="flags">Флаги для использования</param>
         /// <returns>IVideoStream</returns>
         IVideoStream SetFlags(params string[] flags);
 
         /// <summary>
-        ///     Set Framerate of the video (-r option)
+        ///     Устанавливает частоту кадров видео (опция -r)
         /// </summary>
-        /// <param name="framerate">Framerates in FPS</param>
+        /// <param name="framerate">Частота кадров в FPS</param>
         /// <returns>IVideoStream</returns>
         IVideoStream SetFramerate(double framerate);
 
         /// <summary>
-        ///     Set Bitrate of the video (-b:v option)
+        ///     Устанавливает битрейт видео (опция -b:v)
         /// </summary>
-        /// <param name="minBitrate">Bitrate in bits</param>
-        /// <param name="maxBitrate">Bitrate in bits</param>
-        /// <param name="buffersize">Buffersize in bits</param>
+        /// <param name="minBitrate">Битрейт в битах</param>
+        /// <param name="maxBitrate">Битрейт в битах</param>
+        /// <param name="buffersize">Размер буфера в битах</param>
         /// <returns>IVideoStream</returns>
         IVideoStream SetBitrate(long minBitrate, long maxBitrate, long bufferSize);
 
         /// <summary>
-        ///     Set Bitrate of the video (-b:v option)
+        ///     Устанавливает битрейт видео (опция -b:v)
         /// </summary>
-        /// <param name="bitrate">Bitrate in bits</param>
+        /// <param name="bitrate">Битрейт в битах</param>
         /// <returns>IVideoStream</returns>
         IVideoStream SetBitrate(long bitrate);
 
         /// <summary>
-        ///     Set size of video
+        ///     Устанавливает размер видео
         /// </summary>
         /// <param name="size">VideoSize</param>
         /// <returns>IVideoStream</returns>
         IVideoStream SetSize(VideoSize size);
 
         /// <summary>
-        ///     Set size of video
+        ///     Устанавливает размер видео.
         /// </summary>
-        /// <param name="width">Width</param>
-        /// <param name="height">Height</param>
+        /// <param name="width">Ширина</param>
+        /// <param name="height">Высота</param>
         /// <returns>IVideoStream</returns>
         IVideoStream SetSize(int width, int height);
 
         /// <summary>
-        ///     Set video codec
+        ///     Устанавливает видеокодек
         /// </summary>
-        /// <param name="codec">Video codec</param>
+        /// <param name="codec">Видеокодек</param>
         /// <returns>IVideoStream</returns>
         IVideoStream SetCodec(VideoCodec codec);
 
         /// <summary>
-        ///     Set video codec
+        ///     Устанавливает видеокодек
         /// </summary>
-        /// <param name="codec">Video codec</param>
+        /// <param name="codec">Видеокодек</param>
         /// <returns>IVideoStream</returns>
         IVideoStream SetCodec(string codec);
 
         /// <summary>
-        ///     Set stream to copy with orginal codec
+        ///     Устанавливает поток для копирования с оригинальным кодеком
         /// </summary>
         /// <returns>IVideoStream</returns>
         IVideoStream CopyStream();
 
         /// <summary>
-        ///     Set filter
+        ///     Устанавливает фильтр.
         /// </summary>
-        /// <param name="filter">Filter</param>
+        /// <param name="filter">Фильтр.</param>
         /// <returns>IVideoStream</returns>
         IVideoStream SetBitstreamFilter(BitstreamFilter filter);
 
         /// <summary>
-        ///     Loop over the input stream.(-loop)
+        ///     Зацикливает входной поток.(-loop)
         /// </summary>
-        /// <param name="count">Number of repeats</param>
-        /// <param name="delay">Delay between repeats (in seconds)</param>
+        /// <param name="count">Количество повторов</param>
+        /// <param name="delay">Задержка между повторами (в секундах)</param>
         /// <returns>IVideoStream</returns>
         IVideoStream SetLoop(int count, int delay = 0);
 
         /// <summary>
-        ///     Set output frames count
+        ///     Устанавливает количество выходных кадров
         /// </summary>
-        /// <param name="number">Number of frames</param>
+        /// <param name="number">Количество кадров</param>
         /// <returns>IVideoStream</returns>
         IVideoStream SetOutputFramesCount(int number);
 
         /// <summary>
-        ///     Seeks in input file to position. (-ss argument)
+        ///     Переходит к позиции во входном файле. (аргумент -ss)
         /// </summary>
-        /// <param name="seek">Position</param>
+        /// <param name="seek">Позиция</param>
         /// <returns>IVideoStream</returns>
         IVideoStream SetSeek(TimeSpan seek);
 
         /// <summary>
-        ///     Burn subtitle into file
+        ///     Встраивает субтитры в файл
         /// </summary>
-        /// <param name="subtitlePath">Path to subtitle file in .srt format</param>
-        /// <param name="encode">Set subtitles input character encoding. Only useful if not UTF-8.</param>
+        /// <param name="subtitlePath">Путь к файлу субтитров в формате .srt</param>
+        /// <param name="encode">Устанавливает кодировку символов входных субтитров. Полезно только если не UTF-8.</param>
         /// <param name="style">
-        ///     Override default style or script info parameters of the subtitles. It accepts a string containing
-        ///     ASS style format KEY=VALUE couples separated by ","
+        ///     Переопределяет параметры стиля по умолчанию или информации о скрипте субтитров. Принимает строку, содержащую
+        ///     пары формата ASS стиля KEY=VALUE, разделенные запятыми
         /// </param>
         /// <returns>IVideoStream</returns>
         IVideoStream AddSubtitles(string subtitlePath, string encode = null, string style = null);
 
         /// <summary>
-        ///     Burn subtitle into file
+        ///     Встраивает субтитры в файл.
         /// </summary>
-        /// <param name="subtitlePath">Path to subtitle file in .srt format</param>
-        /// <param name="encode">Set subtitles input character encoding. Only useful if not UTF-8.</param>
+        /// <param name="subtitlePath">Путь к файлу субтитров в формате .srt.</param>
+        /// <param name="encode">Кодировка символов входных субтитров. Нужна только если не UTF-8.</param>
         /// <param name="style">
-        ///     Override default style or script info parameters of the subtitles. It accepts a string containing
-        ///     ASS style format KEY=VALUE couples separated by ","
+        ///     Переопределяет параметры стиля по умолчанию или script info субтитров.
+        ///     Принимает строку с парами формата ASS вида KEY=VALUE, разделенными запятыми.
         /// </param>
         /// <param name="originalSize">
-        ///     Specify the size of the original video, the video for which the ASS style was composed. This
-        ///     is necessary to correctly scale the fonts if the aspect ratio has been changed.
+        ///     Указывает размер оригинального видео, для которого был составлен ASS стиль. Это
+        ///     необходимо для правильного масштабирования шрифтов, если соотношение сторон было изменено.
         /// </param>
         /// <returns>IVideoStream</returns>
         IVideoStream AddSubtitles(string subtitlePath, VideoSize originalSize, string encode = null, string style = null);
 
         /// <summary>
-        ///     Get part of video
+        ///     Получает часть видео
         /// </summary>
-        /// <param name="startTime">Start point</param>
-        /// <param name="duration">Duration of new video</param>
+        /// <param name="startTime">Начальная точка</param>
+        /// <param name="duration">Длительность нового видео</param>
         /// <returns>IVideoStream</returns>
         IVideoStream Split(TimeSpan startTime, TimeSpan duration);
 
         /// <summary>
-        ///     Set filter
+        ///     Устанавливает фильтр
         /// </summary>
-        /// <param name="filter">Filter</param>
+        /// <param name="filter">Фильтр</param>
         /// <returns>IVideoStream</returns>
         IVideoStream SetBitstreamFilter(string filter);
 
         /// <summary>
-        /// Sets the format for the input file using the -f option before the input file name
+        /// Устанавливает формат для входного файла, используя опцию -f перед именем входного файла
         /// </summary>
-        /// <param name="inputFormat">The input format to set</param>
-        /// <returns>IConversion object</returns>
+        /// <param name="inputFormat">Входной формат для установки</param>
+        /// <returns>Объект IConversion</returns>
         IVideoStream SetInputFormat(string inputFormat);
 
         /// <summary>
-        /// Sets the format for the input file using the -f option before the input file name
+        /// Устанавливает формат для входного файла, используя опцию -f перед именем входного файла
         /// </summary>
-        /// <param name="inputFormat">The input format to set</param>
-        /// <returns>IConversion object</returns>
+        /// <param name="inputFormat">Входной формат для установки</param>
+        /// <returns>Объект IConversion</returns>
         IVideoStream SetInputFormat(Format inputFormat);
 
         /// <summary>
-        ///     "-re" parameter. Read input at native frame rate. Mainly used to simulate a grab device, or live input stream (e.g. when reading from a file). Should not be used with actual grab devices or live input streams (where it can cause packet loss). By default ffmpeg attempts to read the input(s) as fast as possible. This option will slow down the reading of the input(s) to the native frame rate of the input(s). It is useful for real-time output (e.g. live streaming).
+        ///     Параметр "-re". Читает входные данные с нативной частотой кадров. В основном используется для имитации устройства захвата или живого входного потока (например, при чтении из файла). Не следует использовать с реальными устройствами захвата или живыми входными потоками (где это может вызвать потерю пакетов). По умолчанию ffmpeg пытается читать входные данные как можно быстрее. Эта опция замедлит чтение входных данных до нативной частоты кадров входных данных. Полезна для вывода в реальном времени (например, живая трансляция).
         /// </summary>
-        /// <param name="readInputAtNativeFrameRate">Read input at native frame rate. False set parameter to default value.</param>
-        /// <returns>IConversion object</returns>
+        /// <param name="readInputAtNativeFrameRate">Читать входные данные с нативной частотой кадров. False устанавливает параметр в значение по умолчанию.</param>
+        /// <returns>Объект IConversion</returns>
         IVideoStream UseNativeInputRead(bool readInputAtNativeFrameRate);
 
         /// <summary>
-        ///     "-stream_loop" parameter. Set number of times input stream shall be looped. 
+        ///     Параметр "-stream_loop". Устанавливает количество раз, которое входной поток должен быть зациклен. 
         /// </summary>
-        /// <param name="loopCount">Loop 0 means no loop, loop -1 means infinite loop.</param>
-        /// <returns>IConversion object</returns>
+        /// <param name="loopCount">Цикл 0 означает отсутствие цикла, цикл -1 означает бесконечный цикл.</param>
+        /// <returns>Объект IConversion</returns>
         IVideoStream SetStreamLoop(int loopCount);
     }
 }

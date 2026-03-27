@@ -12,7 +12,9 @@ using Xabe.FFmpeg.Streams;
 
 namespace Xabe.FFmpeg
 {
-    /// <inheritdoc />
+    /// <summary>
+    ///     Реализует процесс конвертации и позволяет выстраивать параметры FFmpeg.
+    /// </summary>
     public partial class Conversion : IConversion
     {
         private readonly object _builderLock = new object();
@@ -35,7 +37,10 @@ namespace Xabe.FFmpeg
             _userDefinedParameters[ParameterPosition.PreInput] = new List<string>();
         }
 
-        /// <inheritdoc />
+        /// <summary>
+        ///     Собирает строку аргументов FFmpeg, основываясь на заданных параметрах и потоках.
+        /// </summary>
+        /// <returns>Строка параметров для запуска процесса FFmpeg.</returns>
         public string Build()
         {
             lock (_builderLock)
@@ -73,43 +78,71 @@ namespace Xabe.FFmpeg
             }
         }
 
-        /// <inheritdoc />
+        /// <summary>
+        ///     Событие обновления прогресса FFmpeg.
+        /// </summary>
         public event ConversionProgressEventHandler OnProgress;
 
-        /// <inheritdoc />
+        /// <summary>
+        ///     Событие, возникающее при выводе текста FFmpeg.
+        /// </summary>
         public event DataReceivedEventHandler OnDataReceived;
 
-        /// <inheritdoc />
+        /// <summary>
+        ///     Событие, возникающее при получении видеоданных из pipe (требует PipeOutput()).
+        /// </summary>
         public event VideoDataEventHandler OnVideoDataReceived;
 
-        /// <inheritdoc />
+        /// <summary>
+        ///     Путь к выходному файлу.
+        /// </summary>
         public string OutputFilePath { get; private set; }
 
-        /// <inheritdoc />
+        /// <summary>
+        ///     Дескриптор канала вывода.
+        /// </summary>
         public PipeDescriptor? OutputPipeDescriptor { get; private set; }
 
-        /// <inheritdoc />
+        /// <summary>
+        ///     Перечисление всех потоков, добавленных в конвертацию.
+        /// </summary>
         public IEnumerable<IStream> Streams => _streams;
 
-        /// <inheritdoc />
+        /// <summary>
+        ///     Запускает конвертацию с текущими параметрами.
+        /// </summary>
+        /// <returns>Результат конвертации.</returns>
         public Task<IConversionResult> Start()
         {
             return Start(Build());
         }
 
-        /// <inheritdoc />
+        /// <summary>
+        ///     Запускает конвертацию с возможностью отмены.
+        /// </summary>
+        /// <param name="cancellationToken">Токен отмены.</param>
+        /// <returns>Результат конвертации.</returns>
         public Task<IConversionResult> Start(CancellationToken cancellationToken)
         {
             return Start(Build(), cancellationToken);
         }
 
-        /// <inheritdoc />
+        /// <summary>
+        ///     Запускает FFmpeg с указанными параметрами.
+        /// </summary>
+        /// <param name="parameters">Строка параметров для FFmpeg.</param>
+        /// <returns>Результат конвертации.</returns>
         public Task<IConversionResult> Start(string parameters)
         {
             return Start(parameters, new CancellationToken());
         }
 
-        /// <inheritdoc />
+        /// <summary>
+        ///     Запускает FFmpeg с заданными параметрами и токеном отмены.
+        /// </summary>
+        /// <param name="parameters">Строка параметров для FFmpeg.</param>
+        /// <param name="cancellationToken">Токен отмены.</param>
+        /// <returns>Результат конвертации.</returns>
         public async Task<IConversionResult> Start(string parameters, CancellationToken cancellationToken)
         {
             if (_ffmpeg != null)
@@ -163,14 +196,38 @@ namespace Xabe.FFmpeg
             }
         }
 
-        /// <inheritdoc />
+        /// <summary>
+        ///     Указывает длительность анализа входного потока FFmpeg.
+        /// </summary>
+        /// <param name="duration">Продолжительность анализа.</param>
+        /// <returns>Текущий объект IConversion.</returns>
+        public IConversion SetAnalysisDuration(TimeSpan duration)
+        {
+            // FFmpeg ожидает микросекунды (1 tick = 100 наносекунд, 10 ticks = 1 микросекунда)
+            long microseconds = duration.Ticks / 10;
+
+            _parameters.Add(new ConversionParameter($"-analyzeduration {microseconds}", ParameterPosition.PostInput));
+            return this;
+        }
+
+
+        /// <summary>
+        ///     Добавляет произвольный параметр к команде FFmpeg.
+        /// </summary>
+        /// <param name="parameter">Строка параметра.</param>
+        /// <param name="parameterPosition">Позиция параметра относительно входных файлов.</param>
+        /// <returns>Текущий объект IConversion.</returns>
         public IConversion AddParameter(string parameter, ParameterPosition parameterPosition = ParameterPosition.PostInput)
         {
             _userDefinedParameters[parameterPosition].Add(parameter);
             return this;
         }
 
-        /// <inheritdoc />
+        /// <summary>
+        ///     Добавляет один или несколько потоков к конвертации.
+        /// </summary>
+        /// <param name="streams">Потоки для добавления.</param>
+        /// <returns>Текущий объект IConversion.</returns>
         public IConversion AddStream<T>(params T[] streams) where T : IStream
         {
             foreach (T stream in streams)
@@ -184,7 +241,11 @@ namespace Xabe.FFmpeg
             return this;
         }
 
-        /// <inheritdoc />
+        /// <summary>
+        ///     Добавляет коллекцию потоков к конвертации.
+        /// </summary>
+        /// <param name="streams">Коллекция потоков.</param>
+        /// <returns>Текущий объект IConversion.</returns>
         public IConversion AddStream(IEnumerable<IStream> streams)
         {
             foreach (var stream in streams)
@@ -195,7 +256,11 @@ namespace Xabe.FFmpeg
             return this;
         }
 
-        /// <inheritdoc />
+        /// <summary>
+        ///     Устанавливает формат хеша для выходного потока в виде перечисления.
+        /// </summary>
+        /// <param name="hashFormat">Выбранный формат хеша.</param>
+        /// <returns>Текущий объект IConversion.</returns>
         public IConversion SetHashFormat(Hash hashFormat = Hash.SHA256)
         {
             var format = hashFormat.ToString();
@@ -212,21 +277,33 @@ namespace Xabe.FFmpeg
             return SetHashFormat(format);
         }
 
-        /// <inheritdoc />
+        /// <summary>
+        ///     Устанавливает формат хеша на основе строкового обозначения.
+        /// </summary>
+        /// <param name="hashFormat">Строковое представление формата хеша.</param>
+        /// <returns>Текущий объект IConversion.</returns>
         public IConversion SetHashFormat(string hashFormat)
         {
             _parameters.Add(new ConversionParameter($"-hash {hashFormat}", ParameterPosition.PostInput));
             return this;
         }
 
-        /// <inheritdoc />
+        /// <summary>
+        ///     Выбирает пресет FFmpeg, влияющий на скорость и качество.
+        /// </summary>
+        /// <param name="preset">Предустановка кодирования.</param>
+        /// <returns>Текущий объект IConversion.</returns>
         public IConversion SetPreset(ConversionPreset preset)
         {
             _parameters.Add(new ConversionParameter($"-preset {preset.ToString().ToLower()}", ParameterPosition.PostInput));
             return this;
         }
 
-        /// <inheritdoc />
+        /// <summary>
+        ///     Перемещает указатель времени в выходном файле (-ss).
+        /// </summary>
+        /// <param name="seek">Позиция начала.</param>
+        /// <returns>Текущий объект IConversion.</returns>
         public IConversion SetSeek(TimeSpan? seek)
         {
             if (seek.HasValue)
@@ -237,7 +314,11 @@ namespace Xabe.FFmpeg
             return this;
         }
 
-        /// <inheritdoc />
+        /// <summary>
+        ///     Ограничивает длительность входных данных (-t до входа).
+        /// </summary>
+        /// <param name="time">Продолжительность входа.</param>
+        /// <returns>Текущий объект IConversion.</returns>
         public IConversion SetInputTime(TimeSpan? time)
         {
             if (time.HasValue)
@@ -248,7 +329,11 @@ namespace Xabe.FFmpeg
             return this;
         }
 
-        /// <inheritdoc />
+        /// <summary>
+        ///     Ограничивает длительность выходного файла (-t после входа).
+        /// </summary>
+        /// <param name="time">Продолжительность выхода.</param>
+        /// <returns>Текущий объект IConversion.</returns>
         public IConversion SetOutputTime(TimeSpan? time)
         {
             if (time.HasValue)
@@ -259,7 +344,11 @@ namespace Xabe.FFmpeg
             return this;
         }
 
-        /// <inheritdoc />
+        /// <summary>
+        ///     Использует многопоточность, ограниченную 16 потоками.
+        /// </summary>
+        /// <param name="multiThread">Разрешить использование всех ядер.</param>
+        /// <returns>Текущий объект IConversion.</returns>
         public IConversion UseMultiThread(bool multiThread)
         {
             var threads = multiThread ? Environment.ProcessorCount : 1;
@@ -267,14 +356,22 @@ namespace Xabe.FFmpeg
             return this;
         }
 
-        /// <inheritdoc />
+        /// <summary>
+        ///     Указывает точное количество потоков FFmpeg.
+        /// </summary>
+        /// <param name="threadsCount">Число нитей.</param>
+        /// <returns>Текущий объект IConversion.</returns>
         public IConversion UseMultiThread(int threadsCount)
         {
             _parameters.Add(new ConversionParameter($"-threads {threadsCount}"));
             return this;
         }
 
-        /// <inheritdoc />
+        /// <summary>
+        ///     Устанавливает путь к выходному файлу.
+        /// </summary>
+        /// <param name="outputPath">Путь к файлу.</param>
+        /// <returns>Текущий объект IConversion.</returns>
         public IConversion SetOutput(string outputPath)
         {
             OutputFilePath = new FileInfo(outputPath).FullName;
@@ -282,7 +379,11 @@ namespace Xabe.FFmpeg
             return this;
         }
 
-        /// <inheritdoc />
+        /// <summary>
+        ///     Перенаправляет вывод FFmpeg в pipe.
+        /// </summary>
+        /// <param name="descriptor">Выбранный дескриптор pipe.</param>
+        /// <returns>Текущий объект IConversion.</returns>
         public IConversion PipeOutput(PipeDescriptor descriptor = PipeDescriptor.stdout)
         {
             SetOutput($"pipe:{(int)descriptor}");
@@ -290,7 +391,11 @@ namespace Xabe.FFmpeg
             return this;
         }
 
-        /// <inheritdoc />
+        /// <summary>
+        ///     Устанавливает битрейт для видеопотоков и соответствующие параметры.
+        /// </summary>
+        /// <param name="bitrate">Целевой битрейт.</param>
+        /// <returns>Текущий объект IConversion.</returns>
         public IConversion SetVideoBitrate(long bitrate)
         {
             _parameters.Add(new ConversionParameter($"-b:v {bitrate}", ParameterPosition.PostInput));
@@ -306,14 +411,22 @@ namespace Xabe.FFmpeg
             return this;
         }
 
-        /// <inheritdoc />
+        /// <summary>
+        ///     Устанавливает битрейт аудиопотоков.
+        /// </summary>
+        /// <param name="bitrate">Целевой битрейт для аудио.</param>
+        /// <returns>Текущий объект IConversion.</returns>
         public IConversion SetAudioBitrate(long bitrate)
         {
             _parameters.Add(new ConversionParameter($"-b:a {bitrate}", ParameterPosition.PostInput));
             return this;
         }
 
-        /// <inheritdoc />
+        /// <summary>
+        ///     Завершает конвертацию по достижении самого короткого потока (-shortest).
+        /// </summary>
+        /// <param name="useShortest">Признак включения опции.</param>
+        /// <returns>Текущий объект IConversion.</returns>
         public IConversion UseShortest(bool useShortest)
         {
             if (useShortest)
@@ -328,14 +441,23 @@ namespace Xabe.FFmpeg
             return this;
         }
 
-        /// <inheritdoc />
+        /// <summary>
+        ///     Устанавливает приоритет запускаемого процесса FFmpeg.
+        /// </summary>
+        /// <param name="priority">Приоритет процесса.</param>
+        /// <returns>Текущий объект IConversion.</returns>
         public IConversion SetPriority(ProcessPriorityClass? priority)
         {
             _priority = priority;
             return this;
         }
 
-        /// <inheritdoc />
+        /// <summary>
+        ///     Извлекает каждый frameNo-й кадр и записывает его как изображение.
+        /// </summary>
+        /// <param name="frameNo">Интервал выборки.</param>
+        /// <param name="buildOutputFileName">Функция генерации имени файла.</param>
+        /// <returns>Текущий объект IConversion.</returns>
         public IConversion ExtractEveryNthFrame(int frameNo, Func<string, string> buildOutputFileName)
         {
             _buildOutputFileName = buildOutputFileName;
@@ -346,7 +468,12 @@ namespace Xabe.FFmpeg
             return this;
         }
 
-        /// <inheritdoc />
+        /// <summary>
+        ///     Извлекает конкретный кадр по индексу.
+        /// </summary>
+        /// <param name="frameNo">Номер кадра.</param>
+        /// <param name="buildOutputFileName">Функция генерации имени файла.</param>
+        /// <returns>Текущий объект IConversion.</returns>
         public IConversion ExtractNthFrame(int frameNo, Func<string, string> buildOutputFileName)
         {
             _buildOutputFileName = buildOutputFileName;
@@ -356,7 +483,12 @@ namespace Xabe.FFmpeg
             return this;
         }
 
-        /// <inheritdoc />
+        /// <summary>
+        ///     Собирает видео из изображений, начиная с указанного номера.
+        /// </summary>
+        /// <param name="startNumber">Номер первого изображения.</param>
+        /// <param name="buildInputFileName">Генератор имен входных файлов.</param>
+        /// <returns>Текущий объект IConversion.</returns>
         public IConversion BuildVideoFromImages(int startNumber, Func<string, string> buildInputFileName)
         {
             _buildInputFileName = buildInputFileName;
@@ -364,7 +496,11 @@ namespace Xabe.FFmpeg
             return this;
         }
 
-        /// <inheritdoc />
+        /// <summary>
+        ///     Собирает видео из заданного списка изображений.
+        /// </summary>
+        /// <param name="imageFiles">Список файлов изображений.</param>
+        /// <returns>Текущий объект IConversion.</returns>
         public IConversion BuildVideoFromImages(IEnumerable<string> imageFiles)
         {
             var builder = new InputBuilder();
@@ -373,7 +509,11 @@ namespace Xabe.FFmpeg
             return this;
         }
 
-        /// <inheritdoc />
+        /// <summary>
+        ///     Устанавливает частоту кадров для входного потока (-framerate и -r до входа).
+        /// </summary>
+        /// <param name="frameRate">Желаемая частота.</param>
+        /// <returns>Текущий объект IConversion.</returns>
         public IConversion SetInputFrameRate(double frameRate)
         {
             _parameters.Add(new ConversionParameter($"-framerate {frameRate.ToFFmpegFormat(3)}", ParameterPosition.PreInput));
@@ -381,7 +521,11 @@ namespace Xabe.FFmpeg
             return this;
         }
 
-        /// <inheritdoc />
+        /// <summary>
+        ///     Устанавливает частоту кадров выходного видео (-framerate и -r после входов).
+        /// </summary>
+        /// <param name="frameRate">Желаемая частота.</param>
+        /// <returns>Текущий объект IConversion.</returns>
         public IConversion SetFrameRate(double frameRate)
         {
             _parameters.Add(new ConversionParameter($"-framerate {frameRate.ToFFmpegFormat(3)}", ParameterPosition.PostInput));
@@ -447,15 +591,15 @@ namespace Xabe.FFmpeg
         }
 
         /// <summary>
-        ///     Create map for included streams, including the InputBuilder if required
+        ///     Создает карту для включенных потоков, включая InputBuilder при необходимости
         /// </summary>
-        /// <returns>Map argument</returns>
+        /// <returns>Аргумент карты</returns>
         private string GetMap()
         {
             var builder = new StringBuilder();
             foreach (IStream stream in _streams)
             {
-                if (_hasInputBuilder) // If we have an input builder we always want to map the first video stream as it will be created by our input builder
+                if (_hasInputBuilder) // Если у нас есть построитель входных данных, мы всегда хотим сопоставить первый видеопоток, так как он будет создан нашим построителем входных данных
                 {
                     builder.Append($"-map 0:0 ");
                 }
@@ -464,7 +608,7 @@ namespace Xabe.FFmpeg
                 {
                     if (_hasInputBuilder)
                     {
-                        // If we have an input builder we need to add one to the input file index to account for the input created by our input builder.
+                        // Если у нас есть построитель входных данных, нам нужно добавить единицу к индексу входного файла, чтобы учесть вход, созданный нашим построителем входных данных.
                         builder.Append($"-map {_inputFileMap[source] + 1}:{stream.Index} ");
                     }
                     else
@@ -478,10 +622,10 @@ namespace Xabe.FFmpeg
         }
 
         /// <summary>
-        ///     Create parameters string
+        ///     Создает строку параметров
         /// </summary>
-        /// <param name="forPosition">Position for parameters</param>
-        /// <returns>Parameters</returns>
+        /// <param name="forPosition">Позиция для параметров</param>
+        /// <returns>Параметры</returns>
         private string GetParameters(ParameterPosition forPosition)
         {
             IEnumerable<ConversionParameter> parameters = _parameters?.Where(x => x.Position == forPosition);
@@ -497,9 +641,9 @@ namespace Xabe.FFmpeg
         }
 
         /// <summary>
-        ///     Create input string for all streams
+        ///     Создает строку входных данных для всех потоков
         /// </summary>
-        /// <returns>Input argument</returns>
+        /// <returns>Аргумент входных данных</returns>
         private string GetInputs()
         {
             var builder = new StringBuilder();
@@ -537,13 +681,27 @@ namespace Xabe.FFmpeg
                 .SetOverwriteOutput(false);
         }
 
-        /// <inheritdoc />
+        /// <summary>
+        ///     Включает аппаратное ускорение с использованием перечислений кодеков.
+        /// </summary>
+        /// <param name="hardwareAccelerator">Аппаратный ускоритель.</param>
+        /// <param name="decoder">Кодек декодирования.</param>
+        /// <param name="encoder">Кодек кодирования.</param>
+        /// <param name="device">Номер устройства (по умолчанию 0).</param>
+        /// <returns>Текущий объект IConversion.</returns>
         public IConversion UseHardwareAcceleration(HardwareAccelerator hardwareAccelerator, VideoCodec decoder, VideoCodec encoder, int device = 0)
         {
             return UseHardwareAcceleration($"{hardwareAccelerator}", decoder.ToString(), encoder.ToString(), device);
         }
 
-        /// <inheritdoc />
+        /// <summary>
+        ///     Включает аппаратное ускорение с использованием строковых идентификаторов кодеков.
+        /// </summary>
+        /// <param name="hardwareAccelerator">Имя аппаратного ускорителя.</param>
+        /// <param name="decoder">Кодек декодирования.</param>
+        /// <param name="encoder">Кодек кодирования.</param>
+        /// <param name="device">Номер устройства (по умолчанию 0).</param>
+        /// <returns>Текущий объект IConversion.</returns>
         public IConversion UseHardwareAcceleration(string hardwareAccelerator, string decoder, string encoder, int device = 0)
         {
             _parameters.Add(new ConversionParameter($"-hwaccel {hardwareAccelerator}", ParameterPosition.PreInput));
@@ -560,7 +718,11 @@ namespace Xabe.FFmpeg
             return this;
         }
 
-        /// <inheritdoc />
+        /// <summary>
+        ///     Определяет поведение перезаписи выходного файла.
+        /// </summary>
+        /// <param name="overwrite">Перезаписывать файл, если он существует.</param>
+        /// <returns>Текущий объект IConversion.</returns>
         public IConversion SetOverwriteOutput(bool overwrite)
         {
             if (overwrite)
@@ -577,7 +739,11 @@ namespace Xabe.FFmpeg
             return this;
         }
 
-        /// <inheritdoc />
+        /// <summary>
+        ///     Задает формат входного файла через перечисление Format.
+        /// </summary>
+        /// <param name="inputFormat">Формат входных данных.</param>
+        /// <returns>Текущий объект IConversion.</returns>
         public IConversion SetInputFormat(Format inputFormat)
         {
             var format = inputFormat.ToString();
@@ -602,7 +768,11 @@ namespace Xabe.FFmpeg
             return SetInputFormat(format);
         }
 
-        /// <inheritdoc />
+        /// <summary>
+        ///     Задает формат входного файла через строковое имя.
+        /// </summary>
+        /// <param name="format">Строковое название формата.</param>
+        /// <returns>Текущий объект IConversion.</returns>
         public IConversion SetInputFormat(string format)
         {
             if (format != null)
@@ -613,7 +783,11 @@ namespace Xabe.FFmpeg
             return this;
         }
 
-        /// <inheritdoc />
+        /// <summary>
+        ///     Задает формат выходного файла через перечисление Format.
+        /// </summary>
+        /// <param name="outputFormat">Формат выходных данных.</param>
+        /// <returns>Текущий объект IConversion.</returns>
         public IConversion SetOutputFormat(Format outputFormat)
         {
             var format = outputFormat.ToString();
@@ -638,7 +812,11 @@ namespace Xabe.FFmpeg
             return SetOutputFormat(format);
         }
 
-        /// <inheritdoc />
+        /// <summary>
+        ///     Задает формат выходного файла через строковое имя.
+        /// </summary>
+        /// <param name="format">Строковое название формата.</param>
+        /// <returns>Текущий объект IConversion.</returns>
         public IConversion SetOutputFormat(string format)
         {
             if (format != null)
@@ -649,7 +827,11 @@ namespace Xabe.FFmpeg
             return this;
         }
 
-        /// <inheritdoc />
+        /// <summary>
+        ///     Устанавливает формат пикселей выходного видео через перечисление.
+        /// </summary>
+        /// <param name="pixelFormat">Формат пикселей.</param>
+        /// <returns>Текущий объект IConversion.</returns>
         public IConversion SetPixelFormat(PixelFormat pixelFormat)
         {
             var format = pixelFormat.ToString();
@@ -668,7 +850,11 @@ namespace Xabe.FFmpeg
             return SetPixelFormat(format);
         }
 
-        /// <inheritdoc />
+        /// <summary>
+        ///     Устанавливает формат пикселей выходного видео через строковое имя.
+        /// </summary>
+        /// <param name="pixelFormat">Строковое обозначение формата пикселей.</param>
+        /// <returns>Текущий объект IConversion.</returns>
         public IConversion SetPixelFormat(string pixelFormat)
         {
             if (pixelFormat != null)
@@ -679,7 +865,11 @@ namespace Xabe.FFmpeg
             return this;
         }
 
-        /// <inheritdoc />
+        /// <summary>
+        ///     Задает метод синхронизации видео (-vsync).
+        /// </summary>
+        /// <param name="method">Метод синхронизации.</param>
+        /// <returns>Текущий объект IConversion.</returns>
         public IConversion SetVideoSyncMethod(VideoSyncMethod method)
         {
             if (method == VideoSyncMethod.auto)
@@ -694,7 +884,14 @@ namespace Xabe.FFmpeg
             return this;
         }
 
-        /// <inheritdoc />
+        /// <summary>
+        ///     Добавляет поток захвата рабочего стола по параметрам.
+        /// </summary>
+        /// <param name="videoSize">Размер окна захвата.</param>
+        /// <param name="framerate">Частота кадров.</param>
+        /// <param name="xOffset">Смещение по X.</param>
+        /// <param name="yOffset">Смещение по Y.</param>
+        /// <returns>Текущий объект IConversion.</returns>
         public IConversion AddDesktopStream(string videoSize = null, double framerate = 30, int xOffset = 0, int yOffset = 0)
         {
             var stream = new VideoStream() { Index = _streams.Any() ? _streams.Max(x => x.Index) + 1 : 0 };
@@ -727,7 +924,14 @@ namespace Xabe.FFmpeg
             return this;
         }
 
-        /// <inheritdoc />
+        /// <summary>
+        ///     Добавляет поток захвата рабочего стола с типизированным размером.
+        /// </summary>
+        /// <param name="videoSize">Размер из перечисления VideoSize.</param>
+        /// <param name="framerate">Частота кадров.</param>
+        /// <param name="xOffset">Смещение по X.</param>
+        /// <param name="yOffset">Смещение по Y.</param>
+        /// <returns>Текущий объект IConversion.</returns>
         public IConversion AddDesktopStream(VideoSize videoSize, double framerate = 30, int xOffset = 0, int yOffset = 0)
         {
             return AddDesktopStream(videoSize.ToFFmpegFormat(), framerate, xOffset, yOffset);

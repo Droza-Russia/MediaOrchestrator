@@ -19,9 +19,9 @@ namespace Xabe.FFmpeg
             {
                 return OperatingSystem.Linux;
 
-                // TODO : How to distinct Tizen / Raspberry architecture
+                // TODO : Как различить архитектуру Tizen / Raspberry
                 // Linux (Armet) (Tizen)
-                // Linux (LinuxArmhf) (for glibc based OS) -> Raspberry Pi
+                // Linux (LinuxArmhf) (для ОС на основе glibc) -> Raspberry Pi
             }
 
             throw new InvalidOperationException("Отсутствует тип системы и архитектура");

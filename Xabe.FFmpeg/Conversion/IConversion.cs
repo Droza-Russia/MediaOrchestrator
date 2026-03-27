@@ -9,238 +9,237 @@ using Xabe.FFmpeg.Exceptions;
 namespace Xabe.FFmpeg
 {
     /// <summary>
-    ///     Allows to prepare and start IConversion.
+    ///     Позволяет подготовить и запустить процесс конвертации.
     /// </summary>
     public interface IConversion
     {
         /// <summary>
-        ///     Output file path
+        ///     Путь к выходному файлу.
         /// </summary>
         string OutputFilePath { get; }
 
         /// <summary>
-        ///     Output pipe descriptor
+        ///     Дескриптор канала вывода.
         /// </summary>
         PipeDescriptor? OutputPipeDescriptor { get; }
 
         /// <summary>
-        /// Set priority of ffmpeg process
+        ///     Устанавливает приоритет процесса FFmpeg.
         /// </summary>
-        /// <param name="priority">FFmpeg process priority</param>
-        /// <returns></returns>
+        /// <param name="priority">Приоритет процесса FFmpeg.</param>
+        /// <returns>Текущий объект IConversion.</returns>
         IConversion SetPriority(ProcessPriorityClass? priority);
 
         /// <summary>
-        /// Extracts Every frameNo frame of the input video and outputs as a png image
+        ///     Извлекает каждый frameNo-й кадр и сохраняет его как изображение.
         /// </summary>
-        /// <param name="frameNo">The frame interval to extract </param>
-        /// <param name="buildOutputFileName"> Delegate Function to build up custom filename when outputting multiple files </param>
-        /// <returns></returns>
+        /// <param name="frameNo">Интервал, через который будут выбираться кадры.</param>
+        /// <param name="buildOutputFileName">Функция для генерации имени файла при выводе нескольких изображений.</param>
+        /// <returns>Текущий объект IConversion.</returns>
         IConversion ExtractEveryNthFrame(int frameNo, Func<string, string> buildOutputFileName);
 
         /// <summary>
-        /// Extracts the frameNo'th frame of the input video and outputs as a png image
+        ///     Извлекает конкретный кадр и сохраняет его как изображение.
         /// </summary>
-        /// <param name="frameNo">The frame to extract</param>
-        /// <param name="buildOutputFileName"> Delegate Function to build up custom filename when outputting multiple files </param>
-        /// <returns></returns>
+        /// <param name="frameNo">Номер кадра, который необходимо извлечь.</param>
+        /// <param name="buildOutputFileName">Функция для генерации имени файла при выводе изображения.</param>
+        /// <returns>Текущий объект IConversion.</returns>
         IConversion ExtractNthFrame(int frameNo, Func<string, string> buildOutputFileName);
 
         /// <summary>
-        /// Builds a video from a directory containing one or more sequentially named images
+        ///     Собирает видео из последовательности изображений с заданного номера.
         /// </summary>
-        /// <param name="startNumber">The number of the image to start building video from</param>
-        /// <param name="buildInputFileName"> Delegate Function to build up custom filename when inputting multiple files </param>
-        /// <returns>IConversion object</returns>
+        /// <param name="startNumber">Номер первого изображения.</param>
+        /// <param name="buildInputFileName">Функция для генерации имени входного файла.</param>
+        /// <returns>Текущий объект IConversion.</returns>
         IConversion BuildVideoFromImages(int startNumber, Func<string, string> buildInputFileName);
 
         /// <summary>
-        /// Builds a video from a directory containing one or more sequentially named images
+        ///     Собирает видео из списка изображений.
         /// </summary>
-        /// <param name="imageFiles"> List of Image Files to Build into a Video</param>
-        /// <returns>IConversion object</returns>
+        /// <param name="imageFiles">Список файлов-изображений.</param>
+        /// <returns>Текущий объект IConversion.</returns>
         IConversion BuildVideoFromImages(IEnumerable<string> imageFiles);
 
         /// <summary>
-        /// Builds the -framerate option for the output of this conversion
+        ///     Устанавливает частоту кадров выходного видео для опции -framerate и -r.
         /// </summary>
-        /// <param name="frameRate">The desired framerate of the output</param>
-        /// <returns>IConversion object</returns>
+        /// <param name="frameRate">Желаемая частота кадров.</param>
+        /// <returns>Текущий объект IConversion.</returns>
         IConversion SetFrameRate(double frameRate);
 
         /// <summary>
-        /// Builds the -framerate option for the input of this conversion
+        ///     Устанавливает частоту кадров для входного потока FFmpeg.
         /// </summary>
-        /// <param name="frameRate">the desired framerate of the input in bytes</param>
-        /// <returns>IConversion object</returns>
+        /// <param name="frameRate">Желаемая входная частота кадров.</param>
+        /// <returns>Текущий объект IConversion.</returns>
         IConversion SetInputFrameRate(double frameRate);
 
         /// <summary>
-        ///     Seeks in output file to position. (-ss argument)
+        ///     Перемещает позицию чтения в выходном файле (параметр -ss).
         /// </summary>
-        /// <param name="seek">Position</param>
-        /// <returns>IConversion</returns>
+        /// <param name="seek">Позиция смещения.</param>
+        /// <returns>Текущий объект IConversion.</returns>
         IConversion SetSeek(TimeSpan? seek);
 
         /// <summary>
-        ///     Sets input capture length (-t input argument)
-        ///     Typically used with the GetScreenCapture Function to stop capturing after a time interval
+        ///     Ограничивает продолжительность входного потока (-t до входа).
         /// </summary>
-        /// <param name="seek">Output Length</param>
-        /// <returns>IConversion</returns>
+        /// <param name="seek">Ограничение длины входа.</param>
+        /// <returns>Текущий объект IConversion.</returns>
         IConversion SetInputTime(TimeSpan? seek);
 
         /// <summary>
-        ///     Sets output file length (-t output argument)
+        ///     Ограничивает продолжительность выходного файла (-t после входа).
         /// </summary>
-        /// <param name="seek">Output Length</param>
-        /// <returns>IConversion</returns>
+        /// <param name="seek">Ограничение длины выхода.</param>
+        /// <returns>Текущий объект IConversion.</returns>
         IConversion SetOutputTime(TimeSpan? seek);
 
         /// <summary>
-        ///     Set preset of IConversion. Slower speed equals better compression and quality.
+        ///     Устанавливает пресет сжатия (предустановку FFmpeg).
         /// </summary>
-        /// <param name="preset">Preset</param>
-        /// <returns>IConversion object</returns>
+        /// <param name="preset">Выбранный пресет.</param>
+        /// <returns>Текущий объект IConversion.</returns>
         IConversion SetPreset(ConversionPreset preset);
 
         /// <summary>
-        ///     Set the hash format of IConversion.
+        ///     Задает формат хеша для вывода.
         /// </summary>
-        /// <param name="format">The required hash format</param>
-        /// <returns>IConversion object</returns>
+        /// <param name="format">Желаемый формат хеширования.</param>
+        /// <returns>Текущий объект IConversion.</returns>
         IConversion SetHashFormat(Hash format = Hash.SHA256);
 
         /// <summary>
-        ///     Set the hash format of IConversion.
+        ///     Задает формат хеша для вывода.
         /// </summary>
-        /// <param name="format">The required hash format</param>
-        /// <returns>IConversion object</returns>
+        /// <param name="format">Строковое представление формата хеширования.</param>
+        /// <returns>Текущий объект IConversion.</returns>
         IConversion SetHashFormat(string format);
 
         /// <summary>
-        ///     Sets The bitrate of the video streams to the supplied value in bytes
+        ///     Устанавливает битрейт для видеопотоков.
         /// </summary>
-        /// <param name="bitrate">The required Bitrate Value</param>
-        /// <returns>IConversion object</returns>
+        /// <param name="bitrate">Битрейт в битах.</param>
+        /// <returns>Текущий объект IConversion.</returns>
         IConversion SetVideoBitrate(long bitrate);
 
         /// <summary>
-        ///     Sets The bitrate of the audio streams to the supplied value in bytes
+        ///     Устанавливает битрейт для аудиопотоков.
         /// </summary>
-        /// <param name="bitrate">The required Bitrate Value</param>
-        /// <returns>IConversion object</returns>
+        /// <param name="bitrate">Битрейт в битах.</param>
+        /// <returns>Текущий объект IConversion.</returns>
         IConversion SetAudioBitrate(long bitrate);
 
         /// <summary>
-        ///     Defines thread count used by converter
+        ///     Задает фиксированное количество потоков FFmpeg.
         /// </summary>
-        /// <param name="threadCount">Number of used threads</param>
-        /// <returns>IConversion object</returns>
+        /// <param name="threadCount">Число потоков.</param>
+        /// <returns>Текущий объект IConversion.</returns>
         IConversion UseMultiThread(int threadCount);
 
         /// <summary>
-        ///     Defines if converter should use all CPU cores. If set to true FFmpeg use max 16 cores due to compatibility reason
+        ///     Позволяет автоматически использовать все ядра процессора при необходимости (максимум 16).
         /// </summary>
-        /// <param name="multiThread">Use multiThreads</param>
-        /// <returns>IConversion object</returns>
+        /// <param name="multiThread">Использовать ли многопоточность.</param>
+        /// <returns>Текущий объект IConversion.</returns>
         IConversion UseMultiThread(bool multiThread);
 
         /// <summary>
-        ///     Set output path
+        ///     Устанавливает путь к выходному файлу.
         /// </summary>
-        /// <param name="outputPath">Output media file</param>
-        /// <returns>IConversion object</returns>
+        /// <param name="outputPath">Путь к файлу.</param>
+        /// <returns>Текущий объект IConversion.</returns>
         IConversion SetOutput(string outputPath);
 
         /// <summary>
-        ///     Set piped output file descriptor
+        ///     Направляет вывод FFmpeg в pipe.
         /// </summary>
-        /// <param name="descriptor">Pipe file descriptor for FFmpeg process to use</param>
-        /// <returns>IConversion object</returns>
+        /// <param name="descriptor">Выбранный дескриптор pipe.</param>
+        /// <returns>Текущий объект IConversion.</returns>
         IConversion PipeOutput(PipeDescriptor descriptor = PipeDescriptor.stdout);
 
         /// <summary>
-        ///     Set overwrite output file parameter
+        ///     Определяет поведение перезаписи выходного файла.
         /// </summary>
-        /// <param name="overwrite">Should be output file overwritten or not. If not overwrite and file exists conversion will throw ConversionException</param>
-        /// <returns>IConversion object</returns>
+        /// <param name="overwrite">Перезаписывать существующий файл.</param>
+        /// <returns>Текущий объект IConversion.</returns>
         IConversion SetOverwriteOutput(bool overwrite);
 
         /// <summary>
-        /// Sets the format for the input file using the -f option before the input file name
+        ///     Задает формат входного файла через параметр -f перед входом.
         /// </summary>
-        /// <param name="inputFormat">The input format to set</param>
-        /// <returns>IConversion object</returns>
+        /// <param name="inputFormat">Желаемый формат.</param>
+        /// <returns>Текущий объект IConversion.</returns>
         IConversion SetInputFormat(string inputFormat);
 
         /// <summary>
-        /// Sets the format for the input file using the -f option before the input file name
+        ///     Задает формат входного файла через параметр -f перед входом.
         /// </summary>
-        /// <param name="inputFormat">The input format to set</param>
-        /// <returns>IConversion object</returns>
+        /// <param name="inputFormat">Формат из перечисления Format.</param>
+        /// <returns>Текущий объект IConversion.</returns>
         IConversion SetInputFormat(Format inputFormat);
 
         /// <summary>
-        /// Sets the format for the output file using the -f option before the output file name
+        ///     Задает формат выходного файла через параметр -f после входов.
         /// </summary>
-        /// <param name="outputFormat">The output format to set</param>
-        /// <returns>IConversion object</returns>
+        /// <param name="outputFormat">Формат из перечисления Format.</param>
+        /// <returns>Текущий объект IConversion.</returns>
         IConversion SetOutputFormat(Format outputFormat);
 
         /// <summary>
-        /// Sets the format for the output file using the -f option before the output file name
+        ///     Задает формат выходного файла через параметр -f после входов.
         /// </summary>
-        /// <param name="outputFormat">The output format to set</param>
-        /// <returns>IConversion object</returns>
+        /// <param name="outputFormat">Строковое представление формата.</param>
+        /// <returns>Текущий объект IConversion.</returns>
         IConversion SetOutputFormat(string outputFormat);
 
         /// <summary>
-        /// Sets the pixel format for the output file using the -pix_fmt option before the output file name
+        ///     Устанавливает формат пикселей для выходного видео.
         /// </summary>
-        /// <param name="pixelFormat">The output pixel format to set</param>
-        /// <returns>IConversion object</returns>
+        /// <param name="pixelFormat">Строковое имя формата.</param>
+        /// <returns>Текущий объект IConversion.</returns>
         IConversion SetPixelFormat(string pixelFormat);
 
         /// <summary>
-        /// Sets the pixel format for the output file using the -pix_fmt option before the output file name
+        ///     Устанавливает формат пикселей для выходного видео.
         /// </summary>
-        /// <param name="pixelFormat">The output pixel format to set</param>
-        /// <returns>IConversion object</returns>
+        /// <param name="pixelFormat">Формат из перечисления PixelFormat.</param>
+        /// <returns>Текущий объект IConversion.</returns>
         IConversion SetPixelFormat(PixelFormat pixelFormat);
 
         /// <summary>
-        ///     Fires when FFmpeg progress changes
+        ///     Событие обновления прогресса FFmpeg.
         /// </summary>
         event ConversionProgressEventHandler OnProgress;
 
         /// <summary>
-        ///     Fires when FFmpeg process print sonething
+        ///     Событие, возникающее при выводе текста FFmpeg.
         /// </summary>
         event DataReceivedEventHandler OnDataReceived;
 
         /// <summary>
-        ///     Fires when FFmpeg process writes video data to stdout. It requires .PipeOutput()
+        ///     Событие, возникающее при получении видеоданных из pipe (требует PipeOutput()).
         /// </summary>
         event VideoDataEventHandler OnVideoDataReceived;
 
         /// <summary>
-        ///     Finish encoding when the shortest input stream ends. (-shortest)
+        ///     Завершает кодирование, когда заканчивается самый короткий входной поток (-shortest).
         /// </summary>
-        /// <param name="useShortest"></param>
-        /// <returns>IConversion object</returns>
+        /// <param name="useShortest">Признак выключения ускоренного завершения.</param>
+        /// <returns>Текущий объект IConversion.</returns>
         IConversion UseShortest(bool useShortest);
 
         /// <summary>
-        ///     Build FFmpeg arguments
+        ///     Собирает аргументы FFmpeg для конвертации.
         /// </summary>
-        /// <returns>Arguments</returns>
+        /// <returns>Строка аргументов.</returns>
         string Build();
 
         /// <summary>
-        ///     Start conversion
+        ///     Запускает конвертацию с текущими параметрами.
         /// </summary>
-        /// <returns>Conversion result</returns>
+        /// <returns>Результат конвертации.</returns>
         /// <exception cref="ConversionException">Возникает, когда процесс FFmpeg возвращает ошибку.</exception>
         /// <exception cref="ArgumentException">Возникает, когда исполняемые файлы FFmpeg не найдены.</exception>
         /// <exception cref="InvalidOperationException"></exception>
@@ -248,10 +247,10 @@ namespace Xabe.FFmpeg
         Task<IConversionResult> Start();
 
         /// <summary>
-        ///     Start conversion
+        ///     Запускает конвертацию с возможностью отмены.
         /// </summary>
-        /// <param name="cancellationToken">Cancellation token</param>
-        /// <returns>Conversion result</returns>
+        /// <param name="cancellationToken">Токен отмены.</param>
+        /// <returns>Результат конвертации.</returns>
         /// <exception cref="ConversionException">Возникает, когда процесс FFmpeg возвращает ошибку.</exception>
         /// <exception cref="ArgumentException">Возникает, когда исполняемые файлы FFmpeg не найдены.</exception>
         /// <exception cref="InvalidOperationException"></exception>
@@ -260,10 +259,10 @@ namespace Xabe.FFmpeg
         Task<IConversionResult> Start(CancellationToken cancellationToken);
 
         /// <summary>
-        ///     Start an FFmpeg process with specified arguments
+        ///     Запускает FFmpeg с указанными параметрами.
         /// </summary>
-        /// <param name="parameters">FFmpeg parameters eg. "-i sample.mp4 -v 0 -vcodec mpeg4 -f mpegts udp://127.0.0.1:23000"</param>
-        /// <returns>Conversion result</returns>
+        /// <param name="parameters">Строка параметров FFmpeg.</param>
+        /// <returns>Результат конвертации.</returns>
         /// <exception cref="ConversionException">Возникает, когда процесс FFmpeg возвращает ошибку.</exception>
         /// <exception cref="ArgumentException">Возникает, когда исполняемые файлы FFmpeg не найдены.</exception>
         /// <exception cref="InvalidOperationException"></exception>
@@ -271,11 +270,11 @@ namespace Xabe.FFmpeg
         Task<IConversionResult> Start(string parameters);
 
         /// <summary>
-        ///     Start an FFmpeg process with specified arguments
+        ///     Запускает FFmpeg с указанными параметрами и токеном отмены.
         /// </summary>
-        /// <param name="parameters">FFmpeg parameters eg. "-i sample.mp4 -v 0 -vcodec mpeg4 -f mpegts udp://127.0.0.1:23000"</param>
-        /// <param name="cancellationToken">Cancellation token</param>
-        /// <returns>Conversion result</returns>
+        /// <param name="parameters">Строка параметров FFmpeg.</param>
+        /// <param name="cancellationToken">Токен отмены.</param>
+        /// <returns>Результат конвертации.</returns>
         /// <exception cref="ConversionException">Возникает, когда процесс FFmpeg возвращает ошибку.</exception>
         /// <exception cref="ArgumentException">Возникает, когда исполняемые файлы FFmpeg не найдены.</exception>
         /// <exception cref="InvalidOperationException"></exception>
@@ -284,79 +283,77 @@ namespace Xabe.FFmpeg
         Task<IConversionResult> Start(string parameters, CancellationToken cancellationToken);
 
         /// <summary>
-        ///     Add additional parameters for the conversion (They must be well formed)
+        ///     Добавляет дополнительный параметр в аргументы FFmpeg.
         /// </summary>
-        /// <param name="parameter"> Parameter to set</param>
-        /// <param name="parameterPosition">Position of parameter</param>
-        /// <returns>IConversion object</returns>
+        /// <param name="parameter">Параметр в виде строки.</param>
+        /// <param name="parameterPosition">Позиция параметра относительно входа.</param>
+        /// <returns>Текущий объект IConversion.</returns>
         IConversion AddParameter(string parameter, ParameterPosition parameterPosition = ParameterPosition.PostInput);
 
         /// <summary>
-        ///     Add streams to output file
+        ///     Добавляет один или несколько потоков в выходной файл.
         /// </summary>
-        /// <param name="streams">Streams to add</param>
-        /// <returns>IConversion object</returns>
+        /// <param name="streams">Потоки для добавления.</param>
+        /// <returns>Текущий объект IConversion.</returns>
         IConversion AddStream<T>(params T[] streams) where T : IStream;
 
         /// <summary>
-        ///     Add streams to output file
+        ///     Добавляет набор потоков в выходной файл.
         /// </summary>
-        /// <param name="streams">Streams to add</param>
-        /// <returns>IConversion object</returns>
+        /// <param name="streams">Коллекция потоков.</param>
+        /// <returns>Текущий объект IConversion.</returns>
         IConversion AddStream(IEnumerable<IStream> streams);
 
         /// <summary>
-        ///     Use hardware acceleration. This option set -threads to 1 for compatibility reasons. This should be use with proper codec (e.g. -c:v h264_nvenc or h264_cuvid)
+        ///     Включает аппаратное ускорение для кодирования и декодирования.
         /// </summary>
-        /// <param name="hardwareAccelerator">Hardware accelerator. List of all accelerators available for your system - "ffmpeg -hwaccels"</param>
-        /// <param name="decoder">Codec using to decode input video.</param>
-        /// <param name="encoder">Codec using to encode output video.</param>
-        /// <param name="device">Number of device (0 = default video card) if more than one video card.</param>
-        /// <returns>IConversion object</returns>
+        /// <param name="hardwareAccelerator">Название ускорителя.</param>
+        /// <param name="decoder">Кодек декодирования.</param>
+        /// <param name="encoder">Кодек кодирования.</param>
+        /// <param name="device">Номер устройства (0 по умолчанию).</param>
+        /// <returns>Текущий объект IConversion.</returns>
         IConversion UseHardwareAcceleration(HardwareAccelerator hardwareAccelerator, VideoCodec decoder, VideoCodec encoder, int device = 0);
 
         /// <summary>
-        ///     Use hardware acceleration. This option set -threads to 1 for compatibility reasons. This should be use with proper codec (e.g. -c:v h264_nvenc or h264_cuvid)
+        ///     Включает аппаратное ускорение при помощи строковых параметров.
         /// </summary>
-        /// <param name="hardwareAccelerator">Hardware accelerator. List of all accelerators available for your system - "ffmpeg -hwaccels"</param>
-        /// <param name="decoder">Codec using to decode input video.</param>
-        /// <param name="encoder">Codec using to encode output video.</param>
-        /// <param name="device">Number of device (0 = default video card) if more than one video card.</param>
-        /// <returns>IConversion object</returns>
+        /// <param name="hardwareAccelerator">Название ускорителя.</param>
+        /// <param name="decoder">Кодек декодирования.</param>
+        /// <param name="encoder">Кодек кодирования.</param>
+        /// <param name="device">Номер устройства, если их несколько.</param>
+        /// <returns>Текущий объект IConversion.</returns>
         IConversion UseHardwareAcceleration(string hardwareAccelerator, string decoder, string encoder, int device = 0);
 
         /// <summary>
-        ///    Set video sync method.
+        ///     Задает метод синхронизации видео для FFmpeg.
         /// </summary>
-        /// <param name="method">Vsync Mode - auto for skip</param>
-        /// <returns>IConversion object</returns>
+        /// <param name="method">Метод синхронизации.</param>
+        /// <returns>Текущий объект IConversion.</returns>
         IConversion SetVideoSyncMethod(VideoSyncMethod method);
 
         /// <summary>
-        ///     List of all streams
+        ///     Перечисление всех потоков, добавленных в конвертацию.
         /// </summary>
         IEnumerable<IStream> Streams { get; }
 
         /// <summary>
-        ///     Capture desktop to output file
+        ///     Добавляет поток захвата рабочего стола по параметрам.
         /// </summary>
-        /// <param name="xOffset">X Offset</param>
-        /// <param name="yOffset">Y Offset</param>
-        /// <param name="videoSize">Input video size</param>
-        /// <param name="framerate">The desired framerate of the output</param>
-        /// <returns>IConversion object</returns>
-        //Get desktop stream with "draw_mouse, x and y offsets, video_size and framerate"
+        /// <param name="videoSize">Размер видео.</param>
+        /// <param name="framerate">Частота кадров.</param>
+        /// <param name="xOffset">Смещение по X.</param>
+        /// <param name="yOffset">Смещение по Y.</param>
+        /// <returns>Текущий объект IConversion.</returns>
         IConversion AddDesktopStream(string videoSize = null, double framerate = 30, int xOffset = 0, int yOffset = 0);
 
         /// <summary>
-        ///     Capture desktop to output file
+        ///     Добавляет поток захвата рабочего стола с помощью типизированного размера.
         /// </summary>
-        /// <param name="xOffset">X Offset</param>
-        /// <param name="yOffset">Y Offset</param>
-        /// <param name="videoSize">Input video size</param>
-        /// <param name="framerate">The desired framerate of the output</param>
-        /// <returns>IConversion object</returns>
-        //Get desktop stream with "draw_mouse, x and y offsets, video_size and framerate"
+        /// <param name="videoSize">Размер видео из перечисления VideoSize.</param>
+        /// <param name="framerate">Частота кадров.</param>
+        /// <param name="xOffset">Смещение по X.</param>
+        /// <param name="yOffset">Смещение по Y.</param>
+        /// <returns>Текущий объект IConversion.</returns>
         IConversion AddDesktopStream(VideoSize videoSize, double framerate = 30, int xOffset = 0, int yOffset = 0);
     }
 }

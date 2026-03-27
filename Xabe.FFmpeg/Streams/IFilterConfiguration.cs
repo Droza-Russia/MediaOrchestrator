@@ -1,24 +1,24 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 
 namespace Xabe.FFmpeg
 {
     /// <summary>
-    ///     Stream filter configuration
+    ///     Конфигурация фильтра потока.
     /// </summary>
     public interface IFilterConfiguration
     {
         /// <summary>
-        ///     Type of filter
+        ///     Тип фильтра.
         /// </summary>
         string FilterType { get; }
 
         /// <summary>
-        ///     Stream filter number
+        ///     Номер потока для фильтрации.
         /// </summary>
         int StreamNumber { get; }
 
         /// <summary>
-        ///     Filter with name and values
+        ///     Фильтр с именами параметров и их значениями.
         /// </summary>
         Dictionary<string, string> Filters { get; }
     }

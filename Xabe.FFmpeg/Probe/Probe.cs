@@ -1,4 +1,4 @@
-﻿using System.Threading;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace Xabe.FFmpeg
@@ -7,9 +7,9 @@ namespace Xabe.FFmpeg
     public class Probe : IProbe
     {
         /// <summary>
-        ///     Get new instance of Conversion
+        ///     Создает новый экземпляр Probe.
         /// </summary>
-        /// <returns>IProbe object</returns>
+        /// <returns>Объект IProbe.</returns>
         public static IProbe New()
         {
             return new Probe();

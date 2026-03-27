@@ -1,29 +1,29 @@
-﻿using System;
+using System;
 
 namespace Xabe.FFmpeg
 {
     /// <summary>
-    ///     Information about conversion
+    ///     Информация о конвертации.
     /// </summary>
     public interface IConversionResult
     {
         /// <summary>
-        ///     Date and time of starting conversion
+        ///     Дата и время начала конвертации.
         /// </summary>
         DateTime StartTime { get; }
 
         /// <summary>
-        ///     Date and time of starting conversion
+        ///     Дата и время завершения конвертации.
         /// </summary>
         DateTime EndTime { get; }
 
         /// <summary>
-        ///     Conversion duration
+        ///     Длительность конвертации.
         /// </summary>
         TimeSpan Duration { get; }
 
         /// <summary>
-        ///     Arguments passed to ffmpeg
+        ///     Аргументы, переданные в ffmpeg.
         /// </summary>
         string Arguments { get; }
     }

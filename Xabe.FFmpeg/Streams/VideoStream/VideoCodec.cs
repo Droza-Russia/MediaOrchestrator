@@ -1,8 +1,8 @@
 ﻿namespace Xabe.FFmpeg
 {
-    ///<summary>
-    ///      Video codec ("ffmpeg -codecs")
-    ///</summary>
+    /// <summary>
+    ///     Видеокодеки (см. `ffmpeg -codecs`).
+    /// </summary>
     public enum VideoCodec
     {
         ///<summary>
@@ -951,22 +951,22 @@
         tqi,
 
         ///<summary>
-        ///      Duck TrueMotion 1.0
+        ///      Кодек Duck TrueMotion 1.0
         ///</summary>
         truemotion1,
 
         ///<summary>
-        ///      Duck TrueMotion 2.0
+        ///      Кодек Duck TrueMotion 2.0
         ///</summary>
         truemotion2,
 
         ///<summary>
-        ///      Duck TrueMotion 2.0 Real Time
+        ///      Duck TrueMotion 2.0 в режиме реального времени
         ///</summary>
         truemotion2rt,
 
         ///<summary>
-        ///      TechSmith Screen Capture Codec (decoders: camtasia )
+        ///      TechSmith Screen Capture Codec (декодер: camtasia)
         ///</summary>
         tscc,
 
@@ -976,37 +976,37 @@
         tscc2,
 
         ///<summary>
-        ///      Renderware TXD (TeXture Dictionary) image
+        ///      Изображение Renderware TXD (словарь текстур)
         ///</summary>
         txd,
 
         ///<summary>
-        ///      IBM UltiMotion (decoders: ultimotion )
+        ///      IBM UltiMotion (декодеры: ultimotion)
         ///</summary>
         ulti,
 
         ///<summary>
-        ///      Ut Video
+        ///      Кодек Ut Video
         ///</summary>
         utvideo,
 
         ///<summary>
-        ///      Uncompressed 4:2:2 10-bit
+        ///      Несжатый 4:2:2 10-бит
         ///</summary>
         v210,
 
         ///<summary>
-        ///      Uncompressed 4:2:2 10-bit
+        ///      Несжатый 4:2:2 10-бит
         ///</summary>
         v210x,
 
         ///<summary>
-        ///      Uncompressed packed 4:4:4
+        ///      Несжатый упакованный 4:4:4
         ///</summary>
         v308,
 
         ///<summary>
-        ///      Uncompressed packed QT 4:4:4:4
+        ///      Несжатый упакованный QuickTime 4:4:4:4
         ///</summary>
         v408,
 

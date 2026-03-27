@@ -1,65 +1,67 @@
-﻿using Xabe.FFmpeg.Streams.SubtitleStream;
+using Xabe.FFmpeg.Streams.SubtitleStream;
 
 namespace Xabe.FFmpeg
 {
     /// <summary>
-    ///     Subtitle stream
+    ///     Поток субтитров.
     /// </summary>
     public interface ISubtitleStream : IStream
     {
         /// <summary>
-        ///     Subtitle language
+        ///     Язык субтитров.
         /// </summary>
         string Language { get; }
 
         /// <summary>
-        /// Default
+        /// По умолчанию.
         /// </summary>
         int? Default { get; }
 
         /// <summary>
-        /// Forced
+        /// Принудительно.
         /// </summary>
         int? Forced { get; }
 
         /// <summary>
-        /// Title
+        /// Заголовок.
         /// </summary>
         string Title { get; }
 
         /// <summary>
-        ///     Set subtitle language
+        ///     Устанавливает язык субтитров.
         /// </summary>
-        /// <param name="language">Language</param>
-        /// <returns>ISubtitleStream</returns>
+        /// <param name="language">Язык.</param>
+        /// <returns>Объект ISubtitleStream.</returns>
         ISubtitleStream SetLanguage(string language);
 
         /// <summary>
-        ///     Set subtitle codec
+        ///     Устанавливает кодек субтитров.
         /// </summary>
-        /// <param name="codec">Subtitle codec</param>
-        /// <returns>ISubtitleStream</returns>
+        /// <param name="codec">Кодек субтитров.</param>
+        /// <returns>Объект ISubtitleStream.</returns>
         ISubtitleStream SetCodec(SubtitleCodec codec);
 
         /// <summary>
-        ///     Set Subtitle codec
+        ///     Устанавливает кодек субтитров.
         /// </summary>
-        /// <param name="codec">Subtitle codec</param>
-        /// <returns>IVideoStream</returns>
+        /// <param name="codec">Кодек субтитров.</param>
+        /// <returns>Объект ISubtitleStream.</returns>
         ISubtitleStream SetCodec(string codec);
 
         /// <summary>
-        ///     "-re" parameter. Read input at native frame rate. Mainly used to simulate a grab device, or live input stream (e.g. when reading from a file). Should not be used with actual grab devices or live input streams (where it can cause packet loss). By default ffmpeg attempts to read the input(s) as fast as possible. This option will slow down the reading of the input(s) to the native frame rate of the input(s). It is useful for real-time output (e.g. live streaming).
+        ///     Параметр "-re". Читает входные данные с нативной частотой кадров.
+        ///     Обычно используется для имитации устройства захвата или live-потока (например, при чтении из файла).
+        ///     По умолчанию ffmpeg читает входные данные максимально быстро; эта опция замедляет чтение до нативной частоты.
         /// </summary>
-        /// <param name="readInputAtNativeFrameRate">Read input at native frame rate. False set parameter to default value.</param>
-        /// <returns>IConversion object</returns>
+        /// <param name="readInputAtNativeFrameRate">Читать вход с нативной частотой кадров. При False используется значение по умолчанию.</param>
+        /// <returns>Объект ISubtitleStream.</returns>
         ISubtitleStream UseNativeInputRead(bool readInputAtNativeFrameRate);
 
         /// <summary>
-        ///     "-stream_loop" parameter. Set number of times input stream shall be looped. 
+        ///     Параметр "-stream_loop". Устанавливает количество повторов входного потока.
         /// </summary>
-        /// <param name="loopCount">Loop 0 means no loop, loop -1 means infinite loop.</param>
-        /// <returns>IConversion object</returns>
+        /// <param name="loopCount">0 - без повтора, -1 - бесконечный повтор.</param>
+        /// <returns>Объект ISubtitleStream.</returns>
         ISubtitleStream SetStreamLoop(int loopCount);
     }
 }
