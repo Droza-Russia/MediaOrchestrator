@@ -1,7 +1,8 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Text.RegularExpressions;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace Xabe.FFmpeg
@@ -19,7 +20,7 @@ namespace Xabe.FFmpeg
         /// <param name="encoder">Codec using to encode output video (e.g. h264_nvenc)</param>
         /// <param name="device">Number of device (0 = default video card) if more than one video card.</param>
         /// <returns>IConversion object</returns>
-        internal static async Task<Device[]> GetAvailableDevices()
+        internal static async Task<Device[]> GetAvailableDevices(CancellationToken cancellationToken = default)
         {
             Format format = Format.dshow;
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
@@ -35,7 +36,7 @@ namespace Xabe.FFmpeg
             var conversion = New().AddParameter($"-list_devices true -f {format} -i dummy");
             var text = new StringBuilder();
             conversion.OnDataReceived += (sender, e) => text.AppendLine(e.Data);
-            await conversion.Start();
+            await conversion.Start(cancellationToken);
 
             var result = text.ToString();
 

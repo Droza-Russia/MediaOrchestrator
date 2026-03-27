@@ -52,6 +52,11 @@ namespace Xabe.FFmpeg.Exceptions
 
         internal void CatchFFmpegErrors(string output, string args)
         {
+            if (LogIndicatesInsufficientDiskSpace(output))
+            {
+                throw new InsufficientDiskSpaceException(ErrorMessages.InsufficientDiskSpace, output, args);
+            }
+
             foreach (var check in _checks)
             {
                 try
@@ -66,6 +71,34 @@ namespace Xabe.FFmpeg.Exceptions
                     throw new ConversionException(e.Message, e, e.InputParameters);
                 }
             }
+        }
+
+        /// <summary>
+        ///     Проверка журнала FFmpeg на признаки нехватки места на диске (для повторного использования после других правил).
+        /// </summary>
+        internal static bool OutputIndicatesInsufficientDiskSpace(string log) => LogIndicatesInsufficientDiskSpace(log);
+
+        /// <summary>
+        ///     Типичные фрагменты stderr ОС/FFmpeg при ENOSPC и аналогах Windows.
+        /// </summary>
+        private static bool LogIndicatesInsufficientDiskSpace(string log)
+        {
+            if (string.IsNullOrEmpty(log))
+            {
+                return false;
+            }
+
+            var u = log.ToUpperInvariant();
+            return u.Contains("NO SPACE LEFT ON DEVICE")
+                   || u.Contains("NOT ENOUGH SPACE ON THE DISK")
+                   || u.Contains("NOT ENOUGH STORAGE IS AVAILABLE")
+                   || u.Contains("ENOSPC")
+                   || u.Contains("ERRNO=28")
+                   || u.Contains("ERROR NUMBER -28")
+                   || u.Contains("НЕДОСТАТОЧНО МЕСТА НА ДИСКЕ")
+                   || u.Contains("НЕ ХВАТАЕТ МЕСТА НА ДИСКЕ")
+                   || u.Contains("NICHT GENÜGEND SPEICHERPLATZ")
+                   || u.Contains("NICHT GENUG SPEICHERPLATZ");
         }
     }
 }

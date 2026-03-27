@@ -72,8 +72,10 @@ namespace Xabe.FFmpeg
         {
             MediaFileSignatureValidator.ValidateOrThrow(filePath);
             var cacheKey = BuildCacheKey(filePath);
+            var cacheEnabled = FFmpeg.MediaInfoCacheEnabled;
+            var cacheLifetime = FFmpeg.MediaInfoCacheLifetime;
             IMediaInfo cached;
-            if (FFmpeg.MediaInfoCacheEnabled && TryGetFromCache(cacheKey, out cached))
+            if (cacheEnabled && TryGetFromCache(cacheKey, out cached))
             {
                 return Clone(cached);
             }
@@ -81,12 +83,12 @@ namespace Xabe.FFmpeg
             var mediaInfo = new MediaInfo(filePath);
             var wrapper = new FFprobeWrapper();
             mediaInfo = await wrapper.SetProperties(mediaInfo, cancellationToken);
-            if (FFmpeg.MediaInfoCacheEnabled)
+            if (cacheEnabled)
             {
                 _cache[cacheKey] = new CacheEntry
                 {
                     Value = Clone(mediaInfo),
-                    ExpiresAtUtc = DateTimeOffset.UtcNow.Add(FFmpeg.MediaInfoCacheLifetime)
+                    ExpiresAtUtc = DateTimeOffset.UtcNow.Add(cacheLifetime)
                 };
             }
 

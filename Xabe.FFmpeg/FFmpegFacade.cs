@@ -17,18 +17,60 @@ namespace Xabe.FFmpeg
         /// <summary>
         ///     Директория, содержащая FFmpeg и FFprobe
         /// </summary>
-        public static string ExecutablesPath { get; private set; }
+        public static string ExecutablesPath
+        {
+            get
+            {
+                _executableConfigurationLock.EnterReadLock();
+                try
+                {
+                    return _executablesPath;
+                }
+                finally
+                {
+                    _executableConfigurationLock.ExitReadLock();
+                }
+            }
+        }
 
         /// <summary>
         ///     Метод фильтрации для поиска файлов FFmpeg и FFprobe
         /// </summary>
-        public static FileNameFilterMethod FilterMethod { get; private set; }
+        public static FileNameFilterMethod FilterMethod
+        {
+            get
+            {
+                _executableConfigurationLock.EnterReadLock();
+                try
+                {
+                    return _filterMethod;
+                }
+                finally
+                {
+                    _executableConfigurationLock.ExitReadLock();
+                }
+            }
+        }
 
         /// <summary>
         ///     Выбирает, должен ли метод фильтрации учитывать регистр
         ///     Это будет использоваться для сравнения имен файлов
         /// </summary>
-        public static IFormatProvider FormatProvider { get; private set; }
+        public static IFormatProvider FormatProvider
+        {
+            get
+            {
+                _executableConfigurationLock.EnterReadLock();
+                try
+                {
+                    return _formatProvider;
+                }
+                finally
+                {
+                    _executableConfigurationLock.ExitReadLock();
+                }
+            }
+        }
 
         /// <summary>
         ///     Включает или отключает кэширование MediaInfo.
@@ -49,23 +91,14 @@ namespace Xabe.FFmpeg
         /// <summary>
         ///     Получает MediaInfo из файла
         /// </summary>
-        /// <param name="filePath">Полный путь к файлу</param>
-        /// <exception cref="ArgumentException">Файл не существует</exception>
-        public static async Task<IMediaInfo> GetMediaInfo(string fileName)
-        {
-            return await MediaInfo.Get(fileName);
-        }
-
-        /// <summary>
-        ///     Получает MediaInfo из файла
-        /// </summary>
-        /// <param name="filePath">Полный путь к файлу</param>
+        /// <param name="fileName">Полный путь к файлу</param>
         /// <param name="cancellationToken">Токен отмены</param>
         /// <exception cref="ArgumentException">Файл не существует</exception>
-        /// <exception cref="TaskCanceledException">Операция занимает слишком много времени</exception>
-        public static async Task<IMediaInfo> GetMediaInfo(string fileName, CancellationToken token)
+        /// <exception cref="TaskCanceledException">Операция отменена или занимает слишком много времени</exception>
+        public static async Task<IMediaInfo> GetMediaInfo(string fileName, CancellationToken cancellationToken = default)
         {
-            return await MediaInfo.Get(fileName, token);
+            EnsureExecutablesLocated(cancellationToken);
+            return await MediaInfo.Get(fileName, cancellationToken);
         }
 
         /// <summary>
@@ -81,6 +114,7 @@ namespace Xabe.FFmpeg
         /// <param name="maxOutputAudioSampleRate">Необязательный лимит частоты дискретизации выходного аудио в Гц (максимум).</param>
         /// <param name="maxOutputAudioChannels">Необязательный лимит числа каналов выходного аудио (максимум).</param>
         /// <param name="tryDetectHardwareAcceleration">Если true — выполняется <c>ffmpeg -hwaccels</c> и выбирается ускоритель с учётом ОС (NVIDIA, Intel QSV, AMD AMF через D3D11, VAAPI, Video Toolbox).</param>
+        /// <param name="cancellationToken">Отмена во время автоопределения HW (процесс ffmpeg -hwaccels).</param>
         public static void SetExecutablesPath(
             string directoryWithFFmpegAndFFprobe,
             string ffmpegExeutableName = "ffmpeg",
@@ -91,35 +125,61 @@ namespace Xabe.FFmpeg
             double? maxOutputVideoFrameRate = null,
             int? maxOutputAudioSampleRate = null,
             int? maxOutputAudioChannels = null,
-            bool tryDetectHardwareAcceleration = false)
+            bool tryDetectHardwareAcceleration = false,
+            CancellationToken cancellationToken = default)
         {
-            ExecutablesPath = directoryWithFFmpegAndFFprobe == null ? null : new DirectoryInfo(directoryWithFFmpegAndFFprobe).FullName;
-            FilterMethod = filteringMethod;
-            FormatProvider = formatprovider ?? CultureInfo.CurrentCulture;
-            _ffmpegExecutableName = ffmpegExeutableName;
-            _ffprobeExecutableName = ffprobeExecutableName;
+            _executableConfigurationLock.EnterWriteLock();
+            try
+            {
+                _executablesPath = directoryWithFFmpegAndFFprobe == null ? null : new DirectoryInfo(directoryWithFFmpegAndFFprobe).FullName;
+                _filterMethod = filteringMethod;
+                _formatProvider = formatprovider ?? CultureInfo.CurrentCulture;
+                _ffmpegExecutableName = ffmpegExeutableName;
+                _ffprobeExecutableName = ffprobeExecutableName;
+                _lastExecutablePathMarker = null;
+                _ffmpegPath = null;
+                _ffprobePath = null;
+            }
+            finally
+            {
+                _executableConfigurationLock.ExitWriteLock();
+            }
+
             LocalizationManager.Initialize(language);
             if (maxOutputVideoFrameRate != null || maxOutputAudioSampleRate != null || maxOutputAudioChannels != null)
             {
                 SetGlobalOutputLimits(maxOutputVideoFrameRate, maxOutputAudioSampleRate, maxOutputAudioChannels);
             }
 
-            if (tryDetectHardwareAcceleration)
+            if (!tryDetectHardwareAcceleration)
             {
-                string ffmpegPath = null;
-                if (ExecutablesPath != null)
+                return;
+            }
+
+            string ffmpegPathToProbe = null;
+            _executableConfigurationLock.EnterReadLock();
+            try
+            {
+                if (_executablesPath != null)
                 {
-                    ffmpegPath = Path.Combine(ExecutablesPath, ffmpegExeutableName);
+                    ffmpegPathToProbe = Path.Combine(_executablesPath, ffmpegExeutableName);
                     if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows) &&
-                        !ffmpegPath.EndsWith(".exe", StringComparison.OrdinalIgnoreCase) &&
-                        !File.Exists(ffmpegPath))
+                        !ffmpegPathToProbe.EndsWith(".exe", StringComparison.OrdinalIgnoreCase) &&
+                        !File.Exists(ffmpegPathToProbe))
                     {
-                        ffmpegPath = Path.Combine(ExecutablesPath, ffmpegExeutableName + ".exe");
+                        ffmpegPathToProbe = Path.Combine(_executablesPath, ffmpegExeutableName + ".exe");
                     }
                 }
-
-                RefreshAutoHardwareAccelerationProfile(ffmpegPath != null && File.Exists(ffmpegPath) ? ffmpegPath : null, true);
             }
+            finally
+            {
+                _executableConfigurationLock.ExitReadLock();
+            }
+
+            RefreshAutoHardwareAccelerationProfile(
+                ffmpegPathToProbe != null && File.Exists(ffmpegPathToProbe) ? ffmpegPathToProbe : null,
+                true,
+                cancellationToken);
         }
 
         /// <summary>
@@ -162,10 +222,11 @@ namespace Xabe.FFmpeg
         /// <summary>
         ///     Получает доступные аудио и видео устройства (например, камеры или микрофоны)
         /// </summary>
+        /// <param name="cancellationToken">Токен отмены.</param>
         /// <returns>Список доступных устройств</returns>
-        internal static async Task<Device[]> GetAvailableDevices()
+        public static async Task<Device[]> GetAvailableDevices(CancellationToken cancellationToken = default)
         {
-            return await Conversion.GetAvailableDevices();
+            return await Conversion.GetAvailableDevices(cancellationToken);
         }
 
         /// <summary>
@@ -213,9 +274,9 @@ namespace Xabe.FFmpeg
         /// <param name="inputPath">Входной путь</param>
         /// <param name="outputPath">Выходной видеопоток</param>
         /// <returns>Результат конвертации</returns>
-        public async Task<IConversion> ExtractAudio(string inputPath, string outputPath)
+        public async Task<IConversion> ExtractAudio(string inputPath, string outputPath, CancellationToken cancellationToken = default)
         {
-            return await Conversion.ExtractAudio(inputPath, outputPath);
+            return await Conversion.ExtractAudio(inputPath, outputPath, cancellationToken);
         }
 
         /// <summary>
@@ -233,9 +294,10 @@ namespace Xabe.FFmpeg
             string outputPath,
             AudioCodec audioCodec = AudioCodec.mp3,
             long? bitrate = null,
-            int? sampleRate = null)
+            int? sampleRate = null,
+            CancellationToken cancellationToken = default)
         {
-            return await Conversion.ExtractAudio(inputPath, outputPath, audioCodec, bitrate, sampleRate);
+            return await Conversion.ExtractAudio(inputPath, outputPath, audioCodec, bitrate, sampleRate, cancellationToken);
         }
 
         /// <summary>
@@ -246,9 +308,9 @@ namespace Xabe.FFmpeg
         /// <param name="sampleRate">Частота дискретизации (по умолчанию 16000 Гц).</param>
         /// <param name="channels">Число каналов (по умолчанию 1 — моно).</param>
         /// <returns>Объект конвертации.</returns>
-        public Task<IConversion> ConvertToWav(string inputPath, string outputPath, int sampleRate = 16000, int channels = 1)
+        public Task<IConversion> ConvertToWav(string inputPath, string outputPath, int sampleRate = 16000, int channels = 1, CancellationToken cancellationToken = default)
         {
-            return Conversion.ConvertToWavFastAsync(inputPath, outputPath, sampleRate, channels);
+            return Conversion.ConvertToWavFastAsync(inputPath, outputPath, sampleRate, channels, cancellationToken);
         }
 
         /// <summary>
@@ -258,9 +320,9 @@ namespace Xabe.FFmpeg
         /// <param name="audioPath">Аудио</param>
         /// <param name="outputPath">Выходной файл</param>
         /// <returns>Результат конвертации</returns>
-        public async Task<IConversion> AddAudio(string videoPath, string audioPath, string outputPath)
+        public async Task<IConversion> AddAudio(string videoPath, string audioPath, string outputPath, CancellationToken cancellationToken = default)
         {
-            return await Conversion.AddAudio(videoPath, audioPath, outputPath);
+            return await Conversion.AddAudio(videoPath, audioPath, outputPath, cancellationToken);
         }
 
         /// <summary>
@@ -280,9 +342,10 @@ namespace Xabe.FFmpeg
             IEnumerable<TimeSpan> timecodes,
             AudioCodec audioCodec = AudioCodec.mp3,
             long bitrate = 192000,
-            int sampleRate = 44100)
+            int sampleRate = 44100,
+            CancellationToken cancellationToken = default)
         {
-            return await Conversion.SplitAudioByTimecodesAsync(inputPath, outputDirectory, timecodes, audioCodec, bitrate, sampleRate);
+            return await Conversion.SplitAudioByTimecodesAsync(inputPath, outputDirectory, timecodes, audioCodec, bitrate, sampleRate, cancellationToken);
         }
 
         /// <summary>
@@ -291,9 +354,9 @@ namespace Xabe.FFmpeg
         /// <param name="inputPath">Входной путь</param>
         /// <param name="outputPath">Выходной файл</param>
         /// <returns>Результат конвертации</returns>
-        public async Task<IConversion> ToMp4(string inputPath, string outputPath)
+        public async Task<IConversion> ToMp4(string inputPath, string outputPath, CancellationToken cancellationToken = default)
         {
-            return await Conversion.ToMp4(inputPath, outputPath);
+            return await Conversion.ToMp4(inputPath, outputPath, cancellationToken);
         }
 
         /// <summary>
@@ -302,9 +365,9 @@ namespace Xabe.FFmpeg
         /// <param name="inputPath">Входной путь</param>
         /// <param name="outputPath">Выходной файл</param>
         /// <returns>Результат конвертации</returns>
-        public async Task<IConversion> ToTs(string inputPath, string outputPath)
+        public async Task<IConversion> ToTs(string inputPath, string outputPath, CancellationToken cancellationToken = default)
         {
-            return await Conversion.ToTs(inputPath, outputPath);
+            return await Conversion.ToTs(inputPath, outputPath, cancellationToken);
         }
 
         /// <summary>
@@ -313,9 +376,9 @@ namespace Xabe.FFmpeg
         /// <param name="inputPath">Входной путь</param>
         /// <param name="outputPath">Выходной файл</param>
         /// <returns>Результат конвертации</returns>
-        public async Task<IConversion> ToOgv(string inputPath, string outputPath)
+        public async Task<IConversion> ToOgv(string inputPath, string outputPath, CancellationToken cancellationToken = default)
         {
-            return await Conversion.ToOgv(inputPath, outputPath);
+            return await Conversion.ToOgv(inputPath, outputPath, cancellationToken);
         }
 
         /// <summary>
@@ -324,9 +387,9 @@ namespace Xabe.FFmpeg
         /// <param name="inputPath">Входной путь</param>
         /// <param name="outputPath">Выходной файл</param>
         /// <returns>Результат конвертации</returns>
-        public async Task<IConversion> ToWebM(string inputPath, string outputPath)
+        public async Task<IConversion> ToWebM(string inputPath, string outputPath, CancellationToken cancellationToken = default)
         {
-            return await Conversion.ToWebM(inputPath, outputPath);
+            return await Conversion.ToWebM(inputPath, outputPath, cancellationToken);
         }
 
         /// <summary>
@@ -336,9 +399,9 @@ namespace Xabe.FFmpeg
         /// <param name="outputPath">Выходной файл</param>
         /// <param name="keepSubtitles">Сохранять ли потоки субтитров</param>
         /// <returns>Результат конвертации</returns>
-        public async Task<IConversion> RemuxToWebM(string inputPath, string outputPath, bool keepSubtitles = false)
+        public async Task<IConversion> RemuxToWebM(string inputPath, string outputPath, bool keepSubtitles = false, CancellationToken cancellationToken = default)
         {
-            return await Conversion.RemuxToWebM(inputPath, outputPath, keepSubtitles);
+            return await Conversion.RemuxToWebM(inputPath, outputPath, keepSubtitles, cancellationToken);
         }
 
         /// <summary>
@@ -349,9 +412,9 @@ namespace Xabe.FFmpeg
         /// <param name="loop">Количество повторов</param>
         /// <param name="delay">Задержка между повторами (в секундах)</param>
         /// <returns>Результат конвертации</returns>
-        public async Task<IConversion> ToGif(string inputPath, string outputPath, int loop, int delay = 0)
+        public async Task<IConversion> ToGif(string inputPath, string outputPath, int loop, int delay = 0, CancellationToken cancellationToken = default)
         {
-            return await Conversion.ToGif(inputPath, outputPath, loop, delay);
+            return await Conversion.ToGif(inputPath, outputPath, loop, delay, cancellationToken);
         }
 
         /// <summary>
@@ -364,9 +427,9 @@ namespace Xabe.FFmpeg
         /// <param name="encoder">Кодек, используемый для кодирования выходного видео (например, h264_nvenc)</param>
         /// <param name="device">Номер устройства (0 = видеокарта по умолчанию), если видеокарт больше одной.</param>
         /// <returns>Объект IConversion</returns>
-        public async Task<IConversion> ConvertWithHardware(string inputFilePath, string outputFilePath, HardwareAccelerator hardwareAccelerator, VideoCodec decoder, VideoCodec encoder, int device = 0)
+        public async Task<IConversion> ConvertWithHardware(string inputFilePath, string outputFilePath, HardwareAccelerator hardwareAccelerator, VideoCodec decoder, VideoCodec encoder, int device = 0, CancellationToken cancellationToken = default)
         {
-            return await Conversion.ConvertWithHardwareAsync(inputFilePath, outputFilePath, hardwareAccelerator, decoder, encoder, device);
+            return await Conversion.ConvertWithHardwareAsync(inputFilePath, outputFilePath, hardwareAccelerator, decoder, encoder, device, cancellationToken);
         }
 
         /// <summary>
@@ -376,9 +439,9 @@ namespace Xabe.FFmpeg
         /// <param name="outputPath">Выходной файл</param>
         /// <param name="subtitlesPath">Субтитры</param>
         /// <returns>Результат конвертации</returns>
-        public async Task<IConversion> BurnSubtitle(string inputPath, string outputPath, string subtitlesPath)
+        public async Task<IConversion> BurnSubtitle(string inputPath, string outputPath, string subtitlesPath, CancellationToken cancellationToken = default)
         {
-            return await Conversion.AddSubtitlesAsync(inputPath, outputPath, subtitlesPath);
+            return await Conversion.AddSubtitlesAsync(inputPath, outputPath, subtitlesPath, cancellationToken);
         }
 
         /// <summary>
@@ -390,9 +453,9 @@ namespace Xabe.FFmpeg
         /// <param name="subtitlePath">Путь к файлу субтитров в формате .srt</param>
         /// <param name="language">Код языка в ISO 639. Пример: "eng", "pol", "pl", "de", "ger"</param>
         /// <returns>Результат конвертации</returns>
-        public async Task<IConversion> AddSubtitle(string inputPath, string outputPath, string subtitlePath, string language = null)
+        public async Task<IConversion> AddSubtitle(string inputPath, string outputPath, string subtitlePath, string language = null, CancellationToken cancellationToken = default)
         {
-            return await Conversion.AddSubtitleAsync(inputPath, outputPath, subtitlePath, language);
+            return await Conversion.AddSubtitleAsync(inputPath, outputPath, subtitlePath, language, cancellationToken);
         }
 
         /// <summary>
@@ -405,9 +468,9 @@ namespace Xabe.FFmpeg
         /// <param name="subtitleCodec">Кодек субтитров для кодирования субтитров</param>
         /// <param name="language">Код языка в ISO 639. Пример: "eng", "pol", "pl", "de", "ger".</param>
         /// <returns>Результат конвертации.</returns>
-        public async Task<IConversion> AddSubtitle(string inputPath, string outputPath, string subtitlePath, SubtitleCodec subtitleCodec, string language = null)
+        public async Task<IConversion> AddSubtitle(string inputPath, string outputPath, string subtitlePath, SubtitleCodec subtitleCodec, string language = null, CancellationToken cancellationToken = default)
         {
-            return await Conversion.AddSubtitleAsync(inputPath, outputPath, subtitlePath, subtitleCodec, language);
+            return await Conversion.AddSubtitleAsync(inputPath, outputPath, subtitlePath, subtitleCodec, language, cancellationToken);
         }
 
         /// <summary>
@@ -418,9 +481,9 @@ namespace Xabe.FFmpeg
         /// <param name="inputImage">Водяной знак</param>
         /// <param name="position">Позиция водяного знака</param>
         /// <returns>Результат конвертации</returns>
-        public async Task<IConversion> SetWatermark(string inputPath, string outputPath, string inputImage, Position position)
+        public async Task<IConversion> SetWatermark(string inputPath, string outputPath, string inputImage, Position position, CancellationToken cancellationToken = default)
         {
-            return await Conversion.SetWatermarkAsync(inputPath, outputPath, inputImage, position);
+            return await Conversion.SetWatermarkAsync(inputPath, outputPath, inputImage, position, cancellationToken);
         }
 
         /// <summary>
@@ -445,9 +508,10 @@ namespace Xabe.FFmpeg
             int marginRight = 20,
             int marginY = 16,
             DrawTextVerticalAlign verticalAlign = DrawTextVerticalAlign.Center,
-            string fontFilePath = null)
+            string fontFilePath = null,
+            CancellationToken cancellationToken = default)
         {
-            return await Conversion.BurnRightSideTextLabelAsync(inputPath, outputPath, text, fontColor, fontSize, marginRight, marginY, verticalAlign, fontFilePath);
+            return await Conversion.BurnRightSideTextLabelAsync(inputPath, outputPath, text, fontColor, fontSize, marginRight, marginY, verticalAlign, fontFilePath, cancellationToken);
         }
 
         /// <summary>
@@ -477,9 +541,10 @@ namespace Xabe.FFmpeg
             int marginRight = 20,
             int marginY = 16,
             DrawTextVerticalAlign verticalAlign = DrawTextVerticalAlign.Center,
-            string fontFilePath = null)
+            string fontFilePath = null,
+            CancellationToken cancellationToken = default)
         {
-            return await Conversion.BurnRightSidePtsTimeLabelAsync(inputPath, outputPath, prefix, suffix, useLocalWallClock, fontColor, fontSize, marginRight, marginY, verticalAlign, fontFilePath);
+            return await Conversion.BurnRightSidePtsTimeLabelAsync(inputPath, outputPath, prefix, suffix, useLocalWallClock, fontColor, fontSize, marginRight, marginY, verticalAlign, fontFilePath, cancellationToken);
         }
 
         /// <summary>
@@ -506,9 +571,10 @@ namespace Xabe.FFmpeg
             int marginRight = 20,
             int marginY = 16,
             DrawTextVerticalAlign verticalAlign = DrawTextVerticalAlign.Center,
-            string fontFilePath = null)
+            string fontFilePath = null,
+            CancellationToken cancellationToken = default)
         {
-            return await Conversion.BurnRightSideSmpteTimecodeAsync(inputPath, outputPath, startTimecode, frameRate, fontColor, fontSize, marginRight, marginY, verticalAlign, fontFilePath);
+            return await Conversion.BurnRightSideSmpteTimecodeAsync(inputPath, outputPath, startTimecode, frameRate, fontColor, fontSize, marginRight, marginY, verticalAlign, fontFilePath, cancellationToken);
         }
 
         /// <summary>
@@ -517,9 +583,9 @@ namespace Xabe.FFmpeg
         /// <param name="inputPath">Входной путь</param>
         /// <param name="outputPath">Выходной аудиопоток</param>
         /// <returns>Результат конвертации</returns>
-        public async Task<IConversion> ExtractVideo(string inputPath, string outputPath)
+        public async Task<IConversion> ExtractVideo(string inputPath, string outputPath, CancellationToken cancellationToken = default)
         {
-            return await Conversion.ExtractVideoAsync(inputPath, outputPath);
+            return await Conversion.ExtractVideoAsync(inputPath, outputPath, cancellationToken);
         }
 
         /// <summary>
@@ -529,9 +595,9 @@ namespace Xabe.FFmpeg
         /// <param name="outputPath">Выходной файл</param>
         /// <param name="captureTime">Временной интервал снимка</param>
         /// <returns>Результат конвертации</returns>
-        public async Task<IConversion> Snapshot(string inputPath, string outputPath, TimeSpan captureTime)
+        public async Task<IConversion> Snapshot(string inputPath, string outputPath, TimeSpan captureTime, CancellationToken cancellationToken = default)
         {
-            return await Conversion.SnapshotAsync(inputPath, outputPath, captureTime);
+            return await Conversion.SnapshotAsync(inputPath, outputPath, captureTime, cancellationToken);
         }
 
         /// <summary>
@@ -542,9 +608,9 @@ namespace Xabe.FFmpeg
         /// <param name="width">Ожидаемая ширина</param>
         /// <param name="height">Ожидаемая высота</param>
         /// <returns>Результат конвертации</returns>
-        public async Task<IConversion> ChangeSize(string inputPath, string outputPath, int width, int height)
+        public async Task<IConversion> ChangeSize(string inputPath, string outputPath, int width, int height, CancellationToken cancellationToken = default)
         {
-            return await Conversion.ChangeSizeAsync(inputPath, outputPath, width, height);
+            return await Conversion.ChangeSizeAsync(inputPath, outputPath, width, height, cancellationToken);
         }
 
         /// <summary>
@@ -554,9 +620,9 @@ namespace Xabe.FFmpeg
         /// <param name="outputPath">Выходной путь.</param>
         /// <param name="size">Ожидаемый размер</param>
         /// <returns>Результат конвертации.</returns>
-        public async Task<IConversion> ChangeSize(string inputPath, string outputPath, VideoSize size)
+        public async Task<IConversion> ChangeSize(string inputPath, string outputPath, VideoSize size, CancellationToken cancellationToken = default)
         {
-            return await Conversion.ChangeSizeAsync(inputPath, outputPath, size);
+            return await Conversion.ChangeSizeAsync(inputPath, outputPath, size, cancellationToken);
         }
 
         /// <summary>
@@ -567,9 +633,9 @@ namespace Xabe.FFmpeg
         /// <param name="startTime">Начальная точка</param>
         /// <param name="duration">Длительность нового видео</param>
         /// <returns>Результат конвертации</returns>
-        public async Task<IConversion> Split(string inputPath, string outputPath, TimeSpan startTime, TimeSpan duration)
+        public async Task<IConversion> Split(string inputPath, string outputPath, TimeSpan startTime, TimeSpan duration, CancellationToken cancellationToken = default)
         {
-            return await Conversion.SplitAsync(inputPath, outputPath, startTime, duration);
+            return await Conversion.SplitAsync(inputPath, outputPath, startTime, duration, cancellationToken);
         }
 
         /// <summary>
@@ -579,9 +645,9 @@ namespace Xabe.FFmpeg
         /// <param name="outputPath">Выходной путь</param>
         /// <param name="duration">Длительность потока</param>
         /// <returns>Результат конвертации</returns>
-        public async Task<IConversion> SaveM3U8Stream(Uri uri, string outputPath, TimeSpan? duration = null)
+        public async Task<IConversion> SaveM3U8Stream(Uri uri, string outputPath, TimeSpan? duration = null, CancellationToken cancellationToken = default)
         {
-            return await Conversion.SaveM3U8StreamAsync(uri, outputPath, duration);
+            return await Conversion.SaveM3U8StreamAsync(uri, outputPath, duration, cancellationToken);
         }
 
         /// <summary>
@@ -590,9 +656,14 @@ namespace Xabe.FFmpeg
         /// <param name="output">Объединенные входные видео</param>
         /// <param name="inputVideos">Видео для добавления</param>
         /// <returns>Результат конвертации</returns>
-        public async Task<IConversion> Concatenate(string output, params string[] inputVideos)
+        public Task<IConversion> Concatenate(string output, params string[] inputVideos)
         {
-            return await Conversion.Concatenate(output, inputVideos);
+            return Concatenate(output, default, inputVideos);
+        }
+
+        public async Task<IConversion> Concatenate(string output, CancellationToken cancellationToken, params string[] inputVideos)
+        {
+            return await Conversion.Concatenate(output, cancellationToken, inputVideos);
         }
 
         /// <summary>
@@ -602,9 +673,9 @@ namespace Xabe.FFmpeg
         /// <param name="outputFilePath">Путь к файлу</param>
         /// <param name="keepSubtitles">Сохранять ли субтитры в выходном видео</param>
         /// <returns>Объект IConversion</returns>
-        public async Task<IConversion> Convert(string inputFilePath, string outputFilePath, bool keepSubtitles = false)
+        public async Task<IConversion> Convert(string inputFilePath, string outputFilePath, bool keepSubtitles = false, CancellationToken cancellationToken = default)
         {
-            return await Conversion.ConvertAsync(inputFilePath, outputFilePath, keepSubtitles);
+            return await Conversion.ConvertAsync(inputFilePath, outputFilePath, keepSubtitles, cancellationToken);
         }
 
         /// <summary>
@@ -617,9 +688,9 @@ namespace Xabe.FFmpeg
         /// <param name="videoCodec">Кодек субтитров для транскодирования входа</param>
         /// <param name="keepSubtitles">Сохранять ли субтитры в выходном видео</param>
         /// <returns>Объект IConversion</returns>
-        public async Task<IConversion> Transcode(string inputFilePath, string outputFilePath, VideoCodec videoCodec, AudioCodec audioCodec, SubtitleCodec subtitleCodec, bool keepSubtitles = false)
+        public async Task<IConversion> Transcode(string inputFilePath, string outputFilePath, VideoCodec videoCodec, AudioCodec audioCodec, SubtitleCodec subtitleCodec, bool keepSubtitles = false, CancellationToken cancellationToken = default)
         {
-            return await Conversion.TranscodeAsync(inputFilePath, outputFilePath, videoCodec, audioCodec, subtitleCodec, keepSubtitles);
+            return await Conversion.TranscodeAsync(inputFilePath, outputFilePath, videoCodec, audioCodec, subtitleCodec, keepSubtitles, cancellationToken);
         }
 
         /// <summary>
@@ -629,9 +700,9 @@ namespace Xabe.FFmpeg
         /// <param name="outputFilePath">Путь к выходному файлу.</param>
         /// <param name="keepSubtitles">Сохранять ли субтитры.</param>
         /// <returns>Объект IConversion.</returns>
-        public async Task<IConversion> Transcode(string inputFilePath, string outputFilePath, bool keepSubtitles = false)
+        public async Task<IConversion> Transcode(string inputFilePath, string outputFilePath, bool keepSubtitles = false, CancellationToken cancellationToken = default)
         {
-            return await Conversion.TranscodeAsync(inputFilePath, outputFilePath, FFmpeg.DefaultTranscodeVideoCodec, FFmpeg.DefaultTranscodeAudioCodec, SubtitleCodec.mov_text, keepSubtitles);
+            return await Conversion.TranscodeAsync(inputFilePath, outputFilePath, FFmpeg.DefaultTranscodeVideoCodec, FFmpeg.DefaultTranscodeAudioCodec, SubtitleCodec.mov_text, keepSubtitles, cancellationToken);
         }
 
         /// <summary>
@@ -649,9 +720,10 @@ namespace Xabe.FFmpeg
             PixelFormat pixelFormat = PixelFormat.yuv420p,
             VisualisationMode mode = VisualisationMode.bar,
             AmplitudeScale amplitudeScale = AmplitudeScale.lin,
-            FrequencyScale frequencyScale = FrequencyScale.log)
+            FrequencyScale frequencyScale = FrequencyScale.log,
+            CancellationToken cancellationToken = default)
         {
-            return await Conversion.VisualiseAudio(inputPath, outputPath, size, pixelFormat, mode, amplitudeScale, frequencyScale);
+            return await Conversion.VisualiseAudio(inputPath, outputPath, size, pixelFormat, mode, amplitudeScale, frequencyScale, cancellationToken);
         }
 
         /// <summary>
@@ -660,9 +732,9 @@ namespace Xabe.FFmpeg
         /// <param name="inputFilePath">Путь к файлу</param>
         /// <param name="rtspServerUri">Uri RTSP сервера в формате: rtsp://127.0.0.1:8554/name</param>
         /// <returns>Объект IConversion</returns>
-        public async Task<IConversion> SendToRtspServer(string inputFilePath, Uri rtspServerUri)
+        public async Task<IConversion> SendToRtspServer(string inputFilePath, Uri rtspServerUri, CancellationToken cancellationToken = default)
         {
-            return await Conversion.SendToRtspServer(inputFilePath, rtspServerUri);
+            return await Conversion.SendToRtspServer(inputFilePath, rtspServerUri, cancellationToken);
         }
 
         /// <summary>
@@ -670,9 +742,9 @@ namespace Xabe.FFmpeg
         /// </summary>
         /// <param name="rtspServerUri">Uri RTSP сервера в формате: rtsp://127.0.0.1:8554/name</param>
         /// <returns>Объект IConversion</returns>
-        public Task<IConversion> SendDesktopToRtspServer(Uri rtspServerUri)
+        public Task<IConversion> SendDesktopToRtspServer(Uri rtspServerUri, CancellationToken cancellationToken = default)
         {
-            return Task.FromResult(Conversion.SendDesktopToRtspServer(rtspServerUri));
+            return Task.FromResult(Conversion.SendDesktopToRtspServer(rtspServerUri, cancellationToken));
         }
     }
 }

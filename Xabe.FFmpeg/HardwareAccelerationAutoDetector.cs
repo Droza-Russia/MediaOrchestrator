@@ -2,6 +2,9 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
+using System.Threading;
+using System.Threading.Tasks;
+
 namespace Xabe.FFmpeg
 {
     /// <summary>
@@ -9,7 +12,7 @@ namespace Xabe.FFmpeg
     /// </summary>
     internal static class HardwareAccelerationAutoDetector
     {
-        internal static bool TryDetect(string ffmpegExecutablePath, OperatingSystem os, out HardwareAccelerationProfile profile)
+        internal static bool TryDetect(string ffmpegExecutablePath, OperatingSystem os, CancellationToken cancellationToken, out HardwareAccelerationProfile profile)
         {
             profile = null;
             if (string.IsNullOrWhiteSpace(ffmpegExecutablePath) || !System.IO.File.Exists(ffmpegExecutablePath))
@@ -17,7 +20,7 @@ namespace Xabe.FFmpeg
                 return false;
             }
 
-            if (!TryGetSupportedHwaccels(ffmpegExecutablePath, out var supported))
+            if (!TryGetSupportedHwaccels(ffmpegExecutablePath, cancellationToken, out var supported))
             {
                 return false;
             }
@@ -77,9 +80,10 @@ namespace Xabe.FFmpeg
             }
         }
 
-        private static bool TryGetSupportedHwaccels(string ffmpegPath, out HashSet<string> supported)
+        private static bool TryGetSupportedHwaccels(string ffmpegPath, CancellationToken cancellationToken, out HashSet<string> supported)
         {
             supported = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            cancellationToken.ThrowIfCancellationRequested();
             try
             {
                 using (var p = new Process
@@ -95,26 +99,74 @@ namespace Xabe.FFmpeg
                            }
                        })
                 {
-                    p.Start();
-                    var output = p.StandardOutput.ReadToEnd();
-                    var err = p.StandardError.ReadToEnd();
-                    p.WaitForExit(15000);
-                    foreach (var line in (output + Environment.NewLine + err).Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries))
+                    using (cancellationToken.Register(() =>
+                           {
+                               try
+                               {
+                                   if (!p.HasExited)
+                                   {
+                                       p.Kill();
+                                   }
+                               }
+                               catch
+                               {
+                                   // ignore
+                               }
+                           }))
                     {
-                        var token = line.Trim();
-                        if (token.Length == 0 || token.IndexOf(' ') >= 0)
+                        p.Start();
+                        var stdoutTask = Task.Run(() => p.StandardOutput.ReadToEnd(), CancellationToken.None);
+                        var stderrTask = Task.Run(() => p.StandardError.ReadToEnd(), CancellationToken.None);
+
+                        const int timeoutMs = 15000;
+                        var sw = Stopwatch.StartNew();
+                        while (!p.WaitForExit(50))
                         {
-                            continue;
+                            cancellationToken.ThrowIfCancellationRequested();
+                            if (sw.ElapsedMilliseconds > timeoutMs)
+                            {
+                                try
+                                {
+                                    if (!p.HasExited)
+                                    {
+                                        p.Kill();
+                                    }
+                                }
+                                catch
+                                {
+                                    // ignore
+                                }
+
+                                return false;
+                            }
                         }
 
-                        if (!char.IsLetter(token[0]))
-                        {
-                            continue;
-                        }
+                        cancellationToken.ThrowIfCancellationRequested();
+                        Task.WaitAll(stdoutTask, stderrTask);
 
-                        supported.Add(token);
+                        var output = stdoutTask.Result;
+                        var err = stderrTask.Result;
+                        foreach (var line in (output + Environment.NewLine + err).Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries))
+                        {
+                            var token = line.Trim();
+                            if (token.Length == 0 || token.IndexOf(' ') >= 0)
+                            {
+                                continue;
+                            }
+
+                            if (!char.IsLetter(token[0]))
+                            {
+                                continue;
+                            }
+
+                            supported.Add(token);
+                        }
                     }
                 }
+            }
+            catch (OperationCanceledException)
+            {
+                throw;
             }
             catch
             {

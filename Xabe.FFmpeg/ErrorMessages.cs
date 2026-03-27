@@ -48,6 +48,11 @@ namespace Xabe.FFmpeg
             Get("Файл '{0}' не соответствует ожидаемой сигнатуре исполняемого файла для текущей ОС.", "File '{0}' does not match the expected executable signature for the current OS.", "Die Datei '{0}' entspricht nicht der erwarteten Signatur einer ausführbaren Datei für das aktuelle Betriebssystem.");
         internal static string InputFileSignatureMismatch =>
             Get("Сигнатура входного файла '{0}' не соответствует заявленному типу '{1}'.", "Input file signature mismatch for '{0}'. Declared type '{1}' is not valid for this content.", "Die Signatur der Eingabedatei '{0}' entspricht nicht dem angegebenen Typ '{1}'.");
+        internal static string InsufficientDiskSpace =>
+            Get(
+                "Недостаточно места на диске для завершения операции. Освободите место или выберите другой выходной путь.",
+                "Insufficient disk space to complete the operation. Free some space or choose a different output path.",
+                "Nicht genug Speicherplatz auf dem Datenträger, um den Vorgang abzuschließen. Geben Sie Speicher frei oder wählen Sie einen anderen Ausgabepfad.");
 
         private static string Get(string russian, string english, string german)
         {

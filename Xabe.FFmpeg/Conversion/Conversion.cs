@@ -9,6 +9,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Xabe.FFmpeg.Events;
+using Xabe.FFmpeg.Exceptions;
 using Xabe.FFmpeg.Streams;
 
 namespace Xabe.FFmpeg
@@ -37,6 +38,7 @@ namespace Xabe.FFmpeg
         private readonly bool _suppressGlobalOutputLimits;
         private readonly bool _suppressAutoHardwareAcceleration;
         private bool _manualHardwareAcceleration;
+        private IProgress<ConversionProgressEventArgs> _progressReporter;
 
         public Conversion()
             : this(suppressGlobalOutputLimits: false, suppressAutoHardwareAcceleration: false)
@@ -112,6 +114,13 @@ namespace Xabe.FFmpeg
         /// </summary>
         public event VideoDataEventHandler OnVideoDataReceived;
 
+        /// <inheritdoc />
+        public IConversion SetProgressReporter(IProgress<ConversionProgressEventArgs> progressReporter)
+        {
+            _progressReporter = progressReporter;
+            return this;
+        }
+
         /// <summary>
         ///     Путь к выходному файлу.
         /// </summary>
@@ -140,30 +149,12 @@ namespace Xabe.FFmpeg
         /// <summary>
         ///     Запускает конвертацию с текущими параметрами.
         /// </summary>
-        /// <returns>Результат конвертации.</returns>
-        public Task<IConversionResult> Start()
-        {
-            return Start(Build());
-        }
-
-        /// <summary>
-        ///     Запускает конвертацию с возможностью отмены.
-        /// </summary>
         /// <param name="cancellationToken">Токен отмены.</param>
+        /// <param name="progress">Репортер прогресса на это выполнение; при null используется <see cref="SetProgressReporter"/>.</param>
         /// <returns>Результат конвертации.</returns>
-        public Task<IConversionResult> Start(CancellationToken cancellationToken)
+        public Task<IConversionResult> Start(CancellationToken cancellationToken = default, IProgress<ConversionProgressEventArgs> progress = null)
         {
-            return Start(Build(), cancellationToken);
-        }
-
-        /// <summary>
-        ///     Запускает FFmpeg с указанными параметрами.
-        /// </summary>
-        /// <param name="parameters">Строка параметров для FFmpeg.</param>
-        /// <returns>Результат конвертации.</returns>
-        public Task<IConversionResult> Start(string parameters)
-        {
-            return Start(parameters, new CancellationToken());
+            return Start(Build(), cancellationToken, progress);
         }
 
         /// <summary>
@@ -171,8 +162,9 @@ namespace Xabe.FFmpeg
         /// </summary>
         /// <param name="parameters">Строка параметров для FFmpeg.</param>
         /// <param name="cancellationToken">Токен отмены.</param>
+        /// <param name="progress">Репортер прогресса на это выполнение; при null используется <see cref="SetProgressReporter"/>.</param>
         /// <returns>Результат конвертации.</returns>
-        public async Task<IConversionResult> Start(string parameters, CancellationToken cancellationToken)
+        public async Task<IConversionResult> Start(string parameters, CancellationToken cancellationToken = default, IProgress<ConversionProgressEventArgs> progress = null)
         {
             if (_ffmpeg != null)
             {
@@ -181,17 +173,42 @@ namespace Xabe.FFmpeg
 
             DateTime startTime = DateTime.Now;
 
+            var reporter = progress ?? _progressReporter;
+            ConversionProgressEventHandler forwardProgress = null;
+            if (reporter != null)
+            {
+                forwardProgress = (_, args) => reporter.Report(args);
+            }
+
             _ffmpeg = new FFmpegWrapper();
             try
             {
                 _ffmpeg.OnProgress += OnProgress;
+                if (forwardProgress != null)
+                {
+                    _ffmpeg.OnProgress += forwardProgress;
+                }
+
                 _ffmpeg.OnDataReceived += OnDataReceived;
                 _ffmpeg.OnVideoDataReceived += OnVideoDataReceived;
                 CreateOutputDirectoryIfNotExists();
-                await _ffmpeg.RunProcess(parameters, cancellationToken, _priority);
+                try
+                {
+                    await _ffmpeg.RunProcess(parameters, cancellationToken, _priority);
+                }
+                catch (Exception ex) when (ShouldDeletePartialOutputOnFailure(ex))
+                {
+                    TryDeletePartialOutputFile();
+                    throw;
+                }
             }
             finally
             {
+                if (forwardProgress != null)
+                {
+                    _ffmpeg.OnProgress -= forwardProgress;
+                }
+
                 _ffmpeg.OnProgress -= OnProgress;
                 _ffmpeg.OnDataReceived -= OnDataReceived;
                 _ffmpeg.OnVideoDataReceived -= OnVideoDataReceived;
@@ -221,6 +238,39 @@ namespace Xabe.FFmpeg
                 }
             }
             catch (IOException)
+            {
+            }
+        }
+
+        private static bool ShouldDeletePartialOutputOnFailure(Exception ex)
+        {
+            return ex is OperationCanceledException || ex is ConversionException;
+        }
+
+        private void TryDeletePartialOutputFile()
+        {
+            if (OutputPipeDescriptor != null)
+            {
+                return;
+            }
+
+            var path = OutputFilePath?.Unescape();
+            if (string.IsNullOrWhiteSpace(path))
+            {
+                return;
+            }
+
+            try
+            {
+                if (File.Exists(path))
+                {
+                    File.Delete(path);
+                }
+            }
+            catch (IOException)
+            {
+            }
+            catch (UnauthorizedAccessException)
             {
             }
         }

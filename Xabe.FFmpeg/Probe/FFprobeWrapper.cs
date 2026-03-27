@@ -101,7 +101,7 @@ namespace Xabe.FFmpeg
             return width;
         }
 
-        public Task<string> Start(string args, CancellationToken cancellationToken)
+        public Task<string> Start(string args, CancellationToken cancellationToken = default)
         {
             return RunProcess(args, cancellationToken);
         }

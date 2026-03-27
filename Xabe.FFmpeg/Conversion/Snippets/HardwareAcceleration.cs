@@ -1,4 +1,5 @@
-﻿using System.Threading.Tasks;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace Xabe.FFmpeg
 {
@@ -14,9 +15,9 @@ namespace Xabe.FFmpeg
         /// <param name="encoder">Codec using to encode output video (e.g. h264_nvenc)</param>
         /// <param name="device">Number of device (0 = default video card) if more than one video card.</param>
         /// <returns>IConversion object</returns>
-        internal static async Task<IConversion> ConvertWithHardwareAsync(string inputFilePath, string outputFilePath, HardwareAccelerator hardwareAccelerator, VideoCodec decoder, VideoCodec encoder, int device = 0)
+        internal static async Task<IConversion> ConvertWithHardwareAsync(string inputFilePath, string outputFilePath, HardwareAccelerator hardwareAccelerator, VideoCodec decoder, VideoCodec encoder, int device = 0, CancellationToken cancellationToken = default)
         {
-            var conversion = await ConvertAsync(inputFilePath, outputFilePath);
+            var conversion = await ConvertAsync(inputFilePath, outputFilePath, keepSubtitles: false, cancellationToken);
             return conversion.UseHardwareAcceleration(hardwareAccelerator, decoder, encoder, device);
         }
     }

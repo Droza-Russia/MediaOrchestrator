@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Xabe.FFmpeg.Exceptions;
 
@@ -15,9 +16,9 @@ namespace Xabe.FFmpeg
         /// <param name="inputPath">Input path</param>
         /// <param name="outputPath">Output video stream</param>
         /// <returns>Conversion result</returns>
-        internal static async Task<IConversion> ExtractAudio(string inputPath, string outputPath)
+        internal static async Task<IConversion> ExtractAudio(string inputPath, string outputPath, CancellationToken cancellationToken = default)
         {
-            IMediaInfo info = await FFmpeg.GetMediaInfo(inputPath);
+            IMediaInfo info = await FFmpeg.GetMediaInfo(inputPath, cancellationToken);
 
             IAudioStream audioStream = info.AudioStreams.FirstOrDefault();
             if (audioStream == null)
@@ -46,9 +47,10 @@ namespace Xabe.FFmpeg
             string outputPath,
             AudioCodec audioCodec = AudioCodec.mp3,
             long? bitrate = null,
-            int? sampleRate = null)
+            int? sampleRate = null,
+            CancellationToken cancellationToken = default)
         {
-            IMediaInfo info = await FFmpeg.GetMediaInfo(inputPath);
+            IMediaInfo info = await FFmpeg.GetMediaInfo(inputPath, cancellationToken);
             IAudioStream audioStream = info.AudioStreams.FirstOrDefault();
             if (audioStream == null)
             {
@@ -75,8 +77,9 @@ namespace Xabe.FFmpeg
         /// <summary>
         ///     Быстрый экспорт аудиодорожки в WAV (pcm_s16le) без лишнего ffprobe и без глобальных лимитов выхода.
         /// </summary>
-        internal static Task<IConversion> ConvertToWavFastAsync(string inputPath, string outputPath, int sampleRate = 16000, int channels = 1)
+        internal static Task<IConversion> ConvertToWavFastAsync(string inputPath, string outputPath, int sampleRate = 16000, int channels = 1, CancellationToken cancellationToken = default)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             if (sampleRate <= 0)
             {
                 throw new ArgumentOutOfRangeException(nameof(sampleRate), ErrorMessages.SampleRateMustBeGreaterThanZero);
@@ -107,11 +110,11 @@ namespace Xabe.FFmpeg
         /// <param name="audioPath">Audio</param>
         /// <param name="outputPath">Output file</param>
         /// <returns>Conversion result</returns>
-        internal static async Task<IConversion> AddAudio(string videoPath, string audioPath, string outputPath)
+        internal static async Task<IConversion> AddAudio(string videoPath, string audioPath, string outputPath, CancellationToken cancellationToken = default)
         {
-            IMediaInfo videoInfo = await FFmpeg.GetMediaInfo(videoPath);
+            IMediaInfo videoInfo = await FFmpeg.GetMediaInfo(videoPath, cancellationToken);
 
-            IMediaInfo audioInfo = await FFmpeg.GetMediaInfo(audioPath);
+            IMediaInfo audioInfo = await FFmpeg.GetMediaInfo(audioPath, cancellationToken);
 
             return New()
                 .AddStream(videoInfo.VideoStreams.FirstOrDefault())
@@ -135,9 +138,10 @@ namespace Xabe.FFmpeg
             PixelFormat pixelFormat = PixelFormat.yuv420p,
             VisualisationMode mode = VisualisationMode.bar,
             AmplitudeScale amplitudeScale = AmplitudeScale.lin,
-            FrequencyScale frequencyScale = FrequencyScale.log)
+            FrequencyScale frequencyScale = FrequencyScale.log,
+            CancellationToken cancellationToken = default)
         {
-            IMediaInfo inputInfo = await FFmpeg.GetMediaInfo(inputPath);
+            IMediaInfo inputInfo = await FFmpeg.GetMediaInfo(inputPath, cancellationToken);
             IAudioStream audioStream = inputInfo.AudioStreams.FirstOrDefault();
             IVideoStream videoStream = inputInfo.VideoStreams.FirstOrDefault();
 
@@ -167,7 +171,8 @@ namespace Xabe.FFmpeg
             IEnumerable<TimeSpan> timecodes,
             AudioCodec audioCodec = AudioCodec.mp3,
             long bitrate = 192000,
-            int sampleRate = 44100)
+            int sampleRate = 44100,
+            CancellationToken cancellationToken = default)
         {
             if (timecodes == null)
             {
@@ -184,7 +189,7 @@ namespace Xabe.FFmpeg
                 throw new ArgumentOutOfRangeException(nameof(sampleRate), ErrorMessages.SampleRateMustBeGreaterThanZero);
             }
 
-            IMediaInfo info = await FFmpeg.GetMediaInfo(inputPath);
+            IMediaInfo info = await FFmpeg.GetMediaInfo(inputPath, cancellationToken);
             IAudioStream sourceAudio = info.AudioStreams.FirstOrDefault();
             if (sourceAudio == null)
             {
@@ -226,6 +231,7 @@ namespace Xabe.FFmpeg
             string fileName = Path.GetFileNameWithoutExtension(inputPath);
             for (int i = 0; i < boundaries.Count - 1; i++)
             {
+                cancellationToken.ThrowIfCancellationRequested();
                 TimeSpan start = boundaries[i];
                 TimeSpan end = boundaries[i + 1];
                 TimeSpan duration = end - start;

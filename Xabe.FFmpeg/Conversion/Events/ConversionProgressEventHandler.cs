@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 
 namespace Xabe.FFmpeg.Events
 {
@@ -38,8 +38,11 @@ namespace Xabe.FFmpeg.Events
         public long ProcessId { get; }
 
         /// <summary>
-        ///     Percent of conversion
+        ///     Доля выполнения относительно оценки полной длины (0–100). При неизвестной длительности — 0.
         /// </summary>
-        public int Percent => (int)(Math.Round(Duration.TotalSeconds / TotalLength.TotalSeconds, 2) * 100);
+        public int Percent =>
+            TotalLength.TotalSeconds <= 0
+                ? 0
+                : (int)(Math.Round(Duration.TotalSeconds / TotalLength.TotalSeconds, 2) * 100);
     }
 }

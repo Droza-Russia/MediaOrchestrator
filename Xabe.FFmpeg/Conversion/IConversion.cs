@@ -234,6 +234,14 @@ namespace Xabe.FFmpeg
         event VideoDataEventHandler OnVideoDataReceived;
 
         /// <summary>
+        ///     Задаёт получатель прогресса для передачи в вызывающий сервис (HTTP, gRPC и т.д.) через стандартный <see cref="IProgress{T}"/>.
+        ///     Уведомления приходят с потока чтения stderr FFmpeg; при необходимости маршалите в UI-синхронизационный контекст сами.
+        /// </summary>
+        /// <param name="progressReporter">Репортер или null, чтобы не вызывать.</param>
+        /// <returns>Текущий объект IConversion.</returns>
+        IConversion SetProgressReporter(IProgress<ConversionProgressEventArgs> progressReporter);
+
+        /// <summary>
         ///     Завершает кодирование, когда заканчивается самый короткий входной поток (-shortest).
         /// </summary>
         /// <param name="useShortest">Признак выключения ускоренного завершения.</param>
@@ -249,48 +257,29 @@ namespace Xabe.FFmpeg
         /// <summary>
         ///     Запускает конвертацию с текущими параметрами.
         /// </summary>
-        /// <returns>Результат конвертации.</returns>
-        /// <exception cref="ConversionException">Возникает, когда процесс FFmpeg возвращает ошибку.</exception>
-        /// <exception cref="ArgumentException">Возникает, когда исполняемые файлы FFmpeg не найдены.</exception>
-        /// <exception cref="InvalidOperationException"></exception>
-        /// <exception cref="ObjectDisposedException"></exception>
-        Task<IConversionResult> Start();
-
-        /// <summary>
-        ///     Запускает конвертацию с возможностью отмены.
-        /// </summary>
         /// <param name="cancellationToken">Токен отмены.</param>
+        /// <param name="progress">Дополнительный репортер на время этого запуска; если null, используется <see cref="SetProgressReporter"/>.</param>
         /// <returns>Результат конвертации.</returns>
         /// <exception cref="ConversionException">Возникает, когда процесс FFmpeg возвращает ошибку.</exception>
         /// <exception cref="ArgumentException">Возникает, когда исполняемые файлы FFmpeg не найдены.</exception>
         /// <exception cref="InvalidOperationException"></exception>
         /// <exception cref="ObjectDisposedException"></exception>
         /// <exception cref="TaskCanceledException">Возникает, когда задача была отменена.</exception>
-        Task<IConversionResult> Start(CancellationToken cancellationToken);
-
-        /// <summary>
-        ///     Запускает FFmpeg с указанными параметрами.
-        /// </summary>
-        /// <param name="parameters">Строка параметров FFmpeg.</param>
-        /// <returns>Результат конвертации.</returns>
-        /// <exception cref="ConversionException">Возникает, когда процесс FFmpeg возвращает ошибку.</exception>
-        /// <exception cref="ArgumentException">Возникает, когда исполняемые файлы FFmpeg не найдены.</exception>
-        /// <exception cref="InvalidOperationException"></exception>
-        /// <exception cref="ObjectDisposedException"></exception>
-        Task<IConversionResult> Start(string parameters);
+        Task<IConversionResult> Start(CancellationToken cancellationToken = default, IProgress<ConversionProgressEventArgs> progress = null);
 
         /// <summary>
         ///     Запускает FFmpeg с указанными параметрами и токеном отмены.
         /// </summary>
         /// <param name="parameters">Строка параметров FFmpeg.</param>
         /// <param name="cancellationToken">Токен отмены.</param>
+        /// <param name="progress">Дополнительный репортер на время этого запуска; если null, используется <see cref="SetProgressReporter"/>.</param>
         /// <returns>Результат конвертации.</returns>
         /// <exception cref="ConversionException">Возникает, когда процесс FFmpeg возвращает ошибку.</exception>
         /// <exception cref="ArgumentException">Возникает, когда исполняемые файлы FFmpeg не найдены.</exception>
         /// <exception cref="InvalidOperationException"></exception>
         /// <exception cref="ObjectDisposedException"></exception>
         /// <exception cref="TaskCanceledException">Возникает, когда задача была отменена.</exception>
-        Task<IConversionResult> Start(string parameters, CancellationToken cancellationToken);
+        Task<IConversionResult> Start(string parameters, CancellationToken cancellationToken = default, IProgress<ConversionProgressEventArgs> progress = null);
 
         /// <summary>
         ///     Добавляет дополнительный параметр в аргументы FFmpeg.
