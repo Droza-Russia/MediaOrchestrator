@@ -24,6 +24,16 @@ namespace Xabe.FFmpeg
         PipeDescriptor? OutputPipeDescriptor { get; }
 
         /// <summary>
+        ///     Раздел аудио-настроек конвертации.
+        /// </summary>
+        IAudioConversionSettings Audio { get; }
+
+        /// <summary>
+        ///     Раздел видео-настроек конвертации.
+        /// </summary>
+        IVideoConversionSettings Video { get; }
+
+        /// <summary>
         ///     Устанавливает приоритет процесса FFmpeg.
         /// </summary>
         /// <param name="priority">Приоритет процесса FFmpeg.</param>

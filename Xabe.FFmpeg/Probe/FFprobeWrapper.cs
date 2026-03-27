@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -89,20 +89,16 @@ namespace Xabe.FFmpeg
 
         private int GetGcd(int width, int height)
         {
-            while (width != 0 &&
-                  height != 0)
+            width = Math.Abs(width);
+            height = Math.Abs(height);
+            while (height != 0)
             {
-                if (width > height)
-                {
-                    width -= height;
-                }
-                else
-                {
-                    height -= width;
-                }
+                var remainder = width % height;
+                width = height;
+                height = remainder;
             }
 
-            return width == 0 ? height : width;
+            return width;
         }
 
         public Task<string> Start(string args, CancellationToken cancellationToken)
@@ -112,36 +108,31 @@ namespace Xabe.FFmpeg
 
         private async Task<string> RunProcess(string args, CancellationToken cancellationToken)
         {
-            return await Task.Factory.StartNew(() =>
+            using (Process process = RunProcess(args, FFprobePath, null, standardOutput: true))
             {
-                using (Process process = RunProcess(args, FFprobePath, null, standardOutput: true))
+                var processExited = false;
+                using (cancellationToken.Register(() =>
                 {
-                    var processExited = false;
-                    cancellationToken.Register(() =>
+                    try
                     {
-                        try
+                        if (!processExited && !process.HasExited)
                         {
-                            if (!processExited && !process.HasExited)
-                            {
-                                process.CloseMainWindow();
-                                process.Kill();
-                            }
+                            process.CloseMainWindow();
+                            process.Kill();
                         }
-                        catch
-                        {
-
-                        }
-                    });
-                    var text = new List<string>();
-                    var output = process.StandardOutput.ReadToEnd();
+                    }
+                    catch
+                    {
+                    }
+                }))
+                {
+                    var output = await process.StandardOutput.ReadToEndAsync().ConfigureAwait(false);
                     process.WaitForExit();
                     processExited = true;
+                    cancellationToken.ThrowIfCancellationRequested();
                     return output;
                 }
-            },
-            cancellationToken,
-            TaskCreationOptions.LongRunning,
-            TaskScheduler.Default);
+            }
         }
 
         /// <summary>

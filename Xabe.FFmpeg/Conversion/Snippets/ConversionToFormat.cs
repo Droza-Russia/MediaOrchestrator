@@ -1,4 +1,5 @@
-﻿using System.Linq;
+using System;
+using System.Linq;
 using System.Threading.Tasks;
 
 namespace Xabe.FFmpeg
@@ -83,6 +84,30 @@ namespace Xabe.FFmpeg
             return New()
                 .AddStream(videoStream, audioStream)
                 .SetOutput(outputPath);
+        }
+
+        /// <summary>
+        ///     Remux file to WebM without re-encoding streams.
+        /// </summary>
+        /// <param name="inputPath">Input path</param>
+        /// <param name="outputPath">Destination file</param>
+        /// <param name="keepSubtitles">Whether to keep subtitle streams</param>
+        /// <returns>Conversion result</returns>
+        internal static Task<IConversion> RemuxToWebM(string inputPath, string outputPath, bool keepSubtitles = false)
+        {
+            var conversion = New()
+                .AddParameter($"-i {inputPath.Escape()}", ParameterPosition.PreInput)
+                .AddParameter("-map 0")
+                .AddParameter("-c copy")
+                .SetOutputFormat(Format.webm)
+                .SetOutput(outputPath);
+
+            if (!keepSubtitles)
+            {
+                conversion.AddParameter("-sn");
+            }
+
+            return Task.FromResult(conversion);
         }
 
         /// <summary>

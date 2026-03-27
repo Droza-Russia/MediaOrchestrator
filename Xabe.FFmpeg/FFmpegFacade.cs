@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Threading;
@@ -27,6 +28,16 @@ namespace Xabe.FFmpeg
         ///     Это будет использоваться для сравнения имен файлов
         /// </summary>
         public static IFormatProvider FormatProvider { get; private set; }
+
+        /// <summary>
+        ///     Включает или отключает кэширование MediaInfo.
+        /// </summary>
+        public static bool MediaInfoCacheEnabled { get; set; } = true;
+
+        /// <summary>
+        ///     Время жизни записи в кэше MediaInfo.
+        /// </summary>
+        public static TimeSpan MediaInfoCacheLifetime { get; set; } = TimeSpan.FromMinutes(10);
 
         /// <summary>
         ///     Получает новый экземпляр Conversion.
@@ -80,6 +91,14 @@ namespace Xabe.FFmpeg
         internal static async Task<Device[]> GetAvailableDevices()
         {
             return await Conversion.GetAvailableDevices();
+        }
+
+        /// <summary>
+        ///     Очищает кэш MediaInfo.
+        /// </summary>
+        public static void ClearMediaInfoCache()
+        {
+            MediaInfo.ClearCache();
         }
     }
 
@@ -137,6 +156,28 @@ namespace Xabe.FFmpeg
         }
 
         /// <summary>
+        ///     Разделяет медиафайл на части по таймкодам и конвертирует аудио в выбранный формат.
+        ///     Работает с файлами как с видеорядом, так и без него, при наличии аудиодорожки.
+        /// </summary>
+        /// <param name="inputPath">Путь к входному файлу.</param>
+        /// <param name="outputDirectory">Директория для выходных частей.</param>
+        /// <param name="timecodes">Таймкоды разделения.</param>
+        /// <param name="audioCodec">Аудиокодек выхода (по умолчанию mp3).</param>
+        /// <param name="bitrate">Битрейт аудио в битах.</param>
+        /// <param name="sampleRate">Частота дискретизации в Гц.</param>
+        /// <returns>Список конвертаций, по одной на каждую часть.</returns>
+        public async Task<IReadOnlyList<IConversion>> SplitAudioByTimecodes(
+            string inputPath,
+            string outputDirectory,
+            IEnumerable<TimeSpan> timecodes,
+            AudioCodec audioCodec = AudioCodec.mp3,
+            long bitrate = 192000,
+            int sampleRate = 44100)
+        {
+            return await Conversion.SplitAudioByTimecodesAsync(inputPath, outputDirectory, timecodes, audioCodec, bitrate, sampleRate);
+        }
+
+        /// <summary>
         ///     Конвертирует файл в MP4
         /// </summary>
         /// <param name="inputPath">Входной путь</param>
@@ -178,6 +219,18 @@ namespace Xabe.FFmpeg
         public async Task<IConversion> ToWebM(string inputPath, string outputPath)
         {
             return await Conversion.ToWebM(inputPath, outputPath);
+        }
+
+        /// <summary>
+        ///     Выполняет remux в WebM без перекодирования потоков.
+        /// </summary>
+        /// <param name="inputPath">Входной путь</param>
+        /// <param name="outputPath">Выходной файл</param>
+        /// <param name="keepSubtitles">Сохранять ли потоки субтитров</param>
+        /// <returns>Результат конвертации</returns>
+        public async Task<IConversion> RemuxToWebM(string inputPath, string outputPath, bool keepSubtitles = false)
+        {
+            return await Conversion.RemuxToWebM(inputPath, outputPath, keepSubtitles);
         }
 
         /// <summary>

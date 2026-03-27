@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -22,6 +22,8 @@ namespace Xabe.FFmpeg
         private readonly ParametersList<ConversionParameter> _parameters = new ParametersList<ConversionParameter>();
         private readonly IDictionary<ParameterPosition, List<string>> _userDefinedParameters = new Dictionary<ParameterPosition, List<string>>();
         private readonly List<IStream> _streams = new List<IStream>();
+        private readonly IAudioConversionSettings _audioSettings;
+        private readonly IVideoConversionSettings _videoSettings;
 
         private string _output;
         private bool _hasInputBuilder = false;
@@ -35,6 +37,8 @@ namespace Xabe.FFmpeg
         {
             _userDefinedParameters[ParameterPosition.PostInput] = new List<string>();
             _userDefinedParameters[ParameterPosition.PreInput] = new List<string>();
+            _audioSettings = new AudioConversionSettings(this);
+            _videoSettings = new VideoConversionSettings(this);
         }
 
         /// <summary>
@@ -102,6 +106,16 @@ namespace Xabe.FFmpeg
         ///     Дескриптор канала вывода.
         /// </summary>
         public PipeDescriptor? OutputPipeDescriptor { get; private set; }
+
+        /// <summary>
+        ///     Раздел аудио-настроек конвертации.
+        /// </summary>
+        public IAudioConversionSettings Audio => _audioSettings;
+
+        /// <summary>
+        ///     Раздел видео-настроек конвертации.
+        /// </summary>
+        public IVideoConversionSettings Video => _videoSettings;
 
         /// <summary>
         ///     Перечисление всех потоков, добавленных в конвертацию.
@@ -571,17 +585,21 @@ namespace Xabe.FFmpeg
             foreach (IGrouping<string, IFilterConfiguration> filterGroup in filterGroups)
             {
                 builder.Append($"{filterGroup.Key} \"");
-                foreach (IFilterConfiguration configuration in configurations.Where(x => x.FilterType == filterGroup.Key))
+                var isFirstFilter = true;
+                foreach (IFilterConfiguration configuration in filterGroup)
                 {
-                    var values = new List<string>();
                     foreach (KeyValuePair<string, string> filter in configuration.Filters)
                     {
+                        if (!isFirstFilter)
+                        {
+                            builder.Append(";");
+                        }
+
                         var map = $"[{configuration.StreamNumber}]";
                         var value = string.IsNullOrEmpty(filter.Value) ? $"{filter.Key} " : $"{filter.Key}={filter.Value}";
-                        values.Add($"{map} {value} ");
+                        builder.Append($"{map} {value} ");
+                        isFirstFilter = false;
                     }
-
-                    builder.Append(string.Join(";", values));
                 }
 
                 builder.Append("\" ");

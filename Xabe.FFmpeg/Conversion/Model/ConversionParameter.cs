@@ -1,5 +1,4 @@
-﻿using System.Collections.Generic;
-using System.Linq;
+using System.Collections.Generic;
 
 namespace Xabe.FFmpeg
 {
@@ -7,8 +6,11 @@ namespace Xabe.FFmpeg
     {
         public ConversionParameter(string parameter, ParameterPosition position = ParameterPosition.PostInput)
         {
-            Parameter = $"{parameter.Trim()} ";
-            Key = parameter.Split(' ').First();
+            var trimmedParameter = parameter.Trim();
+            Parameter = $"{trimmedParameter} ";
+
+            var separatorIndex = trimmedParameter.IndexOf(' ');
+            Key = separatorIndex > 0 ? trimmedParameter.Substring(0, separatorIndex) : trimmedParameter;
             Position = position;
         }
 
