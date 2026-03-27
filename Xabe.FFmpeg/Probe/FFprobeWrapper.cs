@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -68,7 +68,7 @@ namespace Xabe.FFmpeg
 
         private async Task<FormatModel.Root> GetInfos(string videoPath, CancellationToken cancellationToken)
         {
-            var stringResult = await Start($"-v panic -print_format json=c=1 -show_entries format=size,duration,bit_rate:format_tags=creation_time {videoPath}", cancellationToken);
+            var stringResult = await Start($"-v panic -print_format json=c=1 -show_entries format=format_name,size,duration,bit_rate:format_tags=creation_time {videoPath}", cancellationToken);
 
             return JsonSerializer.Deserialize<FormatModel.Root>(stringResult, _defaultSerializerOptions);
         }
@@ -89,59 +89,50 @@ namespace Xabe.FFmpeg
 
         private int GetGcd(int width, int height)
         {
-            while (width != 0 &&
-                  height != 0)
+            width = Math.Abs(width);
+            height = Math.Abs(height);
+            while (height != 0)
             {
-                if (width > height)
-                {
-                    width -= height;
-                }
-                else
-                {
-                    height -= width;
-                }
+                var remainder = width % height;
+                width = height;
+                height = remainder;
             }
 
-            return width == 0 ? height : width;
+            return width;
         }
 
-        public Task<string> Start(string args, CancellationToken cancellationToken)
+        public Task<string> Start(string args, CancellationToken cancellationToken = default)
         {
             return RunProcess(args, cancellationToken);
         }
 
         private async Task<string> RunProcess(string args, CancellationToken cancellationToken)
         {
-            return await Task.Factory.StartNew(() =>
+            using (Process process = RunProcess(args, FFprobePath, null, standardOutput: true))
             {
-                using (Process process = RunProcess(args, FFprobePath, null, standardOutput: true))
+                var processExited = false;
+                using (cancellationToken.Register(() =>
                 {
-                    var processExited = false;
-                    cancellationToken.Register(() =>
+                    try
                     {
-                        try
+                        if (!processExited && !process.HasExited)
                         {
-                            if (!processExited && !process.HasExited)
-                            {
-                                process.CloseMainWindow();
-                                process.Kill();
-                            }
+                            process.CloseMainWindow();
+                            process.Kill();
                         }
-                        catch
-                        {
-
-                        }
-                    });
-                    var text = new List<string>();
-                    var output = process.StandardOutput.ReadToEnd();
+                    }
+                    catch
+                    {
+                    }
+                }))
+                {
+                    var output = await process.StandardOutput.ReadToEndAsync().ConfigureAwait(false);
                     process.WaitForExit();
                     processExited = true;
+                    cancellationToken.ThrowIfCancellationRequested();
                     return output;
                 }
-            },
-            cancellationToken,
-            TaskCreationOptions.LongRunning,
-            TaskScheduler.Default);
+            }
         }
 
         /// <summary>
@@ -156,10 +147,11 @@ namespace Xabe.FFmpeg
             ProbeModel.Stream[] streams = await GetStreams(path, cancellationToken);
             if (!streams.Any())
             {
-                throw new ArgumentException($"Неверный файл. Не удалось загрузить файл {path}");
+                throw new ArgumentException(string.Format(ErrorMessages.InvalidFileUnableToLoad, path));
             }
 
             var infos = await GetInfos(path, cancellationToken);
+            MediaFileSignatureValidator.ValidateDeclaredFormatOrThrow(mediaInfo.Path, infos?.format?.format_name);
             if (infos.format.size != null)
             {
                 mediaInfo.Size = long.Parse(infos.format.size);

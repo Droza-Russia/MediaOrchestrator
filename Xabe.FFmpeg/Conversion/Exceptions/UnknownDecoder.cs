@@ -1,17 +1,17 @@
-﻿namespace Xabe.FFmpeg.Exceptions
+namespace Xabe.FFmpeg.Exceptions
 {
     /// <inheritdoc />
     /// <summary>
-    ///      The exception that is thrown when a FFmpeg cannot find specified hardware accelerator.
+    ///      Исключение, выбрасываемое, когда FFmpeg не может подобрать декодер для входного файла.
     /// </summary>
     public class UnknownDecoderException : ConversionException
     {
         /// <inheritdoc />
         /// <summary>
-        ///     The exception that is thrown when a FFmpeg cannot find a codec to decode the file.
+        ///     Исключение, выбрасываемое, когда FFmpeg не может найти кодек для декодирования файла.
         /// </summary>
-        /// <param name="errorMessage">FFmpeg error output</param>
-        /// <param name="inputParameters">FFmpeg input parameters</param>
+        /// <param name="errorMessage">Текст ошибки FFmpeg.</param>
+        /// <param name="inputParameters">Входные параметры FFmpeg.</param>
         internal UnknownDecoderException(string errorMessage, string inputParameters) : base(errorMessage, inputParameters)
         {
         }

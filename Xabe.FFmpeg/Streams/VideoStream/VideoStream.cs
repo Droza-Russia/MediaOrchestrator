@@ -1,6 +1,8 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
+using System.Text;
 using Xabe.FFmpeg.Streams;
 
 namespace Xabe.FFmpeg
@@ -11,6 +13,7 @@ namespace Xabe.FFmpeg
         private readonly ParametersList<ConversionParameter> _parameters = new ParametersList<ConversionParameter>();
         private readonly Dictionary<string, string> _videoFilters = new Dictionary<string, string>();
         private string _watermarkSource;
+        private bool _outputUsesCopyCodec;
 
         internal VideoStream()
         {
@@ -97,7 +100,7 @@ namespace Xabe.FFmpeg
         {
             if (multiplication < 0.5 || multiplication > 2.0)
             {
-                throw new ArgumentOutOfRangeException(nameof(multiplication), "Значение должно быть больше 0.5 и меньше 2.0.");
+                throw new ArgumentOutOfRangeException(nameof(multiplication), ErrorMessages.SpeedOutOfRange);
             }
 
             var videoMultiplicator = multiplication >= 1 ? 1 - ((multiplication - 1) / 2) : 1 + ((multiplication - 1) * -2);
@@ -129,8 +132,11 @@ namespace Xabe.FFmpeg
         /// <inheritdoc />
         public IVideoStream CopyStream()
         {
+            _outputUsesCopyCodec = true;
             return SetCodec(VideoCodec.copy);
         }
+
+        internal bool IsOutputCodecCopy => _outputUsesCopyCodec;
 
         /// <inheritdoc />
         public IVideoStream SetLoop(int count, int delay)
@@ -264,6 +270,7 @@ namespace Xabe.FFmpeg
         /// <inheritdoc />
         public IVideoStream SetCodec(string codec)
         {
+            _outputUsesCopyCodec = string.Equals(codec, "copy", StringComparison.OrdinalIgnoreCase);
             _parameters.Add(new ConversionParameter($"-c:v {codec}"));
             return this;
         }
@@ -288,7 +295,7 @@ namespace Xabe.FFmpeg
             {
                 if (seek > Duration)
                 {
-                    throw new ArgumentException("Позиция поиска не может быть больше длительности видео. Позиция: " + seek.TotalSeconds + " Длительность: " + Duration.TotalSeconds);
+                    throw new ArgumentException(string.Format(ErrorMessages.SeekCannotExceedDuration, seek.TotalSeconds, Duration.TotalSeconds));
                 }
 
                 _parameters.Add(new ConversionParameter($"-ss {seek.ToFFmpeg()}", ParameterPosition.PreInput));
@@ -342,6 +349,133 @@ namespace Xabe.FFmpeg
 
             _videoFilters["overlay"] = argument;
             return this;
+        }
+
+        /// <inheritdoc />
+        public IVideoStream SetRightSideDrawText(
+            string text,
+            string fontColor = "white",
+            int fontSize = 24,
+            int marginRight = 20,
+            int marginY = 16,
+            DrawTextVerticalAlign verticalAlign = DrawTextVerticalAlign.Center,
+            string fontFilePath = null)
+        {
+            if (text == null)
+            {
+                throw new ArgumentNullException(nameof(text));
+            }
+
+            var textClause = $"text='{EscapeDrawTextQuotedContent(text)}'";
+            _videoFilters["drawtext"] = BuildDrawTextFilterBody(textClause, fontColor, fontSize, marginRight, marginY, verticalAlign, fontFilePath);
+            return this;
+        }
+
+        /// <inheritdoc />
+        public IVideoStream SetRightSidePtsTimeOverlay(
+            string prefix = null,
+            string suffix = null,
+            bool useLocalWallClock = false,
+            string fontColor = "white",
+            int fontSize = 24,
+            int marginRight = 20,
+            int marginY = 16,
+            DrawTextVerticalAlign verticalAlign = DrawTextVerticalAlign.Center,
+            string fontFilePath = null)
+        {
+            var inner = new StringBuilder();
+            if (!string.IsNullOrEmpty(prefix))
+            {
+                inner.Append(EscapeDrawTextQuotedContent(prefix));
+            }
+
+            inner.Append(useLocalWallClock ? "%{localtime}" : "%{pts\\:hms}");
+
+            if (!string.IsNullOrEmpty(suffix))
+            {
+                inner.Append(EscapeDrawTextQuotedContent(suffix));
+            }
+
+            var textClause = $"text='{inner}'";
+            _videoFilters["drawtext"] = BuildDrawTextFilterBody(textClause, fontColor, fontSize, marginRight, marginY, verticalAlign, fontFilePath);
+            return this;
+        }
+
+        /// <inheritdoc />
+        public IVideoStream SetRightSideSmpteTimecodeOverlay(
+            string startTimecode = "00:00:00:00",
+            double frameRate = 25,
+            string fontColor = "white",
+            int fontSize = 24,
+            int marginRight = 20,
+            int marginY = 16,
+            DrawTextVerticalAlign verticalAlign = DrawTextVerticalAlign.Center,
+            string fontFilePath = null)
+        {
+            if (frameRate <= 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(frameRate));
+            }
+
+            var tc = string.IsNullOrWhiteSpace(startTimecode) ? "00:00:00:00" : startTimecode.Trim();
+            var escapedTc = EscapeTimecodeColonsForDrawText(tc);
+            var rateStr = frameRate.ToString(CultureInfo.InvariantCulture);
+            var timecodeClause = $"timecode='{escapedTc}':rate={rateStr}";
+            _videoFilters["drawtext"] = BuildDrawTextFilterBody(timecodeClause, fontColor, fontSize, marginRight, marginY, verticalAlign, fontFilePath);
+            return this;
+        }
+
+        private static string BuildDrawTextFilterBody(
+            string textOrTimecodeClause,
+            string fontColor,
+            int fontSize,
+            int marginRight,
+            int marginY,
+            DrawTextVerticalAlign verticalAlign,
+            string fontFilePath)
+        {
+            var x = $"w-tw-{marginRight.ToString(CultureInfo.InvariantCulture)}";
+            var y = BuildDrawTextYExpression(verticalAlign, marginY);
+            var font = BuildFontFileClause(fontFilePath);
+            return $"{textOrTimecodeClause}:fontcolor={fontColor}:fontsize={fontSize.ToString(CultureInfo.InvariantCulture)}:x={x}:y={y}{font}";
+        }
+
+        private static string BuildDrawTextYExpression(DrawTextVerticalAlign align, int marginY)
+        {
+            switch (align)
+            {
+                case DrawTextVerticalAlign.Top:
+                    return marginY.ToString(CultureInfo.InvariantCulture);
+                case DrawTextVerticalAlign.Bottom:
+                    return $"h-th-{marginY.ToString(CultureInfo.InvariantCulture)}";
+                default:
+                    return "(h-th)/2";
+            }
+        }
+
+        private static string BuildFontFileClause(string fontFilePath)
+        {
+            if (string.IsNullOrWhiteSpace(fontFilePath))
+            {
+                return string.Empty;
+            }
+
+            var full = global::System.IO.Path.GetFullPath(fontFilePath);
+            var escaped = full.Replace("\\", "/").Replace(":", "\\:").Replace("'", "\\'");
+            return $":fontfile='{escaped}'";
+        }
+
+        private static string EscapeDrawTextQuotedContent(string text)
+        {
+            return text
+                .Replace("\\", "\\\\")
+                .Replace("'", "\\'")
+                .Replace(":", "\\:");
+        }
+
+        private static string EscapeTimecodeColonsForDrawText(string timecode)
+        {
+            return timecode.Replace(":", "\\:").Replace("'", "\\'");
         }
 
         /// <inheritdoc />

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Runtime.InteropServices;
 
 namespace Xabe.FFmpeg
@@ -24,7 +24,7 @@ namespace Xabe.FFmpeg
                 // Linux (LinuxArmhf) (для ОС на основе glibc) -> Raspberry Pi
             }
 
-            throw new InvalidOperationException("Отсутствует тип системы и архитектура");
+            throw new InvalidOperationException(ErrorMessages.OperatingSystemAndArchitectureMissing);
         }
     }
 }

@@ -1,4 +1,4 @@
-﻿namespace Xabe.FFmpeg
+namespace Xabe.FFmpeg
 {
     /// <summary>
     ///     Аппаратные ускорители (посмотреть `ffmpeg -hwaccels`).
@@ -24,6 +24,16 @@
         ///     Активирует Intel QuickSync Video для перекодировки.
         /// </summary>
         qsv,
+
+        /// <summary>
+        ///     NVIDIA NVDEC / CUDA (см. <c>ffmpeg -hwaccels</c>).
+        /// </summary>
+        cuda,
+
+        /// <summary>
+        ///     Apple Video Toolbox.
+        /// </summary>
+        videotoolbox,
 
         /// <summary>
         ///     Использует cuvid.

@@ -1,5 +1,6 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace Xabe.FFmpeg
@@ -13,9 +14,9 @@ namespace Xabe.FFmpeg
         /// <param name="inputFilePath">Path to file</param>
         /// <param name="rtspServerUri">Uri of RTSP Server in format: rtsp://127.0.0.1:8554/name</param>
         /// <returns>IConversion object</returns>
-        internal static async Task<IConversion> SendToRtspServer(string inputFilePath, Uri rtspServerUri)
+        internal static async Task<IConversion> SendToRtspServer(string inputFilePath, Uri rtspServerUri, CancellationToken cancellationToken = default)
         {
-            IMediaInfo info = await FFmpeg.GetMediaInfo(inputFilePath);
+            IMediaInfo info = await FFmpeg.GetMediaInfo(inputFilePath, cancellationToken);
 
             var streams = new List<IStream>();
             foreach (var stream in info.VideoStreams)
@@ -54,8 +55,9 @@ namespace Xabe.FFmpeg
         /// <param name="inputFilePath">Path to file</param>
         /// <param name="rtspServerUri">Uri of RTSP Server in format: rtsp://127.0.0.1:8554/name</param>
         /// <returns>IConversion object</returns>
-        internal static IConversion SendDesktopToRtspServer(Uri rtspServerUri)
+        internal static IConversion SendDesktopToRtspServer(Uri rtspServerUri, CancellationToken cancellationToken = default)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             var conversion = FFmpeg.Conversions.New()
                                                .AddDesktopStream("800x600", 30, 0, 0)
                                                .AddParameter("-tune zerolatency")

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
@@ -16,7 +16,7 @@ namespace Xabe.FFmpeg.Extensions
 
             if (!source.CanRead)
             {
-                throw new ArgumentException("Поток должен быть доступен для чтения", nameof(source));
+                throw new ArgumentException(ErrorMessages.StreamMustBeReadable, nameof(source));
             }
 
             if (destination == null)
@@ -26,7 +26,7 @@ namespace Xabe.FFmpeg.Extensions
 
             if (!destination.CanWrite)
             {
-                throw new ArgumentException("Поток должен быть доступен для записи", nameof(destination));
+                throw new ArgumentException(ErrorMessages.StreamMustBeWritable, nameof(destination));
             }
 
             if (bufferSize < 0)

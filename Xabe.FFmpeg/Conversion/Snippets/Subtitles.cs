@@ -1,4 +1,5 @@
-﻿using System.Linq;
+using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Xabe.FFmpeg.Streams.SubtitleStream;
 
@@ -13,9 +14,9 @@ namespace Xabe.FFmpeg
         /// <param name="outputPath">Output file</param>
         /// <param name="subtitlesPath">Subtitles</param>
         /// <returns>Conversion result</returns>
-        internal static async Task<IConversion> AddSubtitlesAsync(string inputPath, string outputPath, string subtitlesPath)
+        internal static async Task<IConversion> AddSubtitlesAsync(string inputPath, string outputPath, string subtitlesPath, CancellationToken cancellationToken = default)
         {
-            IMediaInfo info = await FFmpeg.GetMediaInfo(inputPath);
+            IMediaInfo info = await FFmpeg.GetMediaInfo(inputPath, cancellationToken);
 
             IVideoStream videoStream = info.VideoStreams.FirstOrDefault()
                                            ?.AddSubtitles(subtitlesPath);
@@ -35,10 +36,10 @@ namespace Xabe.FFmpeg
         /// <param name="subtitlePath">Path to subtitle file in .srt format</param>
         /// <param name="language">Language code in ISO 639. Example: "eng", "pol", "pl", "de", "ger"</param>
         /// <returns>Conversion result</returns>
-        internal static async Task<IConversion> AddSubtitleAsync(string inputPath, string outputPath, string subtitlePath, string language = null)
+        internal static async Task<IConversion> AddSubtitleAsync(string inputPath, string outputPath, string subtitlePath, string language = null, CancellationToken cancellationToken = default)
         {
-            IMediaInfo mediaInfo = await FFmpeg.GetMediaInfo(inputPath);
-            IMediaInfo subtitleInfo = await FFmpeg.GetMediaInfo(subtitlePath);
+            IMediaInfo mediaInfo = await FFmpeg.GetMediaInfo(inputPath, cancellationToken);
+            IMediaInfo subtitleInfo = await FFmpeg.GetMediaInfo(subtitlePath, cancellationToken);
 
             ISubtitleStream subtitleStream = subtitleInfo.SubtitleStreams.First()
                                                          .SetLanguage(language);
@@ -60,10 +61,10 @@ namespace Xabe.FFmpeg
         /// <param name="subtitleCodec">The Subtitle Codec to Use to Encode the Subtitles</param>
         /// <param name="language">Language code in ISO 639. Example: "eng", "pol", "pl", "de", "ger"</param>
         /// <returns>Conversion result</returns>
-        internal static async Task<IConversion> AddSubtitleAsync(string inputPath, string outputPath, string subtitlePath, SubtitleCodec subtitleCodec, string language = null)
+        internal static async Task<IConversion> AddSubtitleAsync(string inputPath, string outputPath, string subtitlePath, SubtitleCodec subtitleCodec, string language = null, CancellationToken cancellationToken = default)
         {
-            IMediaInfo mediaInfo = await FFmpeg.GetMediaInfo(inputPath);
-            IMediaInfo subtitleInfo = await FFmpeg.GetMediaInfo(subtitlePath);
+            IMediaInfo mediaInfo = await FFmpeg.GetMediaInfo(inputPath, cancellationToken);
+            IMediaInfo subtitleInfo = await FFmpeg.GetMediaInfo(subtitlePath, cancellationToken);
 
             ISubtitleStream subtitleStream = subtitleInfo.SubtitleStreams.First()
                                                          .SetLanguage(language);

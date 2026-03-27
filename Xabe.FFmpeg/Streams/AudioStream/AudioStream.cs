@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using Xabe.FFmpeg.Streams;
@@ -109,7 +109,7 @@ namespace Xabe.FFmpeg
         {
             if (multiplication < 0.5 || multiplication > 2.0)
             {
-                throw new ArgumentOutOfRangeException(nameof(multiplication), "Значение должно быть больше 0.5 и меньше 2.0.");
+                throw new ArgumentOutOfRangeException(nameof(multiplication), ErrorMessages.SpeedOutOfRange);
             }
 
             return $"{multiplication.ToFFmpegFormat()} ";

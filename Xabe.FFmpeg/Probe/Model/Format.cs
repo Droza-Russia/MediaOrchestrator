@@ -1,4 +1,4 @@
-﻿
+
 #pragma warning disable IDE1006 // Naming Styles
 
 namespace Xabe.FFmpeg
@@ -21,6 +21,8 @@ namespace Xabe.FFmpeg
 
         internal class Format
         {
+            public string format_name { get; set; }
+
             public string size { get; set; }
 
             public long bit_Rate { get; set; }

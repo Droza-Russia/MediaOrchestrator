@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -105,10 +105,12 @@ namespace Xabe.FFmpeg
                             }
                         }
 
+                        EnsureProcessFullyExited(process);
+
                         cancellationToken.ThrowIfCancellationRequested();
                         if (_wasKilled)
                         {
-                            throw new ConversionException("Не удалось остановить процесс. Процесс был принудительно завершен.", args);
+                            throw new ConversionException(ErrorMessages.FailedToStopProcess, args);
                         }
 
                         if (cancellationToken.IsCancellationRequested)
@@ -122,6 +124,11 @@ namespace Xabe.FFmpeg
 
                         if (process.ExitCode != 0 && _outputLog.Any() && !_outputLog.Last().Contains("dummy"))
                         {
+                            if (FFmpegExceptionCatcher.OutputIndicatesInsufficientDiskSpace(output))
+                            {
+                                throw new InsufficientDiskSpaceException(ErrorMessages.InsufficientDiskSpace, output, args);
+                            }
+
                             throw new ConversionException(output, args);
                         }
                     }
@@ -132,6 +139,25 @@ namespace Xabe.FFmpeg
             cancellationToken,
             TaskCreationOptions.LongRunning,
             TaskScheduler.Default);
+        }
+
+        /// <summary>
+        ///     Дожидается завершения процесса после Kill, чтобы файлы и pipe не оставались заблокированными.
+        /// </summary>
+        private static void EnsureProcessFullyExited(Process process)
+        {
+            if (process.HasExited)
+            {
+                return;
+            }
+
+            try
+            {
+                process.WaitForExit(120_000);
+            }
+            catch (InvalidOperationException)
+            {
+            }
         }
 
         private void ProcessOutputData(DataReceivedEventArgs e, string args, int processId)

@@ -1,6 +1,7 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Xabe.FFmpeg.Streams.SubtitleStream;
 
@@ -17,12 +18,93 @@ namespace Xabe.FFmpeg
         /// <param name="inputImage">Watermark</param>
         /// <param name="position">Position of watermark</param>
         /// <returns>Conversion result</returns>
-        internal static async Task<IConversion> SetWatermarkAsync(string inputPath, string outputPath, string inputImage, Position position)
+        internal static async Task<IConversion> SetWatermarkAsync(string inputPath, string outputPath, string inputImage, Position position, CancellationToken cancellationToken = default)
         {
-            IMediaInfo info = await FFmpeg.GetMediaInfo(inputPath);
+            IMediaInfo info = await FFmpeg.GetMediaInfo(inputPath, cancellationToken);
 
             IVideoStream videoStream = info.VideoStreams.FirstOrDefault()
                                            .SetWatermark(inputImage, position);
+
+            return New()
+                .AddStream(videoStream)
+                .AddStream(info.AudioStreams.ToArray())
+                .SetOutput(outputPath);
+        }
+
+        internal static async Task<IConversion> BurnRightSideTextLabelAsync(
+            string inputPath,
+            string outputPath,
+            string text,
+            string fontColor = "white",
+            int fontSize = 24,
+            int marginRight = 20,
+            int marginY = 16,
+            DrawTextVerticalAlign verticalAlign = DrawTextVerticalAlign.Center,
+            string fontFilePath = null,
+            CancellationToken cancellationToken = default)
+        {
+            IMediaInfo info = await FFmpeg.GetMediaInfo(inputPath, cancellationToken);
+            IVideoStream videoStream = info.VideoStreams.FirstOrDefault()
+                                       ?.SetRightSideDrawText(text, fontColor, fontSize, marginRight, marginY, verticalAlign, fontFilePath);
+            if (videoStream == null)
+            {
+                throw new ArgumentException(ErrorMessages.InputFileDoesNotContainVideoStream, nameof(inputPath));
+            }
+
+            return New()
+                .AddStream(videoStream)
+                .AddStream(info.AudioStreams.ToArray())
+                .SetOutput(outputPath);
+        }
+
+        internal static async Task<IConversion> BurnRightSidePtsTimeLabelAsync(
+            string inputPath,
+            string outputPath,
+            string prefix = null,
+            string suffix = null,
+            bool useLocalWallClock = false,
+            string fontColor = "white",
+            int fontSize = 24,
+            int marginRight = 20,
+            int marginY = 16,
+            DrawTextVerticalAlign verticalAlign = DrawTextVerticalAlign.Center,
+            string fontFilePath = null,
+            CancellationToken cancellationToken = default)
+        {
+            IMediaInfo info = await FFmpeg.GetMediaInfo(inputPath, cancellationToken);
+            IVideoStream videoStream = info.VideoStreams.FirstOrDefault()
+                                       ?.SetRightSidePtsTimeOverlay(prefix, suffix, useLocalWallClock, fontColor, fontSize, marginRight, marginY, verticalAlign, fontFilePath);
+            if (videoStream == null)
+            {
+                throw new ArgumentException(ErrorMessages.InputFileDoesNotContainVideoStream, nameof(inputPath));
+            }
+
+            return New()
+                .AddStream(videoStream)
+                .AddStream(info.AudioStreams.ToArray())
+                .SetOutput(outputPath);
+        }
+
+        internal static async Task<IConversion> BurnRightSideSmpteTimecodeAsync(
+            string inputPath,
+            string outputPath,
+            string startTimecode = "00:00:00:00",
+            double frameRate = 25,
+            string fontColor = "white",
+            int fontSize = 24,
+            int marginRight = 20,
+            int marginY = 16,
+            DrawTextVerticalAlign verticalAlign = DrawTextVerticalAlign.Center,
+            string fontFilePath = null,
+            CancellationToken cancellationToken = default)
+        {
+            IMediaInfo info = await FFmpeg.GetMediaInfo(inputPath, cancellationToken);
+            IVideoStream videoStream = info.VideoStreams.FirstOrDefault()
+                                       ?.SetRightSideSmpteTimecodeOverlay(startTimecode, frameRate, fontColor, fontSize, marginRight, marginY, verticalAlign, fontFilePath);
+            if (videoStream == null)
+            {
+                throw new ArgumentException(ErrorMessages.InputFileDoesNotContainVideoStream, nameof(inputPath));
+            }
 
             return New()
                 .AddStream(videoStream)
@@ -36,9 +118,9 @@ namespace Xabe.FFmpeg
         /// <param name="inputPath">Input path</param>
         /// <param name="outputPath">Output audio stream</param>
         /// <returns>Conversion result</returns>
-        internal static async Task<IConversion> ExtractVideoAsync(string inputPath, string outputPath)
+        internal static async Task<IConversion> ExtractVideoAsync(string inputPath, string outputPath, CancellationToken cancellationToken = default)
         {
-            IMediaInfo info = await FFmpeg.GetMediaInfo(inputPath);
+            IMediaInfo info = await FFmpeg.GetMediaInfo(inputPath, cancellationToken);
 
             IVideoStream videoStream = info.VideoStreams.FirstOrDefault();
 
@@ -54,9 +136,9 @@ namespace Xabe.FFmpeg
         /// <param name="outputPath">Output file</param>
         /// <param name="captureTime">TimeSpan of snapshot</param>
         /// <returns>Conversion result</returns>
-        internal static async Task<IConversion> SnapshotAsync(string inputPath, string outputPath, TimeSpan captureTime)
+        internal static async Task<IConversion> SnapshotAsync(string inputPath, string outputPath, TimeSpan captureTime, CancellationToken cancellationToken = default)
         {
-            IMediaInfo info = await FFmpeg.GetMediaInfo(inputPath);
+            IMediaInfo info = await FFmpeg.GetMediaInfo(inputPath, cancellationToken);
 
             IVideoStream videoStream = info.VideoStreams.FirstOrDefault()
                                            .SetOutputFramesCount(1)
@@ -75,9 +157,9 @@ namespace Xabe.FFmpeg
         /// <param name="width">Expected width</param>
         /// <param name="height">Expected height</param>
         /// <returns>Conversion result</returns>
-        internal static async Task<IConversion> ChangeSizeAsync(string inputPath, string outputPath, int width, int height)
+        internal static async Task<IConversion> ChangeSizeAsync(string inputPath, string outputPath, int width, int height, CancellationToken cancellationToken = default)
         {
-            IMediaInfo info = await FFmpeg.GetMediaInfo(inputPath);
+            IMediaInfo info = await FFmpeg.GetMediaInfo(inputPath, cancellationToken);
 
             IVideoStream videoStream = info.VideoStreams.FirstOrDefault()
                                            .SetSize(width, height);
@@ -95,9 +177,9 @@ namespace Xabe.FFmpeg
         /// <param name="outputPath">Output path</param>
         /// <param name="size">Expected size</param>
         /// <returns>Conversion result</returns>
-        internal static async Task<IConversion> ChangeSizeAsync(string inputPath, string outputPath, VideoSize size)
+        internal static async Task<IConversion> ChangeSizeAsync(string inputPath, string outputPath, VideoSize size, CancellationToken cancellationToken = default)
         {
-            IMediaInfo info = await FFmpeg.GetMediaInfo(inputPath);
+            IMediaInfo info = await FFmpeg.GetMediaInfo(inputPath, cancellationToken);
 
             IVideoStream videoStream = info.VideoStreams.FirstOrDefault()
                                            .SetSize(size);
@@ -116,9 +198,9 @@ namespace Xabe.FFmpeg
         /// <param name="startTime">Start point</param>
         /// <param name="duration">Duration of new video</param>
         /// <returns>Conversion result</returns>
-        internal static async Task<IConversion> SplitAsync(string inputPath, string outputPath, TimeSpan startTime, TimeSpan duration)
+        internal static async Task<IConversion> SplitAsync(string inputPath, string outputPath, TimeSpan startTime, TimeSpan duration, CancellationToken cancellationToken = default)
         {
-            IMediaInfo info = await FFmpeg.GetMediaInfo(inputPath);
+            IMediaInfo info = await FFmpeg.GetMediaInfo(inputPath, cancellationToken);
 
             var streams = new List<IStream>();
             foreach (IVideoStream stream in info.VideoStreams)
@@ -143,9 +225,9 @@ namespace Xabe.FFmpeg
         /// <param name="outputPath">Output path</param>
         /// <param name="duration">Duration of stream</param>
         /// <returns>Conversion result</returns>
-        internal static async Task<IConversion> SaveM3U8StreamAsync(Uri uri, string outputPath, TimeSpan? duration = null)
+        internal static async Task<IConversion> SaveM3U8StreamAsync(Uri uri, string outputPath, TimeSpan? duration = null, CancellationToken cancellationToken = default)
         {
-            var mediaInfo = await FFmpeg.GetMediaInfo(uri.ToString());
+            var mediaInfo = await FFmpeg.GetMediaInfo(uri.ToString(), cancellationToken);
             return New()
                 .AddStream(mediaInfo.Streams)
                 .SetInputTime(duration)
@@ -158,11 +240,16 @@ namespace Xabe.FFmpeg
         /// <param name="output">Concatenated inputVideos</param>
         /// <param name="inputVideos">Videos to add</param>
         /// <returns>Conversion result</returns>
-        internal static async Task<IConversion> Concatenate(string output, params string[] inputVideos)
+        internal static Task<IConversion> Concatenate(string output, params string[] inputVideos)
+        {
+            return Concatenate(output, default, inputVideos);
+        }
+
+        internal static async Task<IConversion> Concatenate(string output, CancellationToken cancellationToken, params string[] inputVideos)
         {
             if (inputVideos.Length <= 1)
             {
-                throw new ArgumentException("Для объединения необходимо указать как минимум 2 файла", "inputVideos");
+                throw new ArgumentException(ErrorMessages.ConcatAtLeastTwoFiles, "inputVideos");
             }
 
             var mediaInfos = new List<IMediaInfo>();
@@ -170,7 +257,8 @@ namespace Xabe.FFmpeg
             IConversion conversion = New();
             foreach (var inputVideo in inputVideos)
             {
-                IMediaInfo mediaInfo = await FFmpeg.GetMediaInfo(inputVideo);
+                cancellationToken.ThrowIfCancellationRequested();
+                IMediaInfo mediaInfo = await FFmpeg.GetMediaInfo(inputVideo, cancellationToken);
 
                 mediaInfos.Add(mediaInfo);
                 conversion.AddParameter($"-i {inputVideo.Escape()} ");
@@ -206,11 +294,11 @@ namespace Xabe.FFmpeg
         /// <param name="outputFilePath">Path to file</param>
         /// <param name="keepSubtitles">Whether to Keep Subtitles in the output video</param>
         /// <returns>IConversion object</returns>
-        internal static async Task<IConversion> ConvertAsync(string inputFilePath, string outputFilePath, bool keepSubtitles = false)
+        internal static async Task<IConversion> ConvertAsync(string inputFilePath, string outputFilePath, bool keepSubtitles = false, CancellationToken cancellationToken = default)
         {
-            IMediaInfo info = await FFmpeg.GetMediaInfo(inputFilePath);
+            IMediaInfo info = await FFmpeg.GetMediaInfo(inputFilePath, cancellationToken);
 
-            var conversion = New().SetOutput(outputFilePath);
+            var conversion = New(suppressGlobalOutputLimits: !info.VideoStreams.Any()).SetOutput(outputFilePath);
 
             foreach (var stream in info.Streams)
             {
@@ -242,22 +330,22 @@ namespace Xabe.FFmpeg
         /// <param name="videoCodec"> The Subtitle Codec to Transcode the input to</param>
         /// <param name="keepSubtitles">Whether to Keep Subtitles in the output video</param>
         /// <returns>IConversion object</returns>
-        internal static async Task<IConversion> TranscodeAsync(string inputFilePath, string outputFilePath, VideoCodec videoCodec, AudioCodec audioCodec, SubtitleCodec subtitleCodec, bool keepSubtitles = false)
+        internal static async Task<IConversion> TranscodeAsync(string inputFilePath, string outputFilePath, VideoCodec videoCodec, AudioCodec audioCodec, SubtitleCodec subtitleCodec, bool keepSubtitles = false, CancellationToken cancellationToken = default)
         {
-            IMediaInfo info = await FFmpeg.GetMediaInfo(inputFilePath);
+            IMediaInfo info = await FFmpeg.GetMediaInfo(inputFilePath, cancellationToken);
 
-            var conversion = New().SetOutput(outputFilePath);
+            var conversion = New(suppressGlobalOutputLimits: !info.VideoStreams.Any()).SetOutput(outputFilePath);
 
             foreach (var stream in info.Streams)
             {
                 if (stream is IVideoStream videoStream)
                 {
                     // PR #268 We have to force the framerate here due to an FFmpeg bug with videos > 100fps from android devices
-                    conversion.AddStream(videoStream.SetCodec(videoCodec).SetFramerate(videoStream.Framerate));
+                    conversion.AddStream(videoStream.SetCodec(FFmpeg.ResolveTranscodeVideoCodecToString(videoCodec)).SetFramerate(videoStream.Framerate));
                 }
                 else if (stream is IAudioStream audioStream)
                 {
-                    conversion.AddStream(audioStream.SetCodec(audioCodec));
+                    conversion.AddStream(audioStream.SetCodec(FFmpeg.ResolveTranscodeAudioCodecToString(audioCodec)));
                 }
                 else if (stream is ISubtitleStream subtitleStream && keepSubtitles)
                 {

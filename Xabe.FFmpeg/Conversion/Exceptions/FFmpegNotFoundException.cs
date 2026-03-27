@@ -1,18 +1,18 @@
-﻿using System.IO;
+using System.IO;
 
 namespace Xabe.FFmpeg.Exceptions
 {
     /// <inheritdoc />
     /// <summary>
-    ///     The exception that is thrown when a FFmpeg process return error.
+    ///     Исключение, выбрасываемое, когда исполняемые файлы FFmpeg не найдены.
     /// </summary>
     public class FFmpegNotFoundException : FileNotFoundException
     {
         /// <inheritdoc />
         /// <summary>
-        ///     The exception that is thrown when a FFmpeg executables cannot be found.
+        ///     Исключение, выбрасываемое, когда исполняемые файлы FFmpeg не найдены.
         /// </summary>
-        /// <param name="errorMessage">FFmpeg error output</param>
+        /// <param name="errorMessage">Текст ошибки.</param>
         internal FFmpegNotFoundException(string errorMessage) : base(errorMessage)
         {
         }

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 
 namespace Xabe.FFmpeg
 {
@@ -386,7 +386,7 @@ namespace Xabe.FFmpeg
                 case VideoSize.Uhd4320:
                     return "7680x4320";
                 default:
-                    throw new InvalidOperationException("Неизвестный размер видео.");
+                    throw new InvalidOperationException(ErrorMessages.UnknownVideoSize);
             }
         }
     }
