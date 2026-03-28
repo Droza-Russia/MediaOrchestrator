@@ -1,4 +1,4 @@
-namespace Xabe.FFmpeg.Exceptions
+namespace MediaOrchestrator.Exceptions
 {
     /// <summary>
     ///     Исключение, выбрасываемое, когда кодек потока не поддерживается для выбранной операции или контейнера.

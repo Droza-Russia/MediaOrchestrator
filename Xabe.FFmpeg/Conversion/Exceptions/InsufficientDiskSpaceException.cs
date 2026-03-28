@@ -1,13 +1,13 @@
-namespace Xabe.FFmpeg.Exceptions
+namespace MediaOrchestrator.Exceptions
 {
     /// <inheritdoc />
     /// <summary>
-    ///     Нехватка места на диске при записи выходного файла (распознаётся по журналу FFmpeg).
+    ///     Нехватка места на диске при записи выходного файла (распознаётся по журналу MediaOrchestrator).
     /// </summary>
     public class InsufficientDiskSpaceException : ConversionException
     {
         /// <summary>
-        ///     Исходный вывод stderr FFmpeg (для диагностики).
+        ///     Исходный вывод stderr MediaOrchestrator (для диагностики).
         /// </summary>
         public string RawFfmpegOutput { get; }
 

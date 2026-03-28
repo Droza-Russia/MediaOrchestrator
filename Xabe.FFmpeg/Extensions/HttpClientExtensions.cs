@@ -4,7 +4,7 @@ using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace Xabe.FFmpeg.Extensions
+namespace MediaOrchestrator.Extensions
 {
     public static class HttpClientExtensions
     {

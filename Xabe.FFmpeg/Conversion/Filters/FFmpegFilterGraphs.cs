@@ -1,7 +1,7 @@
 using System.Collections.Generic;
 using System.Linq;
 
-namespace Xabe.FFmpeg
+namespace MediaOrchestrator
 {
     internal static class FFmpegFilterGraphs
     {

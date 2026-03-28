@@ -7,9 +7,9 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using Xabe.FFmpeg.Exceptions;
+using MediaOrchestrator.Exceptions;
 
-namespace Xabe.FFmpeg
+namespace MediaOrchestrator
 {
     public partial class Conversion
     {
@@ -187,10 +187,10 @@ namespace Xabe.FFmpeg
                     yield return settings.MergeOutputFormat;
                 }
 
-                if (!string.IsNullOrWhiteSpace(FFmpeg.ExecutablesPath))
+                if (!string.IsNullOrWhiteSpace(MediaOrchestrator.ExecutablesPath))
                 {
                     yield return FFmpegHostedVideoArguments.FfmpegLocationOption;
-                    yield return FFmpeg.ExecutablesPath;
+                    yield return MediaOrchestrator.ExecutablesPath;
                 }
 
                 if (settings.AdditionalArguments != null)

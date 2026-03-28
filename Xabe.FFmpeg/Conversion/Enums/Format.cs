@@ -1,4 +1,4 @@
-﻿namespace Xabe.FFmpeg
+﻿namespace MediaOrchestrator
 {
     /// <summary>
     ///     Video format ("ffmpeg -formats")
@@ -481,7 +481,7 @@
         f64le,
 
         ///<summary>
-        ///     FFmpeg metadata in text
+        ///     MediaOrchestrator metadata in text
         ///</summary>
         ffmetadata,
 

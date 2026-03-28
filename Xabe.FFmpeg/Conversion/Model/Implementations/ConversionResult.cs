@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace Xabe.FFmpeg
+namespace MediaOrchestrator
 {
     /// <inheritdoc />
     internal class ConversionResult : IConversionResult

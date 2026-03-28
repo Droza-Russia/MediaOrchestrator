@@ -1,4 +1,4 @@
-namespace Xabe.FFmpeg
+namespace MediaOrchestrator
 {
     /// <summary>
     ///     Параметры аппаратного ускорения для декода/кодека H.264 и HEVC (подобраны под конкретный hwaccel из вывода ffmpeg -hwaccels).

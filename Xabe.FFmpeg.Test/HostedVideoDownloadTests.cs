@@ -3,17 +3,17 @@ using System.IO;
 using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
-using Xabe.FFmpeg.Test.TestSupport;
-using Xabe.FFmpeg.Exceptions;
+using MediaOrchestrator.Test.TestSupport;
+using MediaOrchestrator.Exceptions;
 using Xunit;
 
-namespace Xabe.FFmpeg.Test
+namespace MediaOrchestrator.Test
 {
     public class HostedVideoDownloadTests : IDisposable
     {
         public void Dispose()
         {
-            FFmpeg.SetExecutablesPath(null);
+            MediaOrchestrator.SetExecutablesPath(null);
         }
 
         [Fact]
@@ -27,9 +27,9 @@ namespace Xabe.FFmpeg.Test
                     ? $"@echo off{Environment.NewLine}> \"{argsFile}\" ({Environment.NewLine}for %%i in (%*) do @echo %%~i{Environment.NewLine}){Environment.NewLine}exit /b 0{Environment.NewLine}"
                     : $"#!/bin/sh\nprintf '%s\\n' \"$@\" > \"{argsFile}\"\nexit 0\n");
 
-            FFmpeg.SetExecutablesPath(tempDir);
+            MediaOrchestrator.SetExecutablesPath(tempDir);
 
-            await FFmpeg.DownloadHostedVideoAsync(
+            await MediaOrchestrator.DownloadHostedVideoAsync(
                     "https://example.com/video",
                     Path.Combine(tempDir, "output.mp4"),
                     new HostedVideoDownloadSettings
@@ -61,7 +61,7 @@ namespace Xabe.FFmpeg.Test
             using var cts = new CancellationTokenSource(TimeSpan.FromMilliseconds(200));
 
             await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
-                FFmpeg.DownloadHostedVideoAsync(
+                MediaOrchestrator.DownloadHostedVideoAsync(
                     "https://example.com/video",
                     Path.Combine(tempDir, "output.mp4"),
                     new HostedVideoDownloadSettings

@@ -2,10 +2,10 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Reflection;
-using Xabe.FFmpeg.Exceptions;
+using MediaOrchestrator.Exceptions;
 using Xunit;
 
-namespace Xabe.FFmpeg.Test
+namespace MediaOrchestrator.Test
 {
     public class ExceptionContractTests
     {
@@ -49,7 +49,7 @@ namespace Xabe.FFmpeg.Test
         [Fact]
         public void FFmpegExceptionCatcher_DoesNotThrow_WhenOutputIsNull()
         {
-            var catcher = new FFmpegExceptionCatcher();
+            var catcher = new MediaToolExceptionCatcher();
 
             var exception = Record.Exception(() => catcher.CatchFFmpegErrors(null, "-i in.mp4"));
 
@@ -59,7 +59,7 @@ namespace Xabe.FFmpeg.Test
         [Fact]
         public void FFmpegExceptionCatcher_DetectsInsufficientDiskSpace_CaseInsensitive()
         {
-            var catcher = new FFmpegExceptionCatcher();
+            var catcher = new MediaToolExceptionCatcher();
 
             var exception = Assert.Throws<InsufficientDiskSpaceException>(() =>
                 catcher.CatchFFmpegErrors("write failed: no space left on device", "-i in.mp4 out.mp4"));
@@ -69,7 +69,7 @@ namespace Xabe.FFmpeg.Test
         [Fact]
         public void FFmpegExceptionCatcher_ThrowsStreamMappingException_ForMissingMappedStream()
         {
-            var catcher = new FFmpegExceptionCatcher();
+            var catcher = new MediaToolExceptionCatcher();
 
             var exception = Assert.Throws<ConversionException>(() =>
                 catcher.CatchFFmpegErrors("Stream specifier :a:3 matches no streams.", "-map 0:a:3"));
@@ -82,7 +82,7 @@ namespace Xabe.FFmpeg.Test
         [Fact]
         public void FFmpegExceptionCatcher_ThrowsStreamCodecNotSupportedException_ForUnsupportedCodec()
         {
-            var catcher = new FFmpegExceptionCatcher();
+            var catcher = new MediaToolExceptionCatcher();
 
             var exception = Assert.Throws<ConversionException>(() =>
                 catcher.CatchFFmpegErrors("Could not find tag for codec pcm_s16le in stream #0, codec not currently supported in container", "-c:a pcm_s16le"));
@@ -96,14 +96,14 @@ namespace Xabe.FFmpeg.Test
         public void LibraryExceptions_CanBeCaughtBySingleBaseType()
         {
             var invalidInput = Record.Exception(() => new Conversion().MapAudioStream(-1, 0));
-            Assert.IsAssignableFrom<XabeFFmpegException>(invalidInput);
+            Assert.IsAssignableFrom<MediaOrchestratorException>(invalidInput);
             Assert.IsType<StreamIndexOutOfRangeException>(invalidInput);
 
             var ffmpegFailure = Record.Exception(() =>
-                new FFmpegExceptionCatcher().CatchFFmpegErrors(
+                new MediaToolExceptionCatcher().CatchFFmpegErrors(
                     "Could not find tag for codec pcm_s16le in stream #0, codec not currently supported in container",
                     "-c:a pcm_s16le"));
-            Assert.IsAssignableFrom<XabeFFmpegException>(ffmpegFailure);
+            Assert.IsAssignableFrom<MediaOrchestratorException>(ffmpegFailure);
             Assert.IsType<ConversionException>(ffmpegFailure);
         }
 

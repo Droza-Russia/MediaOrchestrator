@@ -1,4 +1,4 @@
-namespace Xabe.FFmpeg.Analytics.Models
+namespace MediaOrchestrator.Analytics.Models
 {
     public sealed class EnvironmentCapabilities
     {
@@ -6,8 +6,8 @@ namespace Xabe.FFmpeg.Analytics.Models
         {
             return new EnvironmentCapabilities
             {
-                IsHardwareAccelerationDetected = FFmpeg.IsHardwareAccelerationProfileDetected,
-                DetectedHardwareAccelerator = FFmpeg.DetectedHardwareAcceleratorName
+                IsHardwareAccelerationDetected = MediaOrchestrator.IsHardwareAccelerationProfileDetected,
+                DetectedHardwareAccelerator = MediaOrchestrator.DetectedHardwareAcceleratorName
             };
         }
 

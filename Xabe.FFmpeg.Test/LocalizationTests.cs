@@ -1,7 +1,7 @@
 using System.Globalization;
 using Xunit;
 
-namespace Xabe.FFmpeg.Test
+namespace MediaOrchestrator.Test
 {
     public class LocalizationTests
     {
@@ -28,7 +28,7 @@ namespace Xabe.FFmpeg.Test
         [Fact]
         public void SetExecutablesPath_UsesExplicitLanguage()
         {
-            FFmpeg.SetExecutablesPath(null, language: LocalizationLanguage.German);
+            MediaOrchestrator.SetExecutablesPath(null, language: LocalizationLanguage.German);
 
             Assert.Equal(LocalizationLanguage.German, LocalizationManager.CurrentLanguage);
             Assert.Equal("Die Konvertierung wurde bereits gestartet.", ErrorMessages.ConversionAlreadyStarted);
@@ -37,7 +37,7 @@ namespace Xabe.FFmpeg.Test
         [Fact]
         public void SetExecutablesPath_DefaultLanguage_IsEnglish()
         {
-            FFmpeg.SetExecutablesPath(null);
+            MediaOrchestrator.SetExecutablesPath(null);
 
             Assert.Equal(LocalizationLanguage.English, LocalizationManager.CurrentLanguage);
             Assert.Equal("Conversion has already been started.", ErrorMessages.ConversionAlreadyStarted);
@@ -46,8 +46,8 @@ namespace Xabe.FFmpeg.Test
         [Fact]
         public void SetLocalizationLanguage_OverridesCurrentLanguage()
         {
-            FFmpeg.SetExecutablesPath(null, language: LocalizationLanguage.Russian);
-            FFmpeg.SetLocalizationLanguage(LocalizationLanguage.English);
+            MediaOrchestrator.SetExecutablesPath(null, language: LocalizationLanguage.Russian);
+            MediaOrchestrator.SetLocalizationLanguage(LocalizationLanguage.English);
 
             Assert.Equal(LocalizationLanguage.English, LocalizationManager.CurrentLanguage);
             Assert.Equal("Conversion has already been started.", ErrorMessages.ConversionAlreadyStarted);

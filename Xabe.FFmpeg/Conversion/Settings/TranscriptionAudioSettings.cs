@@ -1,4 +1,4 @@
-namespace Xabe.FFmpeg
+namespace MediaOrchestrator
 {
     /// <summary>
     ///     Settings for normalizing audio before speech-to-text transcription.

@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 
-namespace Xabe.FFmpeg
+namespace MediaOrchestrator
 {
     /// <summary>
     ///     Настройки скачивания видео с видеохостинга через yt-dlp/youtube-dl.

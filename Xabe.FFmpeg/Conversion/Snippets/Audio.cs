@@ -4,9 +4,9 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using Xabe.FFmpeg.Exceptions;
+using MediaOrchestrator.Exceptions;
 
-namespace Xabe.FFmpeg
+namespace MediaOrchestrator
 {
     public partial class Conversion
     {
@@ -18,12 +18,12 @@ namespace Xabe.FFmpeg
         /// <returns>Conversion result</returns>
         internal static async Task<IConversion> ExtractAudio(string inputPath, string outputPath, CancellationToken cancellationToken = default)
         {
-            IMediaInfo info = await FFmpeg.GetMediaInfo(inputPath, cancellationToken);
+            IMediaInfo info = await MediaOrchestrator.GetMediaInfo(inputPath, cancellationToken);
 
             IAudioStream audioStream = info.AudioStreams.FirstOrDefault();
             if (audioStream == null)
             {
-                throw new AudioStreamNotFoundException(global::Xabe.FFmpeg.ErrorMessages.InputFileDoesNotContainAudioStream, nameof(inputPath));
+                throw new AudioStreamNotFoundException(global::MediaOrchestrator.ErrorMessages.InputFileDoesNotContainAudioStream, nameof(inputPath));
             }
 
             return New(suppressGlobalOutputLimits: true)
@@ -50,14 +50,14 @@ namespace Xabe.FFmpeg
             int? sampleRate = null,
             CancellationToken cancellationToken = default)
         {
-            IMediaInfo info = await FFmpeg.GetMediaInfo(inputPath, cancellationToken);
+            IMediaInfo info = await MediaOrchestrator.GetMediaInfo(inputPath, cancellationToken);
             IAudioStream audioStream = info.AudioStreams.FirstOrDefault();
             if (audioStream == null)
             {
-                throw new AudioStreamNotFoundException(global::Xabe.FFmpeg.ErrorMessages.InputFileDoesNotContainAudioStream, nameof(inputPath));
+                throw new AudioStreamNotFoundException(global::MediaOrchestrator.ErrorMessages.InputFileDoesNotContainAudioStream, nameof(inputPath));
             }
 
-            audioStream.SetCodec(FFmpeg.ResolveTranscodeAudioCodecToString(audioCodec));
+            audioStream.SetCodec(MediaOrchestrator.ResolveTranscodeAudioCodecToString(audioCodec));
 
             if (bitrate.HasValue)
             {
@@ -126,7 +126,19 @@ namespace Xabe.FFmpeg
                 throw new ArgumentOutOfRangeException(nameof(TranscriptionAudioSettings.Channels), ErrorMessages.ChannelsMustBeGreaterThanZero);
             }
 
-            IMediaInfo info = await FFmpeg.GetMediaInfo(inputPath, cancellationToken).ConfigureAwait(false);
+            IMediaInfo info = await MediaOrchestrator.GetMediaInfo(inputPath, cancellationToken).ConfigureAwait(false);
+            return NormalizeAudioForTranscription(info, inputPath, outputPath, settings, cancellationToken);
+        }
+
+        internal static IConversion NormalizeAudioForTranscription(
+            IMediaInfo info,
+            string inputPath,
+            string outputPath,
+            TranscriptionAudioSettings settings = null,
+            CancellationToken cancellationToken = default)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            settings = settings ?? new TranscriptionAudioSettings();
             var audioStreams = info.AudioStreams.ToList();
             if (!audioStreams.Any())
             {
@@ -161,9 +173,9 @@ namespace Xabe.FFmpeg
         /// <returns>Conversion result</returns>
         internal static async Task<IConversion> AddAudio(string videoPath, string audioPath, string outputPath, CancellationToken cancellationToken = default)
         {
-            IMediaInfo videoInfo = await FFmpeg.GetMediaInfo(videoPath, cancellationToken);
+            IMediaInfo videoInfo = await MediaOrchestrator.GetMediaInfo(videoPath, cancellationToken);
 
-            IMediaInfo audioInfo = await FFmpeg.GetMediaInfo(audioPath, cancellationToken);
+            IMediaInfo audioInfo = await MediaOrchestrator.GetMediaInfo(audioPath, cancellationToken);
 
             var videoStream = videoInfo.VideoStreams.FirstOrDefault();
             if (videoStream == null)
@@ -202,7 +214,7 @@ namespace Xabe.FFmpeg
             FrequencyScale frequencyScale = FrequencyScale.log,
             CancellationToken cancellationToken = default)
         {
-            IMediaInfo inputInfo = await FFmpeg.GetMediaInfo(inputPath, cancellationToken);
+            IMediaInfo inputInfo = await MediaOrchestrator.GetMediaInfo(inputPath, cancellationToken);
             IAudioStream audioStream = inputInfo.AudioStreams.FirstOrDefault();
             IVideoStream videoStream = inputInfo.VideoStreams.FirstOrDefault();
             if (audioStream == null)
@@ -254,11 +266,11 @@ namespace Xabe.FFmpeg
                 throw new ArgumentOutOfRangeException(nameof(sampleRate), ErrorMessages.SampleRateMustBeGreaterThanZero);
             }
 
-            IMediaInfo info = await FFmpeg.GetMediaInfo(inputPath, cancellationToken);
+            IMediaInfo info = await MediaOrchestrator.GetMediaInfo(inputPath, cancellationToken);
             IAudioStream sourceAudio = info.AudioStreams.FirstOrDefault();
             if (sourceAudio == null)
             {
-                throw new AudioStreamNotFoundException(global::Xabe.FFmpeg.ErrorMessages.InputFileDoesNotContainAudioStream, nameof(inputPath));
+                throw new AudioStreamNotFoundException(global::MediaOrchestrator.ErrorMessages.InputFileDoesNotContainAudioStream, nameof(inputPath));
             }
 
             var boundaries = timecodes
@@ -308,7 +320,7 @@ namespace Xabe.FFmpeg
                 string outputPath = Path.Combine(outputDirectory, $"{fileName}_{i + 1:D3}.{extension}");
                 IAudioStream outputStream = sourceAudio
                     .Split(start, duration)
-                    .SetCodec(FFmpeg.ResolveTranscodeAudioCodecToString(audioCodec))
+                    .SetCodec(MediaOrchestrator.ResolveTranscodeAudioCodecToString(audioCodec))
                     .SetBitrate(bitrate)
                     .SetSampleRate(sampleRate);
 

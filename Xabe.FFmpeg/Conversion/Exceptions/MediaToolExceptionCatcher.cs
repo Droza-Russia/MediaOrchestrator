@@ -1,8 +1,8 @@
 using System;
 using System.Collections.Generic;
-using Xabe.FFmpeg;
+using MediaOrchestrator;
 
-namespace Xabe.FFmpeg.Exceptions
+namespace MediaOrchestrator.Exceptions
 {
     internal sealed class ExceptionCheck
     {
@@ -22,7 +22,7 @@ namespace Xabe.FFmpeg.Exceptions
         }
     }
 
-    internal sealed class FFmpegExceptionCatcher
+    internal sealed class MediaToolExceptionCatcher
     {
         private sealed class ExceptionRule
         {
@@ -39,27 +39,27 @@ namespace Xabe.FFmpeg.Exceptions
         private static readonly IReadOnlyList<ExceptionRule> _checks =
             new[]
             {
-                new ExceptionRule(new ExceptionCheck(FFmpegLogPatterns.InvalidNalUnitSize), (output, args) => throw new ConversionException(output, args)),
-                new ExceptionRule(new ExceptionCheck(FFmpegLogPatterns.PacketMismatch, true), (output, args) => throw new ConversionException(output, args)),
+                new ExceptionRule(new ExceptionCheck(MediaToolLogPatterns.InvalidNalUnitSize), (output, args) => throw new ConversionException(output, args)),
+                new ExceptionRule(new ExceptionCheck(MediaToolLogPatterns.PacketMismatch, true), (output, args) => throw new ConversionException(output, args)),
 
-                new ExceptionRule(new ExceptionCheck(FFmpegLogPatterns.AsfReadPtsFailed, true), (output, args) => throw new UnknownDecoderException(output, args)),
-                new ExceptionRule(new ExceptionCheck(FFmpegLogPatterns.MissingKeyFrameWhileSearchingTimestamp, true), (output, args) => throw new UnknownDecoderException(output, args)),
-                new ExceptionRule(new ExceptionCheck(FFmpegLogPatterns.OldInterlacedModeNotSupported, true), (output, args) => throw new UnknownDecoderException(output, args)),
-                new ExceptionRule(new ExceptionCheck(FFmpegLogPatterns.Mpeg1Video, true), (output, args) => throw new UnknownDecoderException(output, args)),
-                new ExceptionRule(new ExceptionCheck(FFmpegLogPatterns.FrameRateVeryHighForMuxer, true), (output, args) => throw new UnknownDecoderException(output, args)),
-                new ExceptionRule(new ExceptionCheck(FFmpegLogPatterns.MultipleFourccNotSupported), (output, args) => throw new UnknownDecoderException(output, args)),
-                new ExceptionRule(new ExceptionCheck(FFmpegLogPatterns.UnknownDecoder), (output, args) => throw new UnknownDecoderException(output, args)),
-                new ExceptionRule(new ExceptionCheck(FFmpegLogPatterns.FailedToOpenCodecInStreamInfo), (output, args) => throw new UnknownDecoderException(output, args)),
+                new ExceptionRule(new ExceptionCheck(MediaToolLogPatterns.AsfReadPtsFailed, true), (output, args) => throw new UnknownDecoderException(output, args)),
+                new ExceptionRule(new ExceptionCheck(MediaToolLogPatterns.MissingKeyFrameWhileSearchingTimestamp, true), (output, args) => throw new UnknownDecoderException(output, args)),
+                new ExceptionRule(new ExceptionCheck(MediaToolLogPatterns.OldInterlacedModeNotSupported, true), (output, args) => throw new UnknownDecoderException(output, args)),
+                new ExceptionRule(new ExceptionCheck(MediaToolLogPatterns.Mpeg1Video, true), (output, args) => throw new UnknownDecoderException(output, args)),
+                new ExceptionRule(new ExceptionCheck(MediaToolLogPatterns.FrameRateVeryHighForMuxer, true), (output, args) => throw new UnknownDecoderException(output, args)),
+                new ExceptionRule(new ExceptionCheck(MediaToolLogPatterns.MultipleFourccNotSupported), (output, args) => throw new UnknownDecoderException(output, args)),
+                new ExceptionRule(new ExceptionCheck(MediaToolLogPatterns.UnknownDecoder), (output, args) => throw new UnknownDecoderException(output, args)),
+                new ExceptionRule(new ExceptionCheck(MediaToolLogPatterns.FailedToOpenCodecInStreamInfo), (output, args) => throw new UnknownDecoderException(output, args)),
 
-                new ExceptionRule(new ExceptionCheck(FFmpegLogPatterns.UnrecognizedHwAccel), (output, args) => throw new HardwareAcceleratorNotFoundException(output, args)),
+                new ExceptionRule(new ExceptionCheck(MediaToolLogPatterns.UnrecognizedHwAccel), (output, args) => throw new HardwareAcceleratorNotFoundException(output, args)),
 
-                new ExceptionRule(new ExceptionCheck(FFmpegLogPatterns.UnableToFindSuitableOutputFormat), (output, args) => throw new FFmpegNoSuitableOutputFormatFoundException(output, args)),
+                new ExceptionRule(new ExceptionCheck(MediaToolLogPatterns.UnableToFindSuitableOutputFormat), (output, args) => throw new NoSuitableOutputFormatException(output, args)),
 
-                new ExceptionRule(new ExceptionCheck(FFmpegLogPatterns.NotSupportedByBitstreamFilter), (output, args) => throw new InvalidBitstreamFilterException(output, args)),
-                new ExceptionRule(new ExceptionCheck(FFmpegLogPatterns.StreamMatchesNoStreams), (output, args) => throw new StreamMappingException(ErrorMessages.StreamMappingFailed, output, args)),
-                new ExceptionRule(new ExceptionCheck(FFmpegLogPatterns.CodecNotCurrentlySupportedInContainer), (output, args) => throw new StreamCodecNotSupportedException(ErrorMessages.StreamCodecNotSupported, output, args)),
-                new ExceptionRule(new ExceptionCheck(FFmpegLogPatterns.CouldNotFindTagForCodec), (output, args) => throw new StreamCodecNotSupportedException(ErrorMessages.StreamCodecNotSupported, output, args)),
-                new ExceptionRule(new ExceptionCheck(FFmpegLogPatterns.UnsupportedCodec), (output, args) => throw new StreamCodecNotSupportedException(ErrorMessages.StreamCodecNotSupported, output, args))
+                new ExceptionRule(new ExceptionCheck(MediaToolLogPatterns.NotSupportedByBitstreamFilter), (output, args) => throw new InvalidBitstreamFilterException(output, args)),
+                new ExceptionRule(new ExceptionCheck(MediaToolLogPatterns.StreamMatchesNoStreams), (output, args) => throw new StreamMappingException(ErrorMessages.StreamMappingFailed, output, args)),
+                new ExceptionRule(new ExceptionCheck(MediaToolLogPatterns.CodecNotCurrentlySupportedInContainer), (output, args) => throw new StreamCodecNotSupportedException(ErrorMessages.StreamCodecNotSupported, output, args)),
+                new ExceptionRule(new ExceptionCheck(MediaToolLogPatterns.CouldNotFindTagForCodec), (output, args) => throw new StreamCodecNotSupportedException(ErrorMessages.StreamCodecNotSupported, output, args)),
+                new ExceptionRule(new ExceptionCheck(MediaToolLogPatterns.UnsupportedCodec), (output, args) => throw new StreamCodecNotSupportedException(ErrorMessages.StreamCodecNotSupported, output, args))
             };
 
         internal void CatchFFmpegErrors(string output, string args)
@@ -74,7 +74,7 @@ namespace Xabe.FFmpeg.Exceptions
                 throw new InsufficientDiskSpaceException(ErrorMessages.InsufficientDiskSpace, output, args);
             }
 
-            var outputFileIsEmpty = output.IndexOf(FFmpegLogPatterns.OutputFileIsEmpty, StringComparison.Ordinal) >= 0;
+            var outputFileIsEmpty = output.IndexOf(MediaToolLogPatterns.OutputFileIsEmpty, StringComparison.Ordinal) >= 0;
             foreach (var rule in _checks)
             {
                 if (!rule.Check.CheckLog(output, outputFileIsEmpty))

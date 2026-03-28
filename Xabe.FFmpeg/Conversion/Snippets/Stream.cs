@@ -3,10 +3,10 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using Xabe.FFmpeg.Exceptions;
-using Xabe.FFmpeg.Streams.SubtitleStream;
+using MediaOrchestrator.Exceptions;
+using MediaOrchestrator.Streams.SubtitleStream;
 
-namespace Xabe.FFmpeg
+namespace MediaOrchestrator
 {
     public partial class Conversion
     {
@@ -22,7 +22,12 @@ namespace Xabe.FFmpeg
                 throw new ArgumentException(ErrorMessages.OutputPathMustBeProvided, nameof(outputPath));
             }
 
-            IMediaInfo info = await FFmpeg.GetMediaInfo(inputPath, cancellationToken);
+            IMediaInfo info = await MediaOrchestrator.GetMediaInfo(inputPath, cancellationToken);
+            return RemuxStreamAsync(info, outputPath, outputFormat, keepSubtitles);
+        }
+
+        internal static IConversion RemuxStreamAsync(IMediaInfo info, string outputPath, Format? outputFormat = null, bool keepSubtitles = false)
+        {
             var conversion = New().SetOutput(outputPath);
 
             if (outputFormat.HasValue)
@@ -117,7 +122,7 @@ namespace Xabe.FFmpeg
                 throw new ArgumentException(ErrorMessages.OutputPathMustBeProvided, nameof(outputPath));
             }
 
-            IMediaInfo info = await FFmpeg.GetMediaInfo(inputPath, cancellationToken);
+            IMediaInfo info = await MediaOrchestrator.GetMediaInfo(inputPath, cancellationToken);
             var audioStreams = info.AudioStreams.ToArray();
             if (!audioStreams.Any())
             {

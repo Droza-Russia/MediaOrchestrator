@@ -1,4 +1,4 @@
-﻿namespace Xabe.FFmpeg
+﻿namespace MediaOrchestrator
 {
     /// <summary>
     ///     Пресет конвертации: более высокая скорость снижает оптимизацию и качество.

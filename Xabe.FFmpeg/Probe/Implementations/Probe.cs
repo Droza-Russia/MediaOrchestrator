@@ -1,7 +1,7 @@
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace Xabe.FFmpeg
+namespace MediaOrchestrator
 {
     /// <inheritdoc />
     public sealed class Probe : IProbe
@@ -18,7 +18,7 @@ namespace Xabe.FFmpeg
         /// <inheritdoc />
         public Task<string> Start(string args, CancellationToken cancellationToken = default)
         {
-            var wrapper = new FFprobeWrapper();
+            var wrapper = new MediaProbeRunner();
             return wrapper.Start(args, cancellationToken);
         }
     }

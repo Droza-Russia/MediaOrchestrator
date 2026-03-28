@@ -1,7 +1,7 @@
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace Xabe.FFmpeg
+namespace MediaOrchestrator
 {
     public partial class Conversion
     {

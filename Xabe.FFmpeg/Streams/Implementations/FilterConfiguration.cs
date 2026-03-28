@@ -1,7 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
 
-namespace Xabe.FFmpeg
+namespace MediaOrchestrator
 {
     /// <inheritdoc />
     internal class FilterConfiguration : IFilterConfiguration

@@ -4,8 +4,8 @@
     <TargetFramework>net9.0</TargetFramework>
     <IsPackable>false</IsPackable>
     <IsTestProject>true</IsTestProject>
-    <AssemblyName>Xabe.FFmpeg.Test</AssemblyName>
-    <RootNamespace>Xabe.FFmpeg.Test</RootNamespace>
+    <AssemblyName>MediaOrchestrator.Test</AssemblyName>
+    <RootNamespace>MediaOrchestrator.Test</RootNamespace>
   </PropertyGroup>
 
   <ItemGroup>

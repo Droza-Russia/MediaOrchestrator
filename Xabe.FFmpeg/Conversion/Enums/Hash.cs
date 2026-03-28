@@ -1,4 +1,4 @@
-namespace Xabe.FFmpeg
+namespace MediaOrchestrator
 {
     /// <summary>
     /// Форматы хеширования ("ffmpeg -i INPUT -f hash").

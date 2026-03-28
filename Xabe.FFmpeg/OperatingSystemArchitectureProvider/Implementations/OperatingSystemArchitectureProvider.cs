@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Runtime.InteropServices;
 
-namespace Xabe.FFmpeg
+namespace MediaOrchestrator
 {
     internal class OperatingSystemArchitectureProvider : IOperatingSystemArchitectureProvider
     {

@@ -7,37 +7,38 @@ using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Win32.SafeHandles;
-using Xabe.FFmpeg.Events;
-using Xabe.FFmpeg.Exceptions;
+using MediaOrchestrator.Events;
+using MediaOrchestrator.Exceptions;
 
-namespace Xabe.FFmpeg
+namespace MediaOrchestrator
 {
     // ReSharper disable once InconsistentNaming
 
     /// <inheritdoc />
     /// <summary>
-    ///     Обертка для FFmpeg
+    ///     Обертка для MediaOrchestrator
     /// </summary>
-    internal class FFmpegWrapper : FFmpeg
+    internal class MediaToolRunner : MediaOrchestrator
     {
         private const string TIME_FORMAT_PATTERN = @"\w\w:\w\w:\w\w";
         private static readonly Regex _timeFormatRegex = new Regex(TIME_FORMAT_PATTERN, RegexOptions.Compiled);
         private List<string> _outputLog;
         private TimeSpan _totalTime;
         private bool _wasKilled = false;
+        internal Analytics.Models.ExecutionResourceMetrics LastExecutionResourceMetrics { get; private set; }
 
         /// <summary>
-        ///     Срабатывает при изменении прогресса FFmpeg
+        ///     Срабатывает при изменении прогресса MediaOrchestrator
         /// </summary>
         internal event ConversionProgressEventHandler OnProgress;
 
         /// <summary>
-        ///     Срабатывает, когда процесс FFmpeg выводит что-либо
+        ///     Срабатывает, когда процесс MediaOrchestrator выводит что-либо
         /// </summary>
         internal event DataReceivedEventHandler OnDataReceived;
 
         /// <summary>
-        ///     Срабатывает, когда процесс FFmpeg записывает видеоданные в stdout
+        ///     Срабатывает, когда процесс MediaOrchestrator записывает видеоданные в stdout
         /// </summary>
         internal event VideoDataEventHandler OnVideoDataReceived;
 
@@ -52,6 +53,7 @@ namespace Xabe.FFmpeg
                 _outputLog = new List<string>();
                 var pipedOutput = OnVideoDataReceived != null;
                 var process = RunProcess(args, FFmpegPath, priority, inputStream != null, pipedOutput, true);
+                var resourceCollector = new ProcessResourceTelemetryCollector(process, ResolveHardwareAccelerator(args));
                 Task inputCopyTask = null;
                 if (inputStream != null)
                 {
@@ -128,6 +130,7 @@ namespace Xabe.FFmpeg
                         }
 
                         EnsureProcessFullyExited(process);
+                        LastExecutionResourceMetrics = resourceCollector.Complete();
                         inputCopyTask?.GetAwaiter().GetResult();
 
                         cancellationToken.ThrowIfCancellationRequested();
@@ -142,12 +145,12 @@ namespace Xabe.FFmpeg
                         }
 
                         var output = string.Join(Environment.NewLine, _outputLog.ToArray());
-                        var exceptionsCatcher = new FFmpegExceptionCatcher();
+                        var exceptionsCatcher = new MediaToolExceptionCatcher();
                         exceptionsCatcher.CatchFFmpegErrors(output, args);
 
                         if (process.ExitCode != 0 && _outputLog.Any() && !_outputLog.Last().Contains("dummy"))
                         {
-                            if (FFmpegExceptionCatcher.OutputIndicatesInsufficientDiskSpace(output))
+                            if (MediaToolExceptionCatcher.OutputIndicatesInsufficientDiskSpace(output))
                             {
                                 throw new InsufficientDiskSpaceException(ErrorMessages.InsufficientDiskSpace, output, args);
                             }
@@ -293,6 +296,43 @@ namespace Xabe.FFmpeg
             {
                 return new TimeSpan(0, 0, 0);
             }
+        }
+
+        private static string ResolveHardwareAccelerator(string args)
+        {
+            if (string.IsNullOrWhiteSpace(args))
+            {
+                return string.Empty;
+            }
+
+            if (args.IndexOf("cuda", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                args.IndexOf("_nvenc", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                args.IndexOf("_cuvid", StringComparison.OrdinalIgnoreCase) >= 0)
+            {
+                return "cuda";
+            }
+
+            if (args.IndexOf("_qsv", StringComparison.OrdinalIgnoreCase) >= 0)
+            {
+                return "qsv";
+            }
+
+            if (args.IndexOf("_vaapi", StringComparison.OrdinalIgnoreCase) >= 0)
+            {
+                return "vaapi";
+            }
+
+            if (args.IndexOf("_videotoolbox", StringComparison.OrdinalIgnoreCase) >= 0)
+            {
+                return "videotoolbox";
+            }
+
+            if (args.IndexOf("_amf", StringComparison.OrdinalIgnoreCase) >= 0)
+            {
+                return "amf";
+            }
+
+            return string.Empty;
         }
     }
 }

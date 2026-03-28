@@ -1,7 +1,7 @@
 
 #pragma warning disable IDE1006 // Naming Styles
 
-namespace Xabe.FFmpeg
+namespace MediaOrchestrator
 {
     internal class FormatModel
     {

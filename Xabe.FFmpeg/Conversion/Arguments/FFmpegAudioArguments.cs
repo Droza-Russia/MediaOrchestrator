@@ -1,6 +1,6 @@
 using System.Globalization;
 
-namespace Xabe.FFmpeg
+namespace MediaOrchestrator
 {
     internal static class FFmpegAudioArguments
     {
@@ -9,7 +9,7 @@ namespace Xabe.FFmpeg
 
         internal static string SetCodec(AudioCodec codec)
         {
-            return $"-c:a {FFmpeg.ResolveTranscodeAudioCodecToString(codec)}";
+            return $"-c:a {MediaOrchestrator.ResolveTranscodeAudioCodecToString(codec)}";
         }
 
         internal static string SetSampleRate(int sampleRate)

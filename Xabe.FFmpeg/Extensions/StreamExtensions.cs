@@ -3,7 +3,7 @@ using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace Xabe.FFmpeg.Extensions
+namespace MediaOrchestrator.Extensions
 {
     public static class StreamExtensions
     {

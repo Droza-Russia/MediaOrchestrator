@@ -1,4 +1,4 @@
-﻿namespace Xabe.FFmpeg
+﻿namespace MediaOrchestrator
 {
     /// <summary>
     ///     Видеокодеки (см. `ffmpeg -codecs`).
@@ -306,12 +306,12 @@
         exr,
 
         ///<summary>
-        ///      FFmpeg video codec #1
+        ///      MediaOrchestrator video codec #1
         ///</summary>
         ffv1,
 
         ///<summary>
-        ///      Huffyuv FFmpeg variant
+        ///      Huffyuv MediaOrchestrator variant
         ///</summary>
         ffvhuff,
 

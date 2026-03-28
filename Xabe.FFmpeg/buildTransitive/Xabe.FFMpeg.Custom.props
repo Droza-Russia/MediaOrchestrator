@@ -1,6 +1,0 @@
-<Project>
-  <PropertyGroup>
-    <XabeFFmpegInstallLocalizedXmlDocumentation Condition="'$(XabeFFmpegInstallLocalizedXmlDocumentation)' == ''">true</XabeFFmpegInstallLocalizedXmlDocumentation>
-    <XabeFFmpegDocumentationLanguage Condition="'$(XabeFFmpegDocumentationLanguage)' == ''">en</XabeFFmpegDocumentationLanguage>
-  </PropertyGroup>
-</Project>

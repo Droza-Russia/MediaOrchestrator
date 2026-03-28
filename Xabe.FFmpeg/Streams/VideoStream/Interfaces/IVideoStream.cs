@@ -1,6 +1,6 @@
 using System;
 
-namespace Xabe.FFmpeg
+namespace MediaOrchestrator
 {
     /// <summary>
     ///     Видеопоток
@@ -100,7 +100,7 @@ namespace Xabe.FFmpeg
         ///     для <see cref="DrawTextVerticalAlign.Center"/> не используется.
         /// </param>
         /// <param name="verticalAlign">Вертикальное положение у правой кромки.</param>
-        /// <param name="fontFilePath">Необязательный путь к TTF/OTF (если не задан — шрифт по умолчанию FFmpeg).</param>
+        /// <param name="fontFilePath">Необязательный путь к TTF/OTF (если не задан — шрифт по умолчанию MediaOrchestrator).</param>
         /// <returns>Текущий видеопоток.</returns>
         IVideoStream SetRightSideDrawText(
             string text,

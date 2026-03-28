@@ -3,10 +3,10 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using Xabe.FFmpeg.Exceptions;
-using Xabe.FFmpeg.Streams.SubtitleStream;
+using MediaOrchestrator.Exceptions;
+using MediaOrchestrator.Streams.SubtitleStream;
 
-namespace Xabe.FFmpeg
+namespace MediaOrchestrator
 {
     /// <inheritdoc />
     public partial class Conversion
@@ -21,7 +21,7 @@ namespace Xabe.FFmpeg
         /// <returns>Conversion result</returns>
         internal static async Task<IConversion> SetWatermarkAsync(string inputPath, string outputPath, string inputImage, Position position, CancellationToken cancellationToken = default)
         {
-            IMediaInfo info = await FFmpeg.GetMediaInfo(inputPath, cancellationToken);
+            IMediaInfo info = await MediaOrchestrator.GetMediaInfo(inputPath, cancellationToken);
 
             IVideoStream videoStream = RequireVideoStream(info, nameof(inputPath))
                                            .SetWatermark(inputImage, position);
@@ -44,7 +44,7 @@ namespace Xabe.FFmpeg
             string fontFilePath = null,
             CancellationToken cancellationToken = default)
         {
-            IMediaInfo info = await FFmpeg.GetMediaInfo(inputPath, cancellationToken);
+            IMediaInfo info = await MediaOrchestrator.GetMediaInfo(inputPath, cancellationToken);
             IVideoStream videoStream = info.VideoStreams.FirstOrDefault()
                                        ?.SetRightSideDrawText(text, fontColor, fontSize, marginRight, marginY, verticalAlign, fontFilePath);
             if (videoStream == null)
@@ -72,7 +72,7 @@ namespace Xabe.FFmpeg
             string fontFilePath = null,
             CancellationToken cancellationToken = default)
         {
-            IMediaInfo info = await FFmpeg.GetMediaInfo(inputPath, cancellationToken);
+            IMediaInfo info = await MediaOrchestrator.GetMediaInfo(inputPath, cancellationToken);
             IVideoStream videoStream = info.VideoStreams.FirstOrDefault()
                                        ?.SetRightSidePtsTimeOverlay(prefix, suffix, useLocalWallClock, fontColor, fontSize, marginRight, marginY, verticalAlign, fontFilePath);
             if (videoStream == null)
@@ -99,7 +99,7 @@ namespace Xabe.FFmpeg
             string fontFilePath = null,
             CancellationToken cancellationToken = default)
         {
-            IMediaInfo info = await FFmpeg.GetMediaInfo(inputPath, cancellationToken);
+            IMediaInfo info = await MediaOrchestrator.GetMediaInfo(inputPath, cancellationToken);
             IVideoStream videoStream = info.VideoStreams.FirstOrDefault()
                                        ?.SetRightSideSmpteTimecodeOverlay(startTimecode, frameRate, fontColor, fontSize, marginRight, marginY, verticalAlign, fontFilePath);
             if (videoStream == null)
@@ -121,7 +121,7 @@ namespace Xabe.FFmpeg
         /// <returns>Conversion result</returns>
         internal static async Task<IConversion> ExtractVideoAsync(string inputPath, string outputPath, CancellationToken cancellationToken = default)
         {
-            IMediaInfo info = await FFmpeg.GetMediaInfo(inputPath, cancellationToken);
+            IMediaInfo info = await MediaOrchestrator.GetMediaInfo(inputPath, cancellationToken);
 
             IVideoStream videoStream = RequireVideoStream(info, nameof(inputPath));
 
@@ -139,7 +139,7 @@ namespace Xabe.FFmpeg
         /// <returns>Conversion result</returns>
         internal static async Task<IConversion> SnapshotAsync(string inputPath, string outputPath, TimeSpan captureTime, CancellationToken cancellationToken = default)
         {
-            IMediaInfo info = await FFmpeg.GetMediaInfo(inputPath, cancellationToken);
+            IMediaInfo info = await MediaOrchestrator.GetMediaInfo(inputPath, cancellationToken);
 
             IVideoStream videoStream = RequireVideoStream(info, nameof(inputPath))
                                            .SetOutputFramesCount(1)
@@ -160,7 +160,7 @@ namespace Xabe.FFmpeg
         /// <returns>Conversion result</returns>
         internal static async Task<IConversion> ChangeSizeAsync(string inputPath, string outputPath, int width, int height, CancellationToken cancellationToken = default)
         {
-            IMediaInfo info = await FFmpeg.GetMediaInfo(inputPath, cancellationToken);
+            IMediaInfo info = await MediaOrchestrator.GetMediaInfo(inputPath, cancellationToken);
 
             IVideoStream videoStream = RequireVideoStream(info, nameof(inputPath))
                                            .SetSize(width, height);
@@ -180,7 +180,7 @@ namespace Xabe.FFmpeg
         /// <returns>Conversion result</returns>
         internal static async Task<IConversion> ChangeSizeAsync(string inputPath, string outputPath, VideoSize size, CancellationToken cancellationToken = default)
         {
-            IMediaInfo info = await FFmpeg.GetMediaInfo(inputPath, cancellationToken);
+            IMediaInfo info = await MediaOrchestrator.GetMediaInfo(inputPath, cancellationToken);
 
             IVideoStream videoStream = RequireVideoStream(info, nameof(inputPath))
                                            .SetSize(size);
@@ -201,7 +201,7 @@ namespace Xabe.FFmpeg
         /// <returns>Conversion result</returns>
         internal static async Task<IConversion> SplitAsync(string inputPath, string outputPath, TimeSpan startTime, TimeSpan duration, CancellationToken cancellationToken = default)
         {
-            IMediaInfo info = await FFmpeg.GetMediaInfo(inputPath, cancellationToken);
+            IMediaInfo info = await MediaOrchestrator.GetMediaInfo(inputPath, cancellationToken);
 
             var streams = new List<IStream>();
             foreach (IVideoStream stream in info.VideoStreams)
@@ -228,7 +228,7 @@ namespace Xabe.FFmpeg
         /// <returns>Conversion result</returns>
         internal static async Task<IConversion> SaveM3U8StreamAsync(Uri uri, string outputPath, TimeSpan? duration = null, CancellationToken cancellationToken = default)
         {
-            var mediaInfo = await FFmpeg.GetMediaInfo(uri.ToString(), cancellationToken);
+            var mediaInfo = await MediaOrchestrator.GetMediaInfo(uri.ToString(), cancellationToken);
             return New()
                 .AddStream(mediaInfo.Streams)
                 .SetInputTime(duration)
@@ -259,7 +259,7 @@ namespace Xabe.FFmpeg
             foreach (var inputVideo in inputVideos)
             {
                 cancellationToken.ThrowIfCancellationRequested();
-                IMediaInfo mediaInfo = await FFmpeg.GetMediaInfo(inputVideo, cancellationToken);
+                IMediaInfo mediaInfo = await MediaOrchestrator.GetMediaInfo(inputVideo, cancellationToken);
 
                 mediaInfos.Add(mediaInfo);
                 conversion.AddInput(inputVideo);
@@ -287,7 +287,7 @@ namespace Xabe.FFmpeg
         /// <returns>IConversion object</returns>
         internal static async Task<IConversion> ConvertAsync(string inputFilePath, string outputFilePath, bool keepSubtitles = false, CancellationToken cancellationToken = default)
         {
-            IMediaInfo info = await FFmpeg.GetMediaInfo(inputFilePath, cancellationToken);
+            IMediaInfo info = await MediaOrchestrator.GetMediaInfo(inputFilePath, cancellationToken);
 
             var conversion = New(suppressGlobalOutputLimits: !info.VideoStreams.Any()).SetOutput(outputFilePath);
 
@@ -295,7 +295,7 @@ namespace Xabe.FFmpeg
             {
                 if (stream is IVideoStream videoStream)
                 {
-                    // PR #268 We have to force the framerate here due to an FFmpeg bug with videos > 100fps from android devices
+                    // PR #268 We have to force the framerate here due to an MediaOrchestrator bug with videos > 100fps from android devices
                     conversion.AddStream(videoStream.SetFramerate(videoStream.Framerate));
                 }
                 else if (stream is IAudioStream audioStream)
@@ -323,7 +323,7 @@ namespace Xabe.FFmpeg
         /// <returns>IConversion object</returns>
         internal static async Task<IConversion> TranscodeAsync(string inputFilePath, string outputFilePath, VideoCodec videoCodec, AudioCodec audioCodec, SubtitleCodec subtitleCodec, bool keepSubtitles = false, CancellationToken cancellationToken = default)
         {
-            IMediaInfo info = await FFmpeg.GetMediaInfo(inputFilePath, cancellationToken);
+            IMediaInfo info = await MediaOrchestrator.GetMediaInfo(inputFilePath, cancellationToken);
 
             var conversion = New(suppressGlobalOutputLimits: !info.VideoStreams.Any()).SetOutput(outputFilePath);
 
@@ -331,12 +331,12 @@ namespace Xabe.FFmpeg
             {
                 if (stream is IVideoStream videoStream)
                 {
-                    // PR #268 We have to force the framerate here due to an FFmpeg bug with videos > 100fps from android devices
-                    conversion.AddStream(videoStream.SetCodec(FFmpeg.ResolveTranscodeVideoCodecToString(videoCodec)).SetFramerate(videoStream.Framerate));
+                    // PR #268 We have to force the framerate here due to an MediaOrchestrator bug with videos > 100fps from android devices
+                    conversion.AddStream(videoStream.SetCodec(MediaOrchestrator.ResolveTranscodeVideoCodecToString(videoCodec)).SetFramerate(videoStream.Framerate));
                 }
                 else if (stream is IAudioStream audioStream)
                 {
-                    conversion.AddStream(audioStream.SetCodec(FFmpeg.ResolveTranscodeAudioCodecToString(audioCodec)));
+                    conversion.AddStream(audioStream.SetCodec(MediaOrchestrator.ResolveTranscodeAudioCodecToString(audioCodec)));
                 }
                 else if (stream is ISubtitleStream subtitleStream && keepSubtitles)
                 {

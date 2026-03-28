@@ -1,4 +1,4 @@
-﻿namespace Xabe.FFmpeg
+﻿namespace MediaOrchestrator
 {
     /// <summary>
     ///     Позиция параметра относительно входных файлов.

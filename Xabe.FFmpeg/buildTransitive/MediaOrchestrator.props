@@ -1,0 +1,6 @@
+<Project>
+  <PropertyGroup>
+    <MediaOrchestratorInstallLocalizedXmlDocumentation Condition="'$(MediaOrchestratorInstallLocalizedXmlDocumentation)' == ''">true</MediaOrchestratorInstallLocalizedXmlDocumentation>
+    <MediaOrchestratorDocumentationLanguage Condition="'$(MediaOrchestratorDocumentationLanguage)' == ''">en</MediaOrchestratorDocumentationLanguage>
+  </PropertyGroup>
+</Project>

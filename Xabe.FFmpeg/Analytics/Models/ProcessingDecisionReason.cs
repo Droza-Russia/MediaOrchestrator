@@ -1,4 +1,4 @@
-namespace Xabe.FFmpeg.Analytics.Models
+namespace MediaOrchestrator.Analytics.Models
 {
     public enum ProcessingDecisionReason
     {
@@ -13,6 +13,9 @@ namespace Xabe.FFmpeg.Analytics.Models
         TranscodeAllowed = 8,
         TranscodeNotAllowed = 9,
         HardwareAccelerationAllowed = 10,
-        HardwareAccelerationNotAllowed = 11
+        HardwareAccelerationNotAllowed = 11,
+        HistoricalStatisticsAvailable = 12,
+        HistoricalPreferenceForRemux = 13,
+        HistoricalPreferenceForTranscode = 14
     }
 }

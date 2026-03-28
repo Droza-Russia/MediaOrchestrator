@@ -4,10 +4,10 @@ using System.Diagnostics;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
-using Xabe.FFmpeg.Events;
-using Xabe.FFmpeg.Exceptions;
+using MediaOrchestrator.Events;
+using MediaOrchestrator.Exceptions;
 
-namespace Xabe.FFmpeg
+namespace MediaOrchestrator
 {
     /// <summary>
     ///     Позволяет подготовить и запустить процесс конвертации.
@@ -35,9 +35,9 @@ namespace Xabe.FFmpeg
         IVideoConversionSettings Video { get; }
 
         /// <summary>
-        ///     Устанавливает приоритет процесса FFmpeg.
+        ///     Устанавливает приоритет процесса MediaOrchestrator.
         /// </summary>
-        /// <param name="priority">Приоритет процесса FFmpeg.</param>
+        /// <param name="priority">Приоритет процесса MediaOrchestrator.</param>
         /// <returns>Текущий объект IConversion.</returns>
         IConversion SetPriority(ProcessPriorityClass? priority);
 
@@ -80,7 +80,7 @@ namespace Xabe.FFmpeg
         IConversion SetFrameRate(double frameRate);
 
         /// <summary>
-        ///     Устанавливает частоту кадров для входного потока FFmpeg.
+        ///     Устанавливает частоту кадров для входного потока MediaOrchestrator.
         /// </summary>
         /// <param name="frameRate">Желаемая входная частота кадров.</param>
         /// <returns>Текущий объект IConversion.</returns>
@@ -108,14 +108,14 @@ namespace Xabe.FFmpeg
         IConversion SetOutputTime(TimeSpan? seek);
 
         /// <summary>
-        ///     Устанавливает пресет сжатия (предустановку FFmpeg).
+        ///     Устанавливает пресет сжатия (предустановку MediaOrchestrator).
         /// </summary>
         /// <param name="preset">Выбранный пресет.</param>
         /// <returns>Текущий объект IConversion.</returns>
         IConversion SetPreset(ConversionPreset preset);
 
         /// <summary>
-        ///     Устанавливает профиль настройки кодировщика FFmpeg (`-tune`).
+        ///     Устанавливает профиль настройки кодировщика MediaOrchestrator (`-tune`).
         /// </summary>
         /// <param name="tune">Выбранный профиль.</param>
         /// <returns>Текущий объект IConversion.</returns>
@@ -150,7 +150,7 @@ namespace Xabe.FFmpeg
         IConversion SetAudioBitrate(long bitrate);
 
         /// <summary>
-        ///     Задает фиксированное количество потоков FFmpeg.
+        ///     Задает фиксированное количество потоков MediaOrchestrator.
         /// </summary>
         /// <param name="threadCount">Число потоков.</param>
         /// <returns>Текущий объект IConversion.</returns>
@@ -171,14 +171,14 @@ namespace Xabe.FFmpeg
         IConversion SetOutput(string outputPath);
 
         /// <summary>
-        ///     Направляет вывод FFmpeg в pipe.
+        ///     Направляет вывод MediaOrchestrator в pipe.
         /// </summary>
         /// <param name="descriptor">Выбранный дескриптор pipe.</param>
         /// <returns>Текущий объект IConversion.</returns>
         IConversion PipeOutput(PipeDescriptor descriptor = PipeDescriptor.stdout);
 
         /// <summary>
-        ///     Передаёт входной поток в FFmpeg через pipe.
+        ///     Передаёт входной поток в MediaOrchestrator через pipe.
         /// </summary>
         /// <param name="inputStream">Поток, из которого читаются данные.</param>
         /// <param name="inputSpecifier">Спецификатор pipe (по умолчанию pipe:0).</param>
@@ -235,12 +235,12 @@ namespace Xabe.FFmpeg
         IConversion SetPixelFormat(PixelFormat pixelFormat);
 
         /// <summary>
-        ///     Событие обновления прогресса FFmpeg.
+        ///     Событие обновления прогресса MediaOrchestrator.
         /// </summary>
         event ConversionProgressEventHandler OnProgress;
 
         /// <summary>
-        ///     Событие, возникающее при выводе текста FFmpeg.
+        ///     Событие, возникающее при выводе текста MediaOrchestrator.
         /// </summary>
         event DataReceivedEventHandler OnDataReceived;
 
@@ -251,7 +251,7 @@ namespace Xabe.FFmpeg
 
         /// <summary>
         ///     Задаёт получатель прогресса для передачи в вызывающий сервис (HTTP, gRPC и т.д.) через стандартный <see cref="IProgress{T}"/>.
-        ///     Уведомления приходят с потока чтения stderr FFmpeg; при необходимости маршалите в UI-синхронизационный контекст сами.
+        ///     Уведомления приходят с потока чтения stderr MediaOrchestrator; при необходимости маршалите в UI-синхронизационный контекст сами.
         /// </summary>
         /// <param name="progressReporter">Репортер или null, чтобы не вызывать.</param>
         /// <returns>Текущий объект IConversion.</returns>
@@ -265,7 +265,7 @@ namespace Xabe.FFmpeg
         IConversion UseShortest(bool useShortest);
 
         /// <summary>
-        ///     Собирает аргументы FFmpeg для конвертации.
+        ///     Собирает аргументы MediaOrchestrator для конвертации.
         /// </summary>
         /// <returns>Строка аргументов.</returns>
         string Build();
@@ -276,29 +276,29 @@ namespace Xabe.FFmpeg
         /// <param name="cancellationToken">Токен отмены.</param>
         /// <param name="progress">Дополнительный репортер на время этого запуска; если null, используется <see cref="SetProgressReporter"/>.</param>
         /// <returns>Результат конвертации.</returns>
-        /// <exception cref="ConversionException">Возникает, когда процесс FFmpeg возвращает ошибку.</exception>
-        /// <exception cref="ArgumentException">Возникает, когда исполняемые файлы FFmpeg не найдены.</exception>
+        /// <exception cref="ConversionException">Возникает, когда процесс MediaOrchestrator возвращает ошибку.</exception>
+        /// <exception cref="ArgumentException">Возникает, когда исполняемые файлы MediaOrchestrator не найдены.</exception>
         /// <exception cref="InvalidOperationException"></exception>
         /// <exception cref="ObjectDisposedException"></exception>
         /// <exception cref="TaskCanceledException">Возникает, когда задача была отменена.</exception>
         Task<IConversionResult> Start(CancellationToken cancellationToken = default, IProgress<ConversionProgressEventArgs> progress = null);
 
         /// <summary>
-        ///     Запускает FFmpeg с указанными параметрами и токеном отмены.
+        ///     Запускает MediaOrchestrator с указанными параметрами и токеном отмены.
         /// </summary>
-        /// <param name="parameters">Строка параметров FFmpeg.</param>
+        /// <param name="parameters">Строка параметров MediaOrchestrator.</param>
         /// <param name="cancellationToken">Токен отмены.</param>
         /// <param name="progress">Дополнительный репортер на время этого запуска; если null, используется <see cref="SetProgressReporter"/>.</param>
         /// <returns>Результат конвертации.</returns>
-        /// <exception cref="ConversionException">Возникает, когда процесс FFmpeg возвращает ошибку.</exception>
-        /// <exception cref="ArgumentException">Возникает, когда исполняемые файлы FFmpeg не найдены.</exception>
+        /// <exception cref="ConversionException">Возникает, когда процесс MediaOrchestrator возвращает ошибку.</exception>
+        /// <exception cref="ArgumentException">Возникает, когда исполняемые файлы MediaOrchestrator не найдены.</exception>
         /// <exception cref="InvalidOperationException"></exception>
         /// <exception cref="ObjectDisposedException"></exception>
         /// <exception cref="TaskCanceledException">Возникает, когда задача была отменена.</exception>
         Task<IConversionResult> Start(string parameters, CancellationToken cancellationToken = default, IProgress<ConversionProgressEventArgs> progress = null);
 
         /// <summary>
-        ///     Добавляет дополнительный параметр в аргументы FFmpeg.
+        ///     Добавляет дополнительный параметр в аргументы MediaOrchestrator.
         /// </summary>
         /// <param name="parameter">Параметр в виде строки.</param>
         /// <param name="parameterPosition">Позиция параметра относительно входа.</param>
@@ -477,7 +477,7 @@ namespace Xabe.FFmpeg
         IConversion UseHardwareAcceleration(string hardwareAccelerator, string decoder, string encoder, int device = 0);
 
         /// <summary>
-        ///     Задает метод синхронизации видео для FFmpeg.
+        ///     Задает метод синхронизации видео для MediaOrchestrator.
         /// </summary>
         /// <param name="method">Метод синхронизации.</param>
         /// <returns>Текущий объект IConversion.</returns>

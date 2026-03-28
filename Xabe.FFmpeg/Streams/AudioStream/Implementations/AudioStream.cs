@@ -1,9 +1,9 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Xabe.FFmpeg.Streams;
+using MediaOrchestrator.Streams;
 
-namespace Xabe.FFmpeg
+namespace MediaOrchestrator
 {
     /// <inheritdoc cref="IAudioStream" />
     public sealed class AudioStream : IAudioStream, IFilterable

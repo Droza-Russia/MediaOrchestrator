@@ -1,29 +1,36 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
-using Xabe.FFmpeg.Analytics;
-using Xabe.FFmpeg.Analytics.Models;
-using Xabe.FFmpeg.Streams.SubtitleStream;
+using MediaOrchestrator.Analytics;
+using MediaOrchestrator.Analytics.Models;
+using MediaOrchestrator.Streams.SubtitleStream;
+using MediaOrchestrator.Test.TestSupport;
 using Xunit;
 
-namespace Xabe.FFmpeg.Test
+namespace MediaOrchestrator.Test
 {
     public class MediaProcessingAnalyticsTests : IDisposable
     {
-        private readonly Func<FFprobeWrapper, string, System.Threading.CancellationToken, Task<string>> _originalProbeExecutor = FFprobeWrapper.ProbeCommandExecutor;
+        private readonly Func<MediaProbeRunner, string, System.Threading.CancellationToken, Task<string>> _originalProbeExecutor = MediaProbeRunner.ProbeCommandExecutor;
 
         public MediaProcessingAnalyticsTests()
         {
-            FFmpeg.ClearMediaInfoCache();
-            FFmpeg.MediaInfoCacheEnabled = true;
+            MediaOrchestrator.ClearMediaInfoCache();
+            MediaOrchestrator.MediaInfoCacheEnabled = true;
+            MediaOrchestrator.ClearMediaAnalysisStore();
+            MediaOrchestrator.MediaAnalysisLearningEnabled = true;
         }
 
         public void Dispose()
         {
-            FFprobeWrapper.ProbeCommandExecutor = _originalProbeExecutor;
-            FFmpeg.ClearMediaInfoCache();
-            FFmpeg.SetExecutablesPath(null);
+            MediaProbeRunner.ProbeCommandExecutor = _originalProbeExecutor;
+            MediaOrchestrator.ClearMediaInfoCache();
+            MediaOrchestrator.ClearMediaAnalysisStore();
+            MediaOrchestrator.SetExecutablesPath(null);
+            MediaOrchestrator.MediaInfoCacheEnabled = true;
+            MediaOrchestrator.MediaAnalysisLearningEnabled = true;
         }
 
         [Fact]
@@ -94,8 +101,8 @@ namespace Xabe.FFmpeg.Test
             var inputPath = TestFileFactory.CreateFakeMediaFile(tempDir, "sample.mp4");
             TestFileFactory.CreateFakeExecutable(tempDir, "ffmpeg");
             TestFileFactory.CreateFakeExecutable(tempDir, "ffprobe");
-            FFmpeg.SetExecutablesPath(tempDir);
-            FFprobeWrapper.ProbeCommandExecutor = (_, _, _) => Task.FromResult(TestFileFactory.CreateAudioProbeJson(1));
+            MediaOrchestrator.SetExecutablesPath(tempDir);
+            MediaProbeRunner.ProbeCommandExecutor = (_, _, _) => Task.FromResult(TestFileFactory.CreateAudioProbeJson(1));
 
             var analytics = new MediaProcessingAnalytics();
             var conversion = await analytics.BuildConversionAsync(
@@ -108,6 +115,33 @@ namespace Xabe.FFmpeg.Test
             command.Audio.ShouldUseCodec(AudioCodec.pcm_s16le)
                 .ShouldSetSampleRate(16000)
                 .ShouldSetChannels(1);
+        }
+
+        [Fact]
+        public async Task BuildConversionAsync_AiTranscription_ReusesLoadedMediaInfoWhenCacheDisabled()
+        {
+            var tempDir = TestFileFactory.CreateTempDirectory();
+            var inputPath = TestFileFactory.CreateFakeMediaFile(tempDir, "sample.mp4");
+            TestFileFactory.CreateFakeExecutable(tempDir, "ffmpeg");
+            TestFileFactory.CreateFakeExecutable(tempDir, "ffprobe");
+            MediaOrchestrator.SetExecutablesPath(tempDir);
+            MediaOrchestrator.MediaInfoCacheEnabled = false;
+
+            var invocationCount = 0;
+            MediaProbeRunner.ProbeCommandExecutor = (_, _, _) =>
+            {
+                invocationCount++;
+                return Task.FromResult(TestFileFactory.CreateAudioProbeJson(1));
+            };
+
+            var analytics = new MediaProcessingAnalytics();
+            var conversion = await analytics.BuildConversionAsync(
+                inputPath,
+                System.IO.Path.Combine(tempDir, "out.wav"),
+                ProcessingScenario.AiTranscription);
+
+            Assert.Equal(1, invocationCount);
+            conversion.Should().Audio.ShouldUseCodec(AudioCodec.pcm_s16le);
         }
 
         private sealed class FakeMediaInfo : IMediaInfo

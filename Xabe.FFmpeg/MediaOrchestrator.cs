@@ -7,9 +7,9 @@ using System.Linq;
 using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Threading;
-using Xabe.FFmpeg.Exceptions;
+using MediaOrchestrator.Exceptions;
 
-namespace Xabe.FFmpeg
+namespace MediaOrchestrator
 {
     public enum FileNameFilterMethod
     {
@@ -19,9 +19,9 @@ namespace Xabe.FFmpeg
     }
 
     /// <summary> 
-    ///     Обертка для FFmpeg
+    ///     Обертка для MediaOrchestrator
     /// </summary>
-    public abstract partial class FFmpeg
+    public abstract partial class MediaOrchestrator
     {
         private static string _ffmpegPath;
         private static string _ffprobePath;
@@ -48,6 +48,7 @@ namespace Xabe.FFmpeg
 
         private static HardwareAccelerationProfile _autoDetectedHardwareAccelerationProfile;
         internal static Func<string, CancellationToken, HardwareAccelerationProfile> HardwareAccelerationProfileDetector { get; set; } = DetectAutoHardwareAccelerationProfile;
+        public static Func<string, int, double?> HardwareAcceleratorLoadProvider { get; set; }
 
         /// <summary>
         ///     Верхняя граница частоты кадров выходного видео. Не применяется к извлечению аудио, чисто аудио конвертации,
@@ -111,10 +112,10 @@ namespace Xabe.FFmpeg
         public static AudioCodec DefaultTranscodeAudioCodec { get; set; } = AudioCodec.aac;
 
         /// <summary>
-        ///     Инициализирует новый FFmpeg. Ищет FFmpeg и FFprobe в PATH
+        ///     Инициализирует новый MediaOrchestrator. Ищет MediaOrchestrator и FFprobe в PATH
         /// </summary>
         /// 
-        protected FFmpeg()
+        protected MediaOrchestrator()
         {
             EnsureExecutablePathsResolved(CancellationToken.None);
         }
@@ -504,7 +505,7 @@ namespace Xabe.FFmpeg
         }
 
         /// <summary>
-        ///     Путь к исполняемому файлу FFmpeg
+        ///     Путь к исполняемому файлу MediaOrchestrator
         /// </summary>
         protected string FFmpegPath
         {
@@ -554,11 +555,11 @@ namespace Xabe.FFmpeg
 
             var ffmpegDir = string.IsNullOrWhiteSpace(_executablesPath) ? string.Empty : string.Format(_executablesPath + " or ");
             var exceptionMessage =
-                $"Не удалось найти FFmpeg в переменной окружения {ffmpegDir}PATH. " +
-                $"Для работы этого пакета требуется установленный FFmpeg. Пожалуйста, " +
+                $"Не удалось найти MediaOrchestrator в переменной окружения {ffmpegDir}PATH. " +
+                $"Для работы этого пакета требуется установленный MediaOrchestrator. Пожалуйста, " +
                 $"добавьте его в переменную PATH или укажите путь к ДИРЕКТОРИИ с исполняемыми файлами " +
-                $"FFmpeg в свойстве {nameof(FFmpeg)}.{nameof(ExecutablesPath)}";
-            throw new FFmpegNotFoundException(exceptionMessage);
+                $"MediaOrchestrator в свойстве {nameof(MediaOrchestrator)}.{nameof(ExecutablesPath)}";
+            throw new ToolchainNotFoundException(exceptionMessage);
         }
 
         private static bool IsExecutable(string file, OperatingSystemProvider systemProvider = null, OperatingSystemArchitectureProvider architectureProvider = null)
@@ -686,7 +687,7 @@ namespace Xabe.FFmpeg
 
         private static void ThrowExecutableSignatureMismatch(string filePath)
         {
-            throw new global::Xabe.FFmpeg.Exceptions.ExecutableSignatureMismatchException(string.Format(ErrorMessages.ExecutableSignatureMismatch, filePath));
+            throw new global::MediaOrchestrator.Exceptions.ExecutableSignatureMismatchException(string.Format(ErrorMessages.ExecutableSignatureMismatch, filePath));
         }
 
         /// <summary>
@@ -753,7 +754,7 @@ namespace Xabe.FFmpeg
         }
 
         /// <summary>
-        ///     Имя видеокодека для FFmpeg с учётом автоаппаратного профиля (H.264/HEVC → NVENC/QSV/VAAPI и т.д.).
+        ///     Имя видеокодека для MediaOrchestrator с учётом автоаппаратного профиля (H.264/HEVC → NVENC/QSV/VAAPI и т.д.).
         /// </summary>
         public static string ResolveTranscodeVideoCodecToString(VideoCodec videoCodec)
         {
@@ -790,7 +791,7 @@ namespace Xabe.FFmpeg
         }
 
         /// <summary>
-        ///     Имя аудиокодека для FFmpeg (аудио почти всегда программное; AAC и т.д. не подменяются по GPU).
+        ///     Имя аудиокодека для MediaOrchestrator (аудио почти всегда программное; AAC и т.д. не подменяются по GPU).
         /// </summary>
         public static string ResolveTranscodeAudioCodecToString(AudioCodec audioCodec)
         {
@@ -835,7 +836,7 @@ namespace Xabe.FFmpeg
         ///     Запускает конвертацию
         /// </summary>
         /// <param name="args">Аргументы</param>
-        /// <param name="processPath">Путь к исполняемому файлу (FFmpeg, ffprobe)</param>
+        /// <param name="processPath">Путь к исполняемому файлу (MediaOrchestrator, ffprobe)</param>
         /// <param name="priority">Приоритет процесса для запуска исполняемых файлов</param>
         /// <param name="standardInput">Следует ли перенаправлять стандартный ввод</param>
         /// <param name="standardOutput">Следует ли перенаправлять стандартный вывод</param>

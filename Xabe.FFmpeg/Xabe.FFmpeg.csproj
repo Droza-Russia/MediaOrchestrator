@@ -2,29 +2,29 @@
 
   <PropertyGroup>
     <IncludeSymbols>true</IncludeSymbols>
-    <PackageId>Xabe.FFMpeg.Custom</PackageId>
-    <Version>1.0.3</Version>
+    <PackageId>MediaOrchestrator</PackageId>
+    <Version>2.0.0</Version>
     <SymbolPackageFormat>snupkg</SymbolPackageFormat>
     <DebugType>portable</DebugType>
     <TargetFramework>netstandard2.0</TargetFramework>
-    <AssemblyName>Xabe.FFmpeg</AssemblyName>
-    <RootNamespace>Xabe.FFmpeg</RootNamespace>
-    <Authors>Xabe</Authors>
-    <Company>Xabe Tomasz Żmuda feat FTSoft</Company>
-    <Description>Cross-platform wrapper for FFmpeg with MacOS Silicon FFMpeg Fix</Description>
-    <Copyright>Copyright 2017-2025 (c) Xabe Tomasz Zmuda.</Copyright>
+    <AssemblyName>MediaOrchestrator</AssemblyName>
+    <RootNamespace>MediaOrchestrator</RootNamespace>
+    <Authors>FTSoft</Authors>
+    <Company>FTSoft</Company>
+    <Description>Enterprise-grade media orchestration SDK for adaptive processing, analytics, observability and universal I/O.</Description>
+    <Copyright>Copyright 2017-2026 FTSoft.</Copyright>
     <PackageLicenseFile>LICENSE.md</PackageLicenseFile>
-    <PackageProjectUrl>https://ffmpeg.xabe.net/index.html</PackageProjectUrl>
-    <RepositoryUrl>https://github.com/tomaszzmuda/Xabe.FFmpeg</RepositoryUrl>
-    <RepositoryType>Dependency</RepositoryType>
-    <PackageTags>media converter audio ffmpeg wrapper core video encode decode</PackageTags>
+    <PackageProjectUrl>https://github.com/ftsoft/MediaOrchestrator</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/ftsoft/MediaOrchestrator</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageTags>media orchestration sdk analytics transcoding audio video adaptive processing observability streaming</PackageTags>
     <PackageReleaseNotes></PackageReleaseNotes>
     <PackageReadmeFile>README.md</PackageReadmeFile>
     <SignAssembly>false</SignAssembly>
     <DelaySign>false</DelaySign>
     <PackageRequireLicenseAcceptance>true</PackageRequireLicenseAcceptance>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
-    <DocumentationFile>bin\$(Configuration)\$(TargetFramework)\Xabe.FFmpeg.xml</DocumentationFile>
+    <DocumentationFile>bin\$(Configuration)\$(TargetFramework)\MediaOrchestrator.xml</DocumentationFile>
     <NoWarn>$(NoWarn);1571;1572;1573;1591</NoWarn>
     
     <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
@@ -39,8 +39,8 @@
   <ItemGroup>
     <None Include="..\LICENSE.md" Pack="true" PackagePath="\" Link="LICENSE.md" />
     <None Include="..\README.md" Pack="true" PackagePath="\" Link="README.md" />
-    <None Include="buildTransitive\Xabe.FFMpeg.Custom.props" Pack="true" PackagePath="buildTransitive\" />
-    <None Include="buildTransitive\Xabe.FFMpeg.Custom.targets" Pack="true" PackagePath="buildTransitive\" />
+    <None Include="buildTransitive\MediaOrchestrator.props" Pack="true" PackagePath="buildTransitive\" />
+    <None Include="buildTransitive\MediaOrchestrator.targets" Pack="true" PackagePath="buildTransitive\" />
     <None Include="docs\intellisense\**\*.xml" Pack="true" PackagePath="docs\intellisense\" />
     <Compile Remove="Examples/**/*.cs" />
     <None Include="Examples/**/*.cs" />

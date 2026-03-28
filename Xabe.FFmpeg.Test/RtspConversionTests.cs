@@ -1,8 +1,8 @@
 using System;
-using Xabe.FFmpeg.Test.TestSupport;
+using MediaOrchestrator.Test.TestSupport;
 using Xunit;
 
-namespace Xabe.FFmpeg.Test
+namespace MediaOrchestrator.Test
 {
     public class RtspConversionTests
     {

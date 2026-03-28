@@ -3,9 +3,9 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using System.Text;
-using Xabe.FFmpeg.Streams;
+using MediaOrchestrator.Streams;
 
-namespace Xabe.FFmpeg
+namespace MediaOrchestrator
 {
     /// <inheritdoc cref="IVideoStream" />
     public sealed class VideoStream : IVideoStream, IFilterable

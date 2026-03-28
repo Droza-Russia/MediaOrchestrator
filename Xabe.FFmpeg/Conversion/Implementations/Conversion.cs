@@ -8,14 +8,15 @@ using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using Xabe.FFmpeg.Events;
-using Xabe.FFmpeg.Exceptions;
-using Xabe.FFmpeg.Streams;
+using MediaOrchestrator.Analytics.Models;
+using MediaOrchestrator.Events;
+using MediaOrchestrator.Exceptions;
+using MediaOrchestrator.Streams;
 
-namespace Xabe.FFmpeg
+namespace MediaOrchestrator
 {
     /// <summary>
-    ///     Реализует процесс конвертации и позволяет выстраивать параметры FFmpeg.
+    ///     Реализует процесс конвертации и позволяет выстраивать параметры MediaOrchestrator.
     /// </summary>
     public partial class Conversion : IConversion
     {
@@ -32,7 +33,7 @@ namespace Xabe.FFmpeg
         private bool _hasInputBuilder = false;
 
         private ProcessPriorityClass? _priority = null;
-        private FFmpegWrapper _ffmpeg;
+        private MediaToolRunner _ffmpeg;
         private Func<string, string> _buildInputFileName = null;
         private Func<string, string> _buildOutputFileName = null;
         private Stream _inputPipeStream;
@@ -41,6 +42,9 @@ namespace Xabe.FFmpeg
         private readonly bool _suppressAutoHardwareAcceleration;
         private bool _manualHardwareAcceleration;
         private IProgress<ConversionProgressEventArgs> _progressReporter;
+        private MediaAnalysisSession _analyticsSession;
+        private Func<CancellationToken, Task> _onSuccessAsync;
+        private Func<Task> _onFinallyAsync;
 
         public Conversion()
             : this(suppressGlobalOutputLimits: false, suppressAutoHardwareAcceleration: false)
@@ -57,10 +61,23 @@ namespace Xabe.FFmpeg
             _videoSettings = new VideoConversionSettings(this);
         }
 
+        internal IConversion AttachAnalyticsSession(MediaAnalysisSession analyticsSession)
+        {
+            _analyticsSession = analyticsSession;
+            return this;
+        }
+
+        internal IConversion AttachLifecycleHandlers(Func<CancellationToken, Task> onSuccessAsync, Func<Task> onFinallyAsync)
+        {
+            _onSuccessAsync = onSuccessAsync;
+            _onFinallyAsync = onFinallyAsync;
+            return this;
+        }
+
         /// <summary>
-        ///     Собирает строку аргументов FFmpeg, основываясь на заданных параметрах и потоках.
+        ///     Собирает строку аргументов MediaOrchestrator, основываясь на заданных параметрах и потоках.
         /// </summary>
-        /// <returns>Строка параметров для запуска процесса FFmpeg.</returns>
+        /// <returns>Строка параметров для запуска процесса MediaOrchestrator.</returns>
         public string Build()
         {
             lock (_builderLock)
@@ -102,12 +119,12 @@ namespace Xabe.FFmpeg
         }
 
         /// <summary>
-        ///     Событие обновления прогресса FFmpeg.
+        ///     Событие обновления прогресса MediaOrchestrator.
         /// </summary>
         public event ConversionProgressEventHandler OnProgress;
 
         /// <summary>
-        ///     Событие, возникающее при выводе текста FFmpeg.
+        ///     Событие, возникающее при выводе текста MediaOrchestrator.
         /// </summary>
         public event DataReceivedEventHandler OnDataReceived;
 
@@ -160,9 +177,9 @@ namespace Xabe.FFmpeg
         }
 
         /// <summary>
-        ///     Запускает FFmpeg с заданными параметрами и токеном отмены.
+        ///     Запускает MediaOrchestrator с заданными параметрами и токеном отмены.
         /// </summary>
-        /// <param name="parameters">Строка параметров для FFmpeg.</param>
+        /// <param name="parameters">Строка параметров для MediaOrchestrator.</param>
         /// <param name="cancellationToken">Токен отмены.</param>
         /// <param name="progress">Репортер прогресса на это выполнение; при null используется <see cref="SetProgressReporter"/>.</param>
         /// <returns>Результат конвертации.</returns>
@@ -182,7 +199,7 @@ namespace Xabe.FFmpeg
                 forwardProgress = (_, args) => reporter.Report(args);
             }
 
-            _ffmpeg = new FFmpegWrapper();
+            _ffmpeg = new MediaToolRunner();
             try
             {
                 _ffmpeg.OnProgress += OnProgress;
@@ -197,10 +214,15 @@ namespace Xabe.FFmpeg
                 try
                 {
                     await _ffmpeg.RunProcess(parameters, cancellationToken, _priority, _inputPipeStream);
+                    if (_onSuccessAsync != null)
+                    {
+                        await _onSuccessAsync(cancellationToken).ConfigureAwait(false);
+                    }
                 }
                 catch (Exception ex) when (ShouldDeletePartialOutputOnFailure(ex))
                 {
                     TryDeletePartialOutputFile();
+                    await ReportAnalyticsExecutionAsync(parameters, startTime, DateTime.Now, succeeded: false, failureType: ex.GetType().FullName).ConfigureAwait(false);
                     throw;
                 }
             }
@@ -215,14 +237,50 @@ namespace Xabe.FFmpeg
                 _ffmpeg.OnDataReceived -= OnDataReceived;
                 _ffmpeg.OnVideoDataReceived -= OnVideoDataReceived;
                 _ffmpeg = null;
+                if (_onFinallyAsync != null)
+                {
+                    try
+                    {
+                        await _onFinallyAsync().ConfigureAwait(false);
+                    }
+                    catch
+                    {
+                    }
+                }
             }
 
-            return new ConversionResult
+            var result = new ConversionResult
             {
                 StartTime = startTime,
                 EndTime = DateTime.Now,
                 Arguments = parameters
             };
+            await ReportAnalyticsExecutionAsync(parameters, result.StartTime, result.EndTime, succeeded: true, failureType: null).ConfigureAwait(false);
+            return result;
+        }
+
+        private async Task ReportAnalyticsExecutionAsync(
+            string parameters,
+            DateTime startTime,
+            DateTime endTime,
+            bool succeeded,
+            string failureType)
+        {
+            if (_analyticsSession == null)
+            {
+                return;
+            }
+
+            try
+            {
+                await MediaOrchestrator.Analytics
+                    .ReportExecutionAsync(_analyticsSession, startTime, endTime, parameters, succeeded, failureType, _ffmpeg?.LastExecutionResourceMetrics)
+                    .ConfigureAwait(false);
+            }
+            catch
+            {
+                // Analytics persistence must not break media processing.
+            }
         }
 
         private void CreateOutputDirectoryIfNotExists()
@@ -289,13 +347,13 @@ namespace Xabe.FFmpeg
         }
 
         /// <summary>
-        ///     Указывает длительность анализа входного потока FFmpeg.
+        ///     Указывает длительность анализа входного потока MediaOrchestrator.
         /// </summary>
         /// <param name="duration">Продолжительность анализа.</param>
         /// <returns>Текущий объект IConversion.</returns>
         public IConversion SetAnalysisDuration(TimeSpan duration)
         {
-            // FFmpeg ожидает микросекунды (1 tick = 100 наносекунд, 10 ticks = 1 микросекунда)
+            // MediaOrchestrator ожидает микросекунды (1 tick = 100 наносекунд, 10 ticks = 1 микросекунда)
             long microseconds = duration.Ticks / 10;
 
             _parameters.Add(new ConversionParameter(FFmpegHardwareAccelerationArguments.SetAnalysisDuration(microseconds), ParameterPosition.PostInput));
@@ -304,7 +362,7 @@ namespace Xabe.FFmpeg
 
 
         /// <summary>
-        ///     Добавляет произвольный параметр к команде FFmpeg.
+        ///     Добавляет произвольный параметр к команде MediaOrchestrator.
         /// </summary>
         /// <param name="parameter">Строка параметра.</param>
         /// <param name="parameterPosition">Позиция параметра относительно входных файлов.</param>
@@ -548,7 +606,7 @@ namespace Xabe.FFmpeg
         }
 
         /// <summary>
-        ///     Выбирает пресет FFmpeg, влияющий на скорость и качество.
+        ///     Выбирает пресет MediaOrchestrator, влияющий на скорость и качество.
         /// </summary>
         /// <param name="preset">Предустановка кодирования.</param>
         /// <returns>Текущий объект IConversion.</returns>
@@ -623,7 +681,7 @@ namespace Xabe.FFmpeg
         }
 
         /// <summary>
-        ///     Указывает точное количество потоков FFmpeg.
+        ///     Указывает точное количество потоков MediaOrchestrator.
         /// </summary>
         /// <param name="threadsCount">Число нитей.</param>
         /// <returns>Текущий объект IConversion.</returns>
@@ -651,7 +709,7 @@ namespace Xabe.FFmpeg
         }
 
         /// <summary>
-        ///     Перенаправляет вывод FFmpeg в pipe.
+        ///     Перенаправляет вывод MediaOrchestrator в pipe.
         /// </summary>
         /// <param name="descriptor">Выбранный дескриптор pipe.</param>
         /// <returns>Текущий объект IConversion.</returns>
@@ -663,7 +721,7 @@ namespace Xabe.FFmpeg
         }
 
         /// <summary>
-        ///     Передаёт входные данные в FFmpeg через pipe.
+        ///     Передаёт входные данные в MediaOrchestrator через pipe.
         /// </summary>
         /// <param name="inputStream">Поток, из которого читаются данные.</param>
         /// <param name="inputSpecifier">Спецификатор pipe (например, pipe:0).</param>
@@ -746,7 +804,7 @@ namespace Xabe.FFmpeg
         }
 
         /// <summary>
-        ///     Устанавливает приоритет запускаемого процесса FFmpeg.
+        ///     Устанавливает приоритет запускаемого процесса MediaOrchestrator.
         /// </summary>
         /// <param name="priority">Приоритет процесса.</param>
         /// <returns>Текущий объект IConversion.</returns>
@@ -1008,12 +1066,12 @@ namespace Xabe.FFmpeg
                 return;
             }
 
-            if (!FFmpeg.ApplyAutoHardwareAccelerationToConversions)
+            if (!MediaOrchestrator.ApplyAutoHardwareAccelerationToConversions)
             {
                 return;
             }
 
-            var profile = FFmpeg.AutoDetectedHardwareAccelerationProfile;
+            var profile = MediaOrchestrator.AutoDetectedHardwareAccelerationProfile;
             if (profile == null)
             {
                 return;
@@ -1147,9 +1205,9 @@ namespace Xabe.FFmpeg
                 return string.Empty;
             }
 
-            var maxFps = FFmpeg.MaxOutputVideoFrameRate;
-            var maxAr = FFmpeg.MaxOutputAudioSampleRate;
-            var maxAc = FFmpeg.MaxOutputAudioChannels;
+            var maxFps = MediaOrchestrator.MaxOutputVideoFrameRate;
+            var maxAr = MediaOrchestrator.MaxOutputAudioSampleRate;
+            var maxAc = MediaOrchestrator.MaxOutputAudioChannels;
             if (!maxFps.HasValue && !maxAr.HasValue && !maxAc.HasValue)
             {
                 return string.Empty;

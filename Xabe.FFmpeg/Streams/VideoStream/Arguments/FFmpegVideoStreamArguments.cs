@@ -1,7 +1,7 @@
 using System;
 using System.Globalization;
 
-namespace Xabe.FFmpeg
+namespace MediaOrchestrator
 {
     internal static class FFmpegVideoStreamArguments
     {

@@ -1,21 +1,21 @@
 using System;
 using System.Linq;
 using System.Threading.Tasks;
-using Xabe.FFmpeg;
+using MediaOrchestrator;
 
-namespace Xabe.FFmpeg.Examples.Service
+namespace MediaOrchestrator.Examples.Service
 {
     public static class OverlayTimecodeExample
     {
         public static async Task RunAsync()
         {
             await EnsureBinariesAsync().ConfigureAwait(false);
-            var snippets = FFmpeg.Conversions.FromSnippet;
+            var snippets = MediaOrchestrator.Conversions.FromSnippet;
 
             var inputPath = "input.mp4";
             var outputPath = "input_timestamped.mp4";
 
-            var info = await FFmpeg.GetMediaInfo(inputPath, default).ConfigureAwait(false);
+            var info = await MediaOrchestrator.GetMediaInfo(inputPath, default).ConfigureAwait(false);
             var videoStream = info.VideoStreams.FirstOrDefault();
             if (videoStream == null)
             {
@@ -27,7 +27,7 @@ namespace Xabe.FFmpeg.Examples.Service
                 .SetRightSidePtsTimeOverlay(prefix: "PTS: ", suffix: " UTC", fontSize: 28)
                 .SetRightSideDrawText("Service ID: 42", fontSize: 18, marginY: 60);
 
-            var conversion = FFmpeg.Conversions.New()
+            var conversion = MediaOrchestrator.Conversions.New()
                 .AddStream(annotated)
                 .AddStream(info.AudioStreams.ToArray())
                 .SetOutput(outputPath);
@@ -37,9 +37,9 @@ namespace Xabe.FFmpeg.Examples.Service
 
         private static Task EnsureBinariesAsync()
         {
-            if (string.IsNullOrWhiteSpace(FFmpeg.ExecutablesPath))
+            if (string.IsNullOrWhiteSpace(MediaOrchestrator.ExecutablesPath))
             {
-                FFmpeg.SetExecutablesPath("/usr/local/bin", tryDetectHardwareAcceleration: false);
+                MediaOrchestrator.SetExecutablesPath("/usr/local/bin", tryDetectHardwareAcceleration: false);
             }
 
             return Task.CompletedTask;

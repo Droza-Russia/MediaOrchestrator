@@ -1,6 +1,6 @@
 ﻿using System.Collections.Generic;
 
-namespace Xabe.FFmpeg
+namespace MediaOrchestrator
 {
     /// <summary>
     ///     Базовый интерфейс потока.
@@ -23,7 +23,7 @@ namespace Xabe.FFmpeg
         string Codec { get; }
 
         /// <summary>
-        ///     Составляет аргументы FFmpeg для указанной позиции.
+        ///     Составляет аргументы MediaOrchestrator для указанной позиции.
         /// </summary>
         /// <returns>Строка аргументов.</returns>
         string BuildParameters(ParameterPosition forPosition);

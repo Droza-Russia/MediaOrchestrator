@@ -5,7 +5,7 @@ using System.Globalization;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace Xabe.FFmpeg
+namespace MediaOrchestrator
 {
     /// <summary>
     ///     Автовыбор аппаратного ускорения по списку ffmpeg -hwaccels и ОС (NVIDIA / Intel / AMD / VAAPI / Video Toolbox).

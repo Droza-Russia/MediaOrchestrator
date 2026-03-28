@@ -2,21 +2,24 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
+using System.Linq;
 using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
-using Xabe.FFmpeg.Analytics;
-using Xabe.FFmpeg.Streams.SubtitleStream;
+using MediaOrchestrator.Analytics;
+using MediaOrchestrator.Analytics.Reports;
+using MediaOrchestrator.Analytics.Stores;
+using MediaOrchestrator.Streams.SubtitleStream;
 
-namespace Xabe.FFmpeg
+namespace MediaOrchestrator
 {
     /// <summary> 
-    ///     Обертка для FFmpeg
+    ///     Обертка для MediaOrchestrator
     /// </summary>
-    public abstract partial class FFmpeg
+    public abstract partial class MediaOrchestrator
     {
         /// <summary>
-        ///     Директория, содержащая FFmpeg и FFprobe
+        ///     Директория, содержащая MediaOrchestrator и FFprobe
         /// </summary>
         public static string ExecutablesPath
         {
@@ -35,7 +38,7 @@ namespace Xabe.FFmpeg
         }
 
         /// <summary>
-        ///     Метод фильтрации для поиска файлов FFmpeg и FFprobe
+        ///     Метод фильтрации для поиска файлов MediaOrchestrator и FFprobe
         /// </summary>
         public static FileNameFilterMethod FilterMethod
         {
@@ -83,6 +86,37 @@ namespace Xabe.FFmpeg
         /// </summary>
         public static TimeSpan MediaInfoCacheLifetime { get; set; } = TimeSpan.FromMinutes(10);
 
+        private static readonly object _mediaAnalysisStoreSync = new object();
+        private static string _mediaAnalysisStoreDirectory = Path.Combine(Path.GetTempPath(), "xabe-ffmpeg-media-analysis");
+        private static IMediaAnalysisStore _mediaAnalysisStore = CreateMediaAnalysisStore(_mediaAnalysisStoreDirectory);
+
+        /// <summary>
+        ///     Включает накопление статистики по решениям analytics и адаптацию будущих решений на её основе.
+        /// </summary>
+        public static bool MediaAnalysisLearningEnabled { get; set; } = true;
+
+        internal static IMediaAnalysisStore MediaAnalysisStore
+        {
+            get
+            {
+                lock (_mediaAnalysisStoreSync)
+                {
+                    return _mediaAnalysisStore;
+                }
+            }
+        }
+
+        public static string MediaAnalysisStoreDirectory
+        {
+            get
+            {
+                lock (_mediaAnalysisStoreSync)
+                {
+                    return _mediaAnalysisStoreDirectory;
+                }
+            }
+        }
+
         /// <summary>
         ///     Получает новый экземпляр Conversion.
         /// </summary>
@@ -128,10 +162,31 @@ namespace Xabe.FFmpeg
         }
 
         /// <summary>
-        ///     Устанавливает путь к директории, содержащей FFmpeg и FFprobe
+        ///     Получает MediaInfo из файла, потока или массива байт.
+        /// </summary>
+        public static async Task<IMediaInfo> GetMediaInfo(
+            MediaSource source,
+            CancellationToken cancellationToken = default,
+            bool waitUntilFileStable = false,
+            TimeSpan? stabilityQuietPeriod = null,
+            TimeSpan? maximumWaitForStable = null)
+        {
+            var prepared = await MediaIoBridge.PrepareInputAsync(source, cancellationToken).ConfigureAwait(false);
+            try
+            {
+                return await GetMediaInfo(prepared.Path, cancellationToken, waitUntilFileStable, stabilityQuietPeriod, maximumWaitForStable).ConfigureAwait(false);
+            }
+            finally
+            {
+                await prepared.CleanupAsync().ConfigureAwait(false);
+            }
+        }
+
+        /// <summary>
+        ///     Устанавливает путь к директории, содержащей MediaOrchestrator и FFprobe
         /// </summary>
         /// <param name="directoryWithFFmpegAndFFprobe"></param>
-        /// <param name="ffmpegExeutableName">Имя исполняемого файла FFmpeg</param>
+        /// <param name="ffmpegExeutableName">Имя исполняемого файла MediaOrchestrator</param>
         /// <param name="ffprobeExecutableName">Имя исполняемого файла FFprobe</param>
         /// <param name="filteringMethod">Выбирает метод сравнения имен файлов</param>
         /// <param name="formatprovider">Провайдер формата для сравнения строк</param>
@@ -188,7 +243,7 @@ namespace Xabe.FFmpeg
         }
 
         /// <summary>
-        ///     Задаёт глобальные лимиты параметров выхода (без смены пути к FFmpeg). Null сбрасывает соответствующий лимит.
+        ///     Задаёт глобальные лимиты параметров выхода (без смены пути к MediaOrchestrator). Null сбрасывает соответствующий лимит.
         /// </summary>
         /// <param name="maxOutputVideoFrameRate">Максимальная частота кадров видео.</param>
         /// <param name="maxOutputAudioSampleRate">Максимальная частота дискретизации аудио (Гц).</param>
@@ -243,6 +298,73 @@ namespace Xabe.FFmpeg
         }
 
         /// <summary>
+        ///     Настраивает каталог для персистентного хранения аналитики и статистики media-processing.
+        /// </summary>
+        public static void SetMediaAnalysisStoreDirectory(string directory = null)
+        {
+            lock (_mediaAnalysisStoreSync)
+            {
+                _mediaAnalysisStoreDirectory = string.IsNullOrWhiteSpace(directory)
+                    ? Path.Combine(Path.GetTempPath(), "xabe-ffmpeg-media-analysis")
+                    : new DirectoryInfo(directory).FullName;
+                _mediaAnalysisStore = CreateMediaAnalysisStore(_mediaAnalysisStoreDirectory);
+            }
+        }
+
+        /// <summary>
+        ///     Очищает сохранённую статистику media analytics.
+        /// </summary>
+        public static void ClearMediaAnalysisStore()
+        {
+            MediaAnalysisStore.ClearAsync(CancellationToken.None).GetAwaiter().GetResult();
+        }
+
+        /// <summary>
+        ///     Принудительно сбрасывает накопленную в памяти analytics-статистику в persistent store.
+        ///     Полезно вызывать перед graceful shutdown сервиса.
+        /// </summary>
+        public static void FlushMediaAnalysisStore(CancellationToken cancellationToken = default)
+        {
+            FlushMediaAnalysisStoreAsync(cancellationToken).GetAwaiter().GetResult();
+        }
+
+        /// <summary>
+        ///     Асинхронно сбрасывает накопленную в памяти analytics-статистику в persistent store.
+        /// </summary>
+        public static Task FlushMediaAnalysisStoreAsync(CancellationToken cancellationToken = default)
+        {
+            var cachedStore = MediaAnalysisStore as CachedMediaAnalysisStore;
+            if (cachedStore == null)
+            {
+                return Task.CompletedTask;
+            }
+
+            return cachedStore.FlushPendingAsync(cancellationToken);
+        }
+
+        /// <summary>
+        ///     Возвращает агрегированный отчёт по media analytics для веб-интерфейсов, мониторинга и Grafana.
+        /// </summary>
+        public static MediaAnalyticsReport GetMediaAnalyticsReport(MediaAnalyticsQuery query = null, CancellationToken cancellationToken = default)
+        {
+            return GetMediaAnalyticsReportAsync(query, cancellationToken).GetAwaiter().GetResult();
+        }
+
+        /// <summary>
+        ///     Асинхронно возвращает агрегированный отчёт по media analytics для веб-интерфейсов, мониторинга и Grafana.
+        /// </summary>
+        public static async Task<MediaAnalyticsReport> GetMediaAnalyticsReportAsync(MediaAnalyticsQuery query = null, CancellationToken cancellationToken = default)
+        {
+            var records = await MediaAnalysisStore.GetAllAsync(cancellationToken).ConfigureAwait(false);
+            return MediaAnalyticsReportBuilder.Build(records, query);
+        }
+
+        private static IMediaAnalysisStore CreateMediaAnalysisStore(string directoryPath)
+        {
+            return new CachedMediaAnalysisStore(new FileMediaAnalysisStore(directoryPath));
+        }
+
+        /// <summary>
         ///     Скачивает видео с видеохостинга (YouTube, RuTube и т.п.) через yt-dlp/youtube-dl.
         /// </summary>
         public static Task DownloadHostedVideoAsync(string url, string outputPath, HostedVideoDownloadSettings settings = null, CancellationToken cancellationToken = default)
@@ -289,6 +411,221 @@ namespace Xabe.FFmpeg
 
         }
 
+        private static IConversion AttachManagedMediaIo(
+            IConversion conversion,
+            Func<CancellationToken, Task> onSuccessAsync,
+            Func<Task> onFinallyAsync)
+        {
+            var concrete = conversion as Conversion;
+            if (concrete != null)
+            {
+                concrete.AttachLifecycleHandlers(onSuccessAsync, onFinallyAsync);
+            }
+
+            return conversion;
+        }
+
+        private sealed class SharedCleanupScope
+        {
+            private readonly Func<Task> _cleanupAsync;
+            private int _remaining;
+
+            internal SharedCleanupScope(int remaining, Func<Task> cleanupAsync)
+            {
+                _remaining = remaining;
+                _cleanupAsync = cleanupAsync ?? (() => Task.CompletedTask);
+            }
+
+            internal Task ReleaseAsync()
+            {
+                if (Interlocked.Decrement(ref _remaining) == 0)
+                {
+                    return _cleanupAsync();
+                }
+
+                return Task.CompletedTask;
+            }
+        }
+
+        private static async Task<IConversion> PrepareSingleInputOutputAsync(
+            MediaSource input,
+            MediaDestination output,
+            Func<string, string, CancellationToken, Task<IConversion>> factory,
+            CancellationToken cancellationToken)
+        {
+            var preparedInput = await MediaIoBridge.PrepareInputAsync(input, cancellationToken).ConfigureAwait(false);
+            var preparedOutput = MediaIoBridge.PrepareOutput(output);
+            try
+            {
+                var conversion = await factory(preparedInput.Path, preparedOutput.Path, cancellationToken).ConfigureAwait(false);
+                return AttachManagedMediaIo(
+                    conversion,
+                    preparedOutput.FinalizeAsync,
+                    async () =>
+                    {
+                        await preparedInput.CleanupAsync().ConfigureAwait(false);
+                        await preparedOutput.CleanupAsync().ConfigureAwait(false);
+                    });
+            }
+            catch
+            {
+                await preparedInput.CleanupAsync().ConfigureAwait(false);
+                await preparedOutput.CleanupAsync().ConfigureAwait(false);
+                throw;
+            }
+        }
+
+        private static async Task<IConversion> PrepareDoubleInputOutputAsync(
+            MediaSource input1,
+            MediaSource input2,
+            MediaDestination output,
+            Func<string, string, string, CancellationToken, Task<IConversion>> factory,
+            CancellationToken cancellationToken)
+        {
+            var preparedInput1 = await MediaIoBridge.PrepareInputAsync(input1, cancellationToken).ConfigureAwait(false);
+            var preparedInput2 = await MediaIoBridge.PrepareInputAsync(input2, cancellationToken).ConfigureAwait(false);
+            var preparedOutput = MediaIoBridge.PrepareOutput(output);
+            try
+            {
+                var conversion = await factory(preparedInput1.Path, preparedInput2.Path, preparedOutput.Path, cancellationToken).ConfigureAwait(false);
+                return AttachManagedMediaIo(
+                    conversion,
+                    preparedOutput.FinalizeAsync,
+                    async () =>
+                    {
+                        await preparedInput1.CleanupAsync().ConfigureAwait(false);
+                        await preparedInput2.CleanupAsync().ConfigureAwait(false);
+                        await preparedOutput.CleanupAsync().ConfigureAwait(false);
+                    });
+            }
+            catch
+            {
+                await preparedInput1.CleanupAsync().ConfigureAwait(false);
+                await preparedInput2.CleanupAsync().ConfigureAwait(false);
+                await preparedOutput.CleanupAsync().ConfigureAwait(false);
+                throw;
+            }
+        }
+
+        private static async Task<IConversion> PrepareManyInputsOutputAsync(
+            IEnumerable<MediaSource> inputs,
+            MediaDestination output,
+            Func<string, CancellationToken, string[], Task<IConversion>> factory,
+            CancellationToken cancellationToken)
+        {
+            var preparedInputs = new List<MediaIoBridge.PreparedMediaInput>();
+            var preparedOutput = MediaIoBridge.PrepareOutput(output);
+            try
+            {
+                foreach (var input in inputs)
+                {
+                    preparedInputs.Add(await MediaIoBridge.PrepareInputAsync(input, cancellationToken).ConfigureAwait(false));
+                }
+
+                var conversion = await factory(preparedOutput.Path, cancellationToken, preparedInputs.Select(x => x.Path).ToArray()).ConfigureAwait(false);
+                return AttachManagedMediaIo(
+                    conversion,
+                    preparedOutput.FinalizeAsync,
+                    async () =>
+                    {
+                        foreach (var preparedInput in preparedInputs)
+                        {
+                            await preparedInput.CleanupAsync().ConfigureAwait(false);
+                        }
+
+                        await preparedOutput.CleanupAsync().ConfigureAwait(false);
+                    });
+            }
+            catch
+            {
+                foreach (var preparedInput in preparedInputs)
+                {
+                    await preparedInput.CleanupAsync().ConfigureAwait(false);
+                }
+
+                await preparedOutput.CleanupAsync().ConfigureAwait(false);
+                throw;
+            }
+        }
+
+        private static async Task<IReadOnlyList<IConversion>> PrepareSplitAudioOutputsAsync(
+            MediaSource input,
+            MediaDirectoryDestination outputDirectory,
+            IEnumerable<TimeSpan> timecodes,
+            AudioCodec audioCodec,
+            long bitrate,
+            int sampleRate,
+            CancellationToken cancellationToken)
+        {
+            var preparedInput = await MediaIoBridge.PrepareInputAsync(input, cancellationToken).ConfigureAwait(false);
+            var preparedDirectory = MediaIoBridge.PrepareDirectoryOutput(outputDirectory);
+            try
+            {
+                var conversions = await Conversion.SplitAudioByTimecodesAsync(
+                    preparedInput.Path,
+                    preparedDirectory.Path,
+                    timecodes,
+                    audioCodec,
+                    bitrate,
+                    sampleRate,
+                    cancellationToken).ConfigureAwait(false);
+
+                var cleanupScope = new SharedCleanupScope(
+                    conversions.Count,
+                    async () =>
+                    {
+                        await preparedInput.CleanupAsync().ConfigureAwait(false);
+                        await preparedDirectory.CleanupAsync().ConfigureAwait(false);
+                    });
+
+                foreach (var conversion in conversions)
+                {
+                    var fileName = Path.GetFileName(conversion.OutputFilePath);
+                    AttachManagedMediaIo(
+                        conversion,
+                        async ct =>
+                        {
+                            if (outputDirectory.Kind == MediaDirectoryDestination.DirectoryDestinationKind.Memory)
+                            {
+                                outputDirectory.SetFile(fileName, await MediaIoBridge.ReadFileBytesAsync(conversion.OutputFilePath, ct).ConfigureAwait(false));
+                            }
+                        },
+                        cleanupScope.ReleaseAsync);
+                }
+
+                return conversions;
+            }
+            catch
+            {
+                await preparedInput.CleanupAsync().ConfigureAwait(false);
+                await preparedDirectory.CleanupAsync().ConfigureAwait(false);
+                throw;
+            }
+        }
+
+        private static async Task<IConversion> PrepareDirectoryOutputAsync(
+            Func<string, CancellationToken, Task<IConversion>> factory,
+            MediaDirectoryDestination outputDirectory,
+            string outputFileName,
+            CancellationToken cancellationToken)
+        {
+            var preparedDirectory = MediaIoBridge.PrepareDirectoryOutput(outputDirectory);
+            try
+            {
+                var outputPath = Path.Combine(preparedDirectory.Path, outputFileName);
+                var conversion = await factory(outputPath, cancellationToken).ConfigureAwait(false);
+                return AttachManagedMediaIo(
+                    conversion,
+                    preparedDirectory.FinalizeAsync,
+                    preparedDirectory.CleanupAsync);
+            }
+            catch
+            {
+                await preparedDirectory.CleanupAsync().ConfigureAwait(false);
+                throw;
+            }
+        }
+
         /// <summary>
         ///     Извлекает аудио из файла
         /// </summary>
@@ -298,6 +635,11 @@ namespace Xabe.FFmpeg
         public async Task<IConversion> ExtractAudio(string inputPath, string outputPath, CancellationToken cancellationToken = default)
         {
             return await Conversion.ExtractAudio(inputPath, outputPath, cancellationToken);
+        }
+
+        public Task<IConversion> ExtractAudio(MediaSource input, MediaDestination output, CancellationToken cancellationToken = default)
+        {
+            return PrepareSingleInputOutputAsync(input, output, ExtractAudio, cancellationToken);
         }
 
         /// <summary>
@@ -321,6 +663,21 @@ namespace Xabe.FFmpeg
             return await Conversion.ExtractAudio(inputPath, outputPath, audioCodec, bitrate, sampleRate, cancellationToken);
         }
 
+        public Task<IConversion> ExtractAudio(
+            MediaSource input,
+            MediaDestination output,
+            AudioCodec audioCodec = AudioCodec.mp3,
+            long? bitrate = null,
+            int? sampleRate = null,
+            CancellationToken cancellationToken = default)
+        {
+            return PrepareSingleInputOutputAsync(
+                input,
+                output,
+                (inputPath, outputPath, ct) => ExtractAudio(inputPath, outputPath, audioCodec, bitrate, sampleRate, ct),
+                cancellationToken);
+        }
+
         /// <summary>
         ///     Быстро сохраняет первую аудиодорожку входа в WAV (PCM s16le). Глобальные лимиты выхода не применяются.
         /// </summary>
@@ -334,6 +691,15 @@ namespace Xabe.FFmpeg
             return Conversion.ConvertToWavFastAsync(inputPath, outputPath, sampleRate, channels, cancellationToken);
         }
 
+        public Task<IConversion> ConvertToWav(MediaSource input, MediaDestination output, int sampleRate = 16000, int channels = 1, CancellationToken cancellationToken = default)
+        {
+            return PrepareSingleInputOutputAsync(
+                input,
+                output,
+                (inputPath, outputPath, ct) => ConvertToWav(inputPath, outputPath, sampleRate, channels, ct),
+                cancellationToken);
+        }
+
         /// <summary>
         ///     Normalizes audio for speech-to-text transcription.
         ///     By default, exports the first audio stream as mono WAV PCM s16le at 16 kHz.
@@ -345,6 +711,11 @@ namespace Xabe.FFmpeg
         public Task<IConversion> NormalizeAudioForTranscription(string inputPath, string outputPath, CancellationToken cancellationToken = default)
         {
             return Conversion.NormalizeAudioForTranscription(inputPath, outputPath, null, cancellationToken);
+        }
+
+        public Task<IConversion> NormalizeAudioForTranscription(MediaSource input, MediaDestination output, CancellationToken cancellationToken = default)
+        {
+            return PrepareSingleInputOutputAsync(input, output, NormalizeAudioForTranscription, cancellationToken);
         }
 
         /// <summary>
@@ -364,6 +735,19 @@ namespace Xabe.FFmpeg
             return Conversion.NormalizeAudioForTranscription(inputPath, outputPath, settings, cancellationToken);
         }
 
+        public Task<IConversion> NormalizeAudioForTranscription(
+            MediaSource input,
+            MediaDestination output,
+            TranscriptionAudioSettings settings,
+            CancellationToken cancellationToken = default)
+        {
+            return PrepareSingleInputOutputAsync(
+                input,
+                output,
+                (inputPath, outputPath, ct) => NormalizeAudioForTranscription(inputPath, outputPath, settings, ct),
+                cancellationToken);
+        }
+
         /// <summary>
         ///     Добавляет аудиопоток к видеофайлу
         /// </summary>
@@ -374,6 +758,11 @@ namespace Xabe.FFmpeg
         public async Task<IConversion> AddAudio(string videoPath, string audioPath, string outputPath, CancellationToken cancellationToken = default)
         {
             return await Conversion.AddAudio(videoPath, audioPath, outputPath, cancellationToken);
+        }
+
+        public Task<IConversion> AddAudio(MediaSource video, MediaSource audio, MediaDestination output, CancellationToken cancellationToken = default)
+        {
+            return PrepareDoubleInputOutputAsync(video, audio, output, AddAudio, cancellationToken);
         }
 
         /// <summary>
@@ -399,6 +788,18 @@ namespace Xabe.FFmpeg
             return await Conversion.SplitAudioByTimecodesAsync(inputPath, outputDirectory, timecodes, audioCodec, bitrate, sampleRate, cancellationToken);
         }
 
+        public Task<IReadOnlyList<IConversion>> SplitAudioByTimecodes(
+            MediaSource input,
+            MediaDirectoryDestination outputDirectory,
+            IEnumerable<TimeSpan> timecodes,
+            AudioCodec audioCodec = AudioCodec.mp3,
+            long bitrate = 192000,
+            int sampleRate = 44100,
+            CancellationToken cancellationToken = default)
+        {
+            return PrepareSplitAudioOutputsAsync(input, outputDirectory, timecodes, audioCodec, bitrate, sampleRate, cancellationToken);
+        }
+
         /// <summary>
         ///     Конвертирует файл в MP4
         /// </summary>
@@ -408,6 +809,11 @@ namespace Xabe.FFmpeg
         public async Task<IConversion> ToMp4(string inputPath, string outputPath, CancellationToken cancellationToken = default)
         {
             return await Conversion.ToMp4(inputPath, outputPath, cancellationToken);
+        }
+
+        public Task<IConversion> ToMp4(MediaSource input, MediaDestination output, CancellationToken cancellationToken = default)
+        {
+            return PrepareSingleInputOutputAsync(input, output, ToMp4, cancellationToken);
         }
 
         /// <summary>
@@ -421,6 +827,11 @@ namespace Xabe.FFmpeg
             return await Conversion.ToTs(inputPath, outputPath, cancellationToken);
         }
 
+        public Task<IConversion> ToTs(MediaSource input, MediaDestination output, CancellationToken cancellationToken = default)
+        {
+            return PrepareSingleInputOutputAsync(input, output, ToTs, cancellationToken);
+        }
+
         /// <summary>
         ///     Конвертирует файл в OGV
         /// </summary>
@@ -432,6 +843,11 @@ namespace Xabe.FFmpeg
             return await Conversion.ToOgv(inputPath, outputPath, cancellationToken);
         }
 
+        public Task<IConversion> ToOgv(MediaSource input, MediaDestination output, CancellationToken cancellationToken = default)
+        {
+            return PrepareSingleInputOutputAsync(input, output, ToOgv, cancellationToken);
+        }
+
         /// <summary>
         ///     Конвертирует файл в WebM
         /// </summary>
@@ -441,6 +857,11 @@ namespace Xabe.FFmpeg
         public async Task<IConversion> ToWebM(string inputPath, string outputPath, CancellationToken cancellationToken = default)
         {
             return await Conversion.ToWebM(inputPath, outputPath, cancellationToken);
+        }
+
+        public Task<IConversion> ToWebM(MediaSource input, MediaDestination output, CancellationToken cancellationToken = default)
+        {
+            return PrepareSingleInputOutputAsync(input, output, ToWebM, cancellationToken);
         }
 
         /// <summary>
@@ -455,6 +876,15 @@ namespace Xabe.FFmpeg
             return await Conversion.RemuxToWebM(inputPath, outputPath, keepSubtitles, cancellationToken);
         }
 
+        public Task<IConversion> RemuxToWebM(MediaSource input, MediaDestination output, bool keepSubtitles = false, CancellationToken cancellationToken = default)
+        {
+            return PrepareSingleInputOutputAsync(
+                input,
+                output,
+                (inputPath, outputPath, ct) => RemuxToWebM(inputPath, outputPath, keepSubtitles, ct),
+                cancellationToken);
+        }
+
         /// <summary>
         ///     Конвертирует видеопоток изображений в gif
         /// </summary>
@@ -466,6 +896,15 @@ namespace Xabe.FFmpeg
         public async Task<IConversion> ToGif(string inputPath, string outputPath, int loop, int delay = 0, CancellationToken cancellationToken = default)
         {
             return await Conversion.ToGif(inputPath, outputPath, loop, delay, cancellationToken);
+        }
+
+        public Task<IConversion> ToGif(MediaSource input, MediaDestination output, int loop, int delay = 0, CancellationToken cancellationToken = default)
+        {
+            return PrepareSingleInputOutputAsync(
+                input,
+                output,
+                (inputPath, outputPath, ct) => ToGif(inputPath, outputPath, loop, delay, ct),
+                cancellationToken);
         }
 
         /// <summary>
@@ -483,6 +922,15 @@ namespace Xabe.FFmpeg
             return await Conversion.ConvertWithHardwareAsync(inputFilePath, outputFilePath, hardwareAccelerator, decoder, encoder, device, cancellationToken);
         }
 
+        public Task<IConversion> ConvertWithHardware(MediaSource input, MediaDestination output, HardwareAccelerator hardwareAccelerator, VideoCodec decoder, VideoCodec encoder, int device = 0, CancellationToken cancellationToken = default)
+        {
+            return PrepareSingleInputOutputAsync(
+                input,
+                output,
+                (inputPath, outputPath, ct) => ConvertWithHardware(inputPath, outputPath, hardwareAccelerator, decoder, encoder, device, ct),
+                cancellationToken);
+        }
+
         /// <summary>
         ///     Добавляет субтитры к видеопотоку
         /// </summary>
@@ -493,6 +941,16 @@ namespace Xabe.FFmpeg
         public async Task<IConversion> BurnSubtitle(string inputPath, string outputPath, string subtitlesPath, CancellationToken cancellationToken = default)
         {
             return await Conversion.AddSubtitlesAsync(inputPath, outputPath, subtitlesPath, cancellationToken);
+        }
+
+        public Task<IConversion> BurnSubtitle(MediaSource input, MediaDestination output, MediaSource subtitles, CancellationToken cancellationToken = default)
+        {
+            return PrepareDoubleInputOutputAsync(
+                input,
+                subtitles,
+                output,
+                (inputPath, subtitlePath, outputPath, ct) => BurnSubtitle(inputPath, outputPath, subtitlePath, ct),
+                cancellationToken);
         }
 
         /// <summary>
@@ -507,6 +965,16 @@ namespace Xabe.FFmpeg
         public async Task<IConversion> AddSubtitle(string inputPath, string outputPath, string subtitlePath, string language = null, CancellationToken cancellationToken = default)
         {
             return await Conversion.AddSubtitleAsync(inputPath, outputPath, subtitlePath, language, cancellationToken);
+        }
+
+        public Task<IConversion> AddSubtitle(MediaSource input, MediaDestination output, MediaSource subtitle, string language = null, CancellationToken cancellationToken = default)
+        {
+            return PrepareDoubleInputOutputAsync(
+                input,
+                subtitle,
+                output,
+                (inputPath, subtitlePath, outputPath, ct) => AddSubtitle(inputPath, outputPath, subtitlePath, language, ct),
+                cancellationToken);
         }
 
         /// <summary>
@@ -524,6 +992,16 @@ namespace Xabe.FFmpeg
             return await Conversion.AddSubtitleAsync(inputPath, outputPath, subtitlePath, subtitleCodec, language, cancellationToken);
         }
 
+        public Task<IConversion> AddSubtitle(MediaSource input, MediaDestination output, MediaSource subtitle, SubtitleCodec subtitleCodec, string language = null, CancellationToken cancellationToken = default)
+        {
+            return PrepareDoubleInputOutputAsync(
+                input,
+                subtitle,
+                output,
+                (inputPath, subtitlePath, outputPath, ct) => AddSubtitle(inputPath, outputPath, subtitlePath, subtitleCodec, language, ct),
+                cancellationToken);
+        }
+
         /// <summary>
         ///     Встраивает водяной знак в видео
         /// </summary>
@@ -535,6 +1013,16 @@ namespace Xabe.FFmpeg
         public async Task<IConversion> SetWatermark(string inputPath, string outputPath, string inputImage, Position position, CancellationToken cancellationToken = default)
         {
             return await Conversion.SetWatermarkAsync(inputPath, outputPath, inputImage, position, cancellationToken);
+        }
+
+        public Task<IConversion> SetWatermark(MediaSource input, MediaDestination output, MediaSource watermarkImage, Position position, CancellationToken cancellationToken = default)
+        {
+            return PrepareDoubleInputOutputAsync(
+                input,
+                watermarkImage,
+                output,
+                (inputPath, imagePath, outputPath, ct) => SetWatermark(inputPath, outputPath, imagePath, position, ct),
+                cancellationToken);
         }
 
         /// <summary>
@@ -563,6 +1051,25 @@ namespace Xabe.FFmpeg
             CancellationToken cancellationToken = default)
         {
             return await Conversion.BurnRightSideTextLabelAsync(inputPath, outputPath, text, fontColor, fontSize, marginRight, marginY, verticalAlign, fontFilePath, cancellationToken);
+        }
+
+        public Task<IConversion> BurnRightSideTextLabel(
+            MediaSource input,
+            MediaDestination output,
+            string text,
+            string fontColor = "white",
+            int fontSize = 24,
+            int marginRight = 20,
+            int marginY = 16,
+            DrawTextVerticalAlign verticalAlign = DrawTextVerticalAlign.Center,
+            string fontFilePath = null,
+            CancellationToken cancellationToken = default)
+        {
+            return PrepareSingleInputOutputAsync(
+                input,
+                output,
+                (inputPath, outputPath, ct) => BurnRightSideTextLabel(inputPath, outputPath, text, fontColor, fontSize, marginRight, marginY, verticalAlign, fontFilePath, ct),
+                cancellationToken);
         }
 
         /// <summary>
@@ -598,6 +1105,27 @@ namespace Xabe.FFmpeg
             return await Conversion.BurnRightSidePtsTimeLabelAsync(inputPath, outputPath, prefix, suffix, useLocalWallClock, fontColor, fontSize, marginRight, marginY, verticalAlign, fontFilePath, cancellationToken);
         }
 
+        public Task<IConversion> BurnRightSidePtsTimeLabel(
+            MediaSource input,
+            MediaDestination output,
+            string prefix = null,
+            string suffix = null,
+            bool useLocalWallClock = false,
+            string fontColor = "white",
+            int fontSize = 24,
+            int marginRight = 20,
+            int marginY = 16,
+            DrawTextVerticalAlign verticalAlign = DrawTextVerticalAlign.Center,
+            string fontFilePath = null,
+            CancellationToken cancellationToken = default)
+        {
+            return PrepareSingleInputOutputAsync(
+                input,
+                output,
+                (inputPath, outputPath, ct) => BurnRightSidePtsTimeLabel(inputPath, outputPath, prefix, suffix, useLocalWallClock, fontColor, fontSize, marginRight, marginY, verticalAlign, fontFilePath, ct),
+                cancellationToken);
+        }
+
         /// <summary>
         ///     Вшивает у правого края таймкод в стиле SMPTE (drawtext timecode/rate): поля ЧЧ:ММ:СС:кадр с заданным fps.
         /// </summary>
@@ -628,6 +1156,26 @@ namespace Xabe.FFmpeg
             return await Conversion.BurnRightSideSmpteTimecodeAsync(inputPath, outputPath, startTimecode, frameRate, fontColor, fontSize, marginRight, marginY, verticalAlign, fontFilePath, cancellationToken);
         }
 
+        public Task<IConversion> BurnRightSideSmpteTimecode(
+            MediaSource input,
+            MediaDestination output,
+            string startTimecode = "00:00:00:00",
+            double frameRate = 25,
+            string fontColor = "white",
+            int fontSize = 24,
+            int marginRight = 20,
+            int marginY = 16,
+            DrawTextVerticalAlign verticalAlign = DrawTextVerticalAlign.Center,
+            string fontFilePath = null,
+            CancellationToken cancellationToken = default)
+        {
+            return PrepareSingleInputOutputAsync(
+                input,
+                output,
+                (inputPath, outputPath, ct) => BurnRightSideSmpteTimecode(inputPath, outputPath, startTimecode, frameRate, fontColor, fontSize, marginRight, marginY, verticalAlign, fontFilePath, ct),
+                cancellationToken);
+        }
+
         /// <summary>
         ///     Извлекает видео из файла
         /// </summary>
@@ -637,6 +1185,11 @@ namespace Xabe.FFmpeg
         public async Task<IConversion> ExtractVideo(string inputPath, string outputPath, CancellationToken cancellationToken = default)
         {
             return await Conversion.ExtractVideoAsync(inputPath, outputPath, cancellationToken);
+        }
+
+        public Task<IConversion> ExtractVideo(MediaSource input, MediaDestination output, CancellationToken cancellationToken = default)
+        {
+            return PrepareSingleInputOutputAsync(input, output, ExtractVideo, cancellationToken);
         }
 
         /// <summary>
@@ -649,6 +1202,15 @@ namespace Xabe.FFmpeg
         public async Task<IConversion> Snapshot(string inputPath, string outputPath, TimeSpan captureTime, CancellationToken cancellationToken = default)
         {
             return await Conversion.SnapshotAsync(inputPath, outputPath, captureTime, cancellationToken);
+        }
+
+        public Task<IConversion> Snapshot(MediaSource input, MediaDestination output, TimeSpan captureTime, CancellationToken cancellationToken = default)
+        {
+            return PrepareSingleInputOutputAsync(
+                input,
+                output,
+                (inputPath, outputPath, ct) => Snapshot(inputPath, outputPath, captureTime, ct),
+                cancellationToken);
         }
 
         /// <summary>
@@ -664,6 +1226,15 @@ namespace Xabe.FFmpeg
             return await Conversion.ChangeSizeAsync(inputPath, outputPath, width, height, cancellationToken);
         }
 
+        public Task<IConversion> ChangeSize(MediaSource input, MediaDestination output, int width, int height, CancellationToken cancellationToken = default)
+        {
+            return PrepareSingleInputOutputAsync(
+                input,
+                output,
+                (inputPath, outputPath, ct) => ChangeSize(inputPath, outputPath, width, height, ct),
+                cancellationToken);
+        }
+
         /// <summary>
         ///     Изменяет размер видео.
         /// </summary>
@@ -674,6 +1245,15 @@ namespace Xabe.FFmpeg
         public async Task<IConversion> ChangeSize(string inputPath, string outputPath, VideoSize size, CancellationToken cancellationToken = default)
         {
             return await Conversion.ChangeSizeAsync(inputPath, outputPath, size, cancellationToken);
+        }
+
+        public Task<IConversion> ChangeSize(MediaSource input, MediaDestination output, VideoSize size, CancellationToken cancellationToken = default)
+        {
+            return PrepareSingleInputOutputAsync(
+                input,
+                output,
+                (inputPath, outputPath, ct) => ChangeSize(inputPath, outputPath, size, ct),
+                cancellationToken);
         }
 
         /// <summary>
@@ -689,6 +1269,15 @@ namespace Xabe.FFmpeg
             return await Conversion.SplitAsync(inputPath, outputPath, startTime, duration, cancellationToken);
         }
 
+        public Task<IConversion> Split(MediaSource input, MediaDestination output, TimeSpan startTime, TimeSpan duration, CancellationToken cancellationToken = default)
+        {
+            return PrepareSingleInputOutputAsync(
+                input,
+                output,
+                (inputPath, outputPath, ct) => Split(inputPath, outputPath, startTime, duration, ct),
+                cancellationToken);
+        }
+
         /// <summary>
         /// Сохраняет поток M3U8
         /// </summary>
@@ -701,6 +1290,16 @@ namespace Xabe.FFmpeg
             return await Conversion.SaveM3U8StreamAsync(uri, outputPath, duration, cancellationToken);
         }
 
+        public Task<IConversion> SaveM3U8Stream(Uri uri, MediaDirectoryDestination outputDirectory, string playlistFileName = "stream.m3u8", TimeSpan? duration = null, CancellationToken cancellationToken = default)
+        {
+            var fileName = string.IsNullOrWhiteSpace(playlistFileName) ? "stream.m3u8" : playlistFileName;
+            return PrepareDirectoryOutputAsync(
+                (outputPath, ct) => SaveM3U8Stream(uri, outputPath, duration, ct),
+                outputDirectory,
+                fileName,
+                cancellationToken);
+        }
+
         /// <summary>
         ///     Сохраняет только аудиодорожку потока в файл (поддерживается HLS/RTSP/HTTP).
         /// </summary>
@@ -711,6 +1310,15 @@ namespace Xabe.FFmpeg
         public async Task<IConversion> SaveAudioStream(string inputPath, string outputPath, Format? outputFormat = null, CancellationToken cancellationToken = default)
         {
             return await Conversion.SaveAudioStreamAsync(inputPath, outputPath, outputFormat, cancellationToken);
+        }
+
+        public Task<IConversion> SaveAudioStream(MediaSource input, MediaDestination output, Format? outputFormat = null, CancellationToken cancellationToken = default)
+        {
+            return PrepareSingleInputOutputAsync(
+                input,
+                output,
+                (inputPath, outputPath, ct) => SaveAudioStream(inputPath, outputPath, outputFormat, ct),
+                cancellationToken);
         }
 
         /// <summary>
@@ -733,6 +1341,15 @@ namespace Xabe.FFmpeg
         public async Task<IConversion> RemuxStream(string inputPath, string outputPath, bool keepSubtitles = false, Format? outputFormat = null, CancellationToken cancellationToken = default)
         {
             return await Conversion.RemuxStreamAsync(inputPath, outputPath, outputFormat, keepSubtitles, cancellationToken);
+        }
+
+        public Task<IConversion> RemuxStream(MediaSource input, MediaDestination output, bool keepSubtitles = false, Format? outputFormat = null, CancellationToken cancellationToken = default)
+        {
+            return PrepareSingleInputOutputAsync(
+                input,
+                output,
+                (inputPath, outputPath, ct) => RemuxStream(inputPath, outputPath, keepSubtitles, outputFormat, ct),
+                cancellationToken);
         }
 
         /// <summary>
@@ -761,12 +1378,26 @@ namespace Xabe.FFmpeg
             return Conversion.StreamFromStdin(inputStream, outputPath, outputFormat);
         }
 
+        public IConversion StreamFromStdin(Stream inputStream, MediaDestination output, Format? outputFormat = null)
+        {
+            var preparedOutput = MediaIoBridge.PrepareOutput(output);
+            var conversion = Conversion.StreamFromStdin(inputStream, preparedOutput.Path, outputFormat);
+            return AttachManagedMediaIo(conversion, preparedOutput.FinalizeAsync, preparedOutput.CleanupAsync);
+        }
+
         /// <summary>
         ///     Сохраняет только аудиодорожку из stdin за счёт подстановки map 0:a.
         /// </summary>
         public IConversion StreamAudioFromStdin(Stream inputStream, string outputPath, Format? outputFormat = null)
         {
             return Conversion.StreamAudioFromStdin(inputStream, outputPath, outputFormat);
+        }
+
+        public IConversion StreamAudioFromStdin(Stream inputStream, MediaDestination output, Format? outputFormat = null)
+        {
+            var preparedOutput = MediaIoBridge.PrepareOutput(output);
+            var conversion = Conversion.StreamAudioFromStdin(inputStream, preparedOutput.Path, outputFormat);
+            return AttachManagedMediaIo(conversion, preparedOutput.FinalizeAsync, preparedOutput.CleanupAsync);
         }
 
         /// <summary>
@@ -780,9 +1411,19 @@ namespace Xabe.FFmpeg
             return Concatenate(output, default, inputVideos);
         }
 
+        public Task<IConversion> Concatenate(MediaDestination output, params MediaSource[] inputVideos)
+        {
+            return Concatenate(output, default, inputVideos);
+        }
+
         public async Task<IConversion> Concatenate(string output, CancellationToken cancellationToken, params string[] inputVideos)
         {
             return await Conversion.Concatenate(output, cancellationToken, inputVideos);
+        }
+
+        public Task<IConversion> Concatenate(MediaDestination output, CancellationToken cancellationToken, params MediaSource[] inputVideos)
+        {
+            return PrepareManyInputsOutputAsync(inputVideos, output, Conversion.Concatenate, cancellationToken);
         }
 
         /// <summary>
@@ -795,6 +1436,15 @@ namespace Xabe.FFmpeg
         public async Task<IConversion> Convert(string inputFilePath, string outputFilePath, bool keepSubtitles = false, CancellationToken cancellationToken = default)
         {
             return await Conversion.ConvertAsync(inputFilePath, outputFilePath, keepSubtitles, cancellationToken);
+        }
+
+        public Task<IConversion> Convert(MediaSource input, MediaDestination output, bool keepSubtitles = false, CancellationToken cancellationToken = default)
+        {
+            return PrepareSingleInputOutputAsync(
+                input,
+                output,
+                (inputPath, outputPath, ct) => Convert(inputPath, outputPath, keepSubtitles, ct),
+                cancellationToken);
         }
 
         /// <summary>
@@ -812,8 +1462,17 @@ namespace Xabe.FFmpeg
             return await Conversion.TranscodeAsync(inputFilePath, outputFilePath, videoCodec, audioCodec, subtitleCodec, keepSubtitles, cancellationToken);
         }
 
+        public Task<IConversion> Transcode(MediaSource input, MediaDestination output, VideoCodec videoCodec, AudioCodec audioCodec, SubtitleCodec subtitleCodec, bool keepSubtitles = false, CancellationToken cancellationToken = default)
+        {
+            return PrepareSingleInputOutputAsync(
+                input,
+                output,
+                (inputPath, outputPath, ct) => Transcode(inputPath, outputPath, videoCodec, audioCodec, subtitleCodec, keepSubtitles, ct),
+                cancellationToken);
+        }
+
         /// <summary>
-        ///     Транскодирует файл с кодеками по умолчанию (<see cref="FFmpeg.DefaultTranscodeVideoCodec"/>, <see cref="FFmpeg.DefaultTranscodeAudioCodec"/>, mov_text для субтитров).
+        ///     Транскодирует файл с кодеками по умолчанию (<see cref="MediaOrchestrator.DefaultTranscodeVideoCodec"/>, <see cref="MediaOrchestrator.DefaultTranscodeAudioCodec"/>, mov_text для субтитров).
         /// </summary>
         /// <param name="inputFilePath">Путь к входному файлу.</param>
         /// <param name="outputFilePath">Путь к выходному файлу.</param>
@@ -821,7 +1480,16 @@ namespace Xabe.FFmpeg
         /// <returns>Объект IConversion.</returns>
         public async Task<IConversion> Transcode(string inputFilePath, string outputFilePath, bool keepSubtitles = false, CancellationToken cancellationToken = default)
         {
-            return await Conversion.TranscodeAsync(inputFilePath, outputFilePath, FFmpeg.DefaultTranscodeVideoCodec, FFmpeg.DefaultTranscodeAudioCodec, SubtitleCodec.mov_text, keepSubtitles, cancellationToken);
+            return await Conversion.TranscodeAsync(inputFilePath, outputFilePath, MediaOrchestrator.DefaultTranscodeVideoCodec, MediaOrchestrator.DefaultTranscodeAudioCodec, SubtitleCodec.mov_text, keepSubtitles, cancellationToken);
+        }
+
+        public Task<IConversion> Transcode(MediaSource input, MediaDestination output, bool keepSubtitles = false, CancellationToken cancellationToken = default)
+        {
+            return PrepareSingleInputOutputAsync(
+                input,
+                output,
+                (inputPath, outputPath, ct) => Transcode(inputPath, outputPath, keepSubtitles, ct),
+                cancellationToken);
         }
 
         /// <summary>
@@ -845,6 +1513,20 @@ namespace Xabe.FFmpeg
             return await Conversion.VisualiseAudio(inputPath, outputPath, size, pixelFormat, mode, amplitudeScale, frequencyScale, cancellationToken);
         }
 
+        public Task<IConversion> VisualiseAudio(MediaSource input, MediaDestination output, VideoSize size,
+            PixelFormat pixelFormat = PixelFormat.yuv420p,
+            VisualisationMode mode = VisualisationMode.bar,
+            AmplitudeScale amplitudeScale = AmplitudeScale.lin,
+            FrequencyScale frequencyScale = FrequencyScale.log,
+            CancellationToken cancellationToken = default)
+        {
+            return PrepareSingleInputOutputAsync(
+                input,
+                output,
+                (inputPath, outputPath, ct) => VisualiseAudio(inputPath, outputPath, size, pixelFormat, mode, amplitudeScale, frequencyScale, ct),
+                cancellationToken);
+        }
+
         /// <summary>
         ///     Зацикливает файл бесконечно в потоки RTSP с некоторыми параметрами по умолчанию, такими как: -re, -preset ultrafast
         /// </summary>
@@ -854,6 +1536,21 @@ namespace Xabe.FFmpeg
         public async Task<IConversion> SendToRtspServer(string inputFilePath, Uri rtspServerUri, CancellationToken cancellationToken = default)
         {
             return await Conversion.SendToRtspServer(inputFilePath, rtspServerUri, cancellationToken);
+        }
+
+        public async Task<IConversion> SendToRtspServer(MediaSource input, Uri rtspServerUri, CancellationToken cancellationToken = default)
+        {
+            var preparedInput = await MediaIoBridge.PrepareInputAsync(input, cancellationToken).ConfigureAwait(false);
+            try
+            {
+                var conversion = await SendToRtspServer(preparedInput.Path, rtspServerUri, cancellationToken).ConfigureAwait(false);
+                return AttachManagedMediaIo(conversion, _ => Task.CompletedTask, preparedInput.CleanupAsync);
+            }
+            catch
+            {
+                await preparedInput.CleanupAsync().ConfigureAwait(false);
+                throw;
+            }
         }
 
         /// <summary>

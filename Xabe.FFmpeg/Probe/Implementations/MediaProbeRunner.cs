@@ -7,15 +7,15 @@ using System.Text.Json.Serialization;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace Xabe.FFmpeg
+namespace MediaOrchestrator
 {
     /// <summary>
     ///     Get information about media file
     /// </summary>
     // ReSharper disable once InheritdocConsiderUsage
-    internal sealed class FFprobeWrapper : FFmpeg
+    internal sealed class MediaProbeRunner : MediaOrchestrator
     {
-        internal static Func<FFprobeWrapper, string, CancellationToken, Task<string>> ProbeCommandExecutor { get; set; } =
+        internal static Func<MediaProbeRunner, string, CancellationToken, Task<string>> ProbeCommandExecutor { get; set; } =
             (wrapper, args, cancellationToken) => wrapper.RunProbeProcessAsync(args, cancellationToken);
 
         private readonly JsonSerializerOptions _defaultSerializerOptions = new JsonSerializerOptions

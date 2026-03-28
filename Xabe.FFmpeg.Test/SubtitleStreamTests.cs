@@ -1,6 +1,6 @@
 using Xunit;
 
-namespace Xabe.FFmpeg.Test
+namespace MediaOrchestrator.Test
 {
     public class SubtitleStreamTests
     {

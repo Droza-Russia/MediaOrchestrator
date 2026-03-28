@@ -4,18 +4,20 @@ using System.Threading;
 using System.Threading.Tasks;
 using Xunit;
 
-namespace Xabe.FFmpeg.Test
+namespace MediaOrchestrator.Test
 {
     public class MediaInfoCacheTests : IDisposable
     {
-        private readonly Func<FFprobeWrapper, string, CancellationToken, Task<string>> _originalProbeExecutor = FFprobeWrapper.ProbeCommandExecutor;
+        private readonly Func<MediaProbeRunner, string, CancellationToken, Task<string>> _originalProbeExecutor = MediaProbeRunner.ProbeCommandExecutor;
 
         public void Dispose()
         {
-            FFprobeWrapper.ProbeCommandExecutor = _originalProbeExecutor;
-            FFmpeg.ClearMediaInfoCache();
-            FFmpeg.MediaInfoCacheEnabled = true;
-            FFmpeg.SetExecutablesPath(null);
+            MediaProbeRunner.ProbeCommandExecutor = _originalProbeExecutor;
+            MediaOrchestrator.ClearMediaInfoCache();
+            MediaOrchestrator.ClearMediaAnalysisStore();
+            MediaOrchestrator.MediaInfoCacheEnabled = true;
+            MediaOrchestrator.SetExecutablesPath(null);
+            MediaOrchestrator.MediaAnalysisLearningEnabled = true;
         }
 
         [Fact]
@@ -26,10 +28,10 @@ namespace Xabe.FFmpeg.Test
             File.WriteAllBytes(inputPath, CreateIsoBmffHeader());
             CreateFakeExecutable(tempDir, "ffmpeg");
             CreateFakeExecutable(tempDir, "ffprobe");
-            FFmpeg.SetExecutablesPath(tempDir);
+            MediaOrchestrator.SetExecutablesPath(tempDir);
 
             var invocationCount = 0;
-            FFprobeWrapper.ProbeCommandExecutor = (_, _, _) =>
+            MediaProbeRunner.ProbeCommandExecutor = (_, _, _) =>
             {
                 Interlocked.Increment(ref invocationCount);
                 return Task.FromResult(
@@ -71,7 +73,7 @@ namespace Xabe.FFmpeg.Test
                     "}");
             };
 
-            var mediaInfo = await FFmpeg.GetMediaInfo(inputPath).ConfigureAwait(false);
+            var mediaInfo = await MediaOrchestrator.GetMediaInfo(inputPath).ConfigureAwait(false);
 
             Assert.Equal(1, invocationCount);
             Assert.Single(mediaInfo.VideoStreams);
@@ -87,10 +89,10 @@ namespace Xabe.FFmpeg.Test
             File.WriteAllBytes(inputPath, CreateIsoBmffHeader());
             CreateFakeExecutable(tempDir, "ffmpeg");
             CreateFakeExecutable(tempDir, "ffprobe");
-            FFmpeg.SetExecutablesPath(tempDir);
+            MediaOrchestrator.SetExecutablesPath(tempDir);
 
             var invocationCount = 0;
-            FFprobeWrapper.ProbeCommandExecutor = (_, _, _) =>
+            MediaProbeRunner.ProbeCommandExecutor = (_, _, _) =>
             {
                 Interlocked.Increment(ref invocationCount);
                 return Task.FromResult(
@@ -118,12 +120,61 @@ namespace Xabe.FFmpeg.Test
                     "}");
             };
 
-            var first = await FFmpeg.GetMediaInfo(inputPath).ConfigureAwait(false);
-            var second = await FFmpeg.GetMediaInfo(inputPath).ConfigureAwait(false);
+            var first = await MediaOrchestrator.GetMediaInfo(inputPath).ConfigureAwait(false);
+            var second = await MediaOrchestrator.GetMediaInfo(inputPath).ConfigureAwait(false);
 
             Assert.Equal(1, invocationCount);
             Assert.NotSame(first, second);
             Assert.Equal(first.Duration, second.Duration);
+        }
+
+        [Fact]
+        public async Task GetMediaInfo_OnConcurrentCalls_UsesSingleFfprobeInvocation()
+        {
+            var tempDir = CreateTempDirectory();
+            var inputPath = Path.Combine(tempDir, "sample.mp4");
+            File.WriteAllBytes(inputPath, CreateIsoBmffHeader());
+            CreateFakeExecutable(tempDir, "ffmpeg");
+            CreateFakeExecutable(tempDir, "ffprobe");
+            MediaOrchestrator.SetExecutablesPath(tempDir);
+
+            var invocationCount = 0;
+            MediaProbeRunner.ProbeCommandExecutor = async (_, _, _) =>
+            {
+                Interlocked.Increment(ref invocationCount);
+                await Task.Delay(100).ConfigureAwait(false);
+                return "{\n" +
+                       "  \"streams\": [\n" +
+                       "    {\n" +
+                       "      \"codec_name\": \"h264\",\n" +
+                       "      \"width\": 1280,\n" +
+                       "      \"height\": 720,\n" +
+                       "      \"codec_type\": \"video\",\n" +
+                       "      \"r_frame_rate\": \"30/1\",\n" +
+                       "      \"duration\": 1.0,\n" +
+                       "      \"bit_rate\": 800000,\n" +
+                       "      \"index\": 0,\n" +
+                       "      \"pix_fmt\": \"yuv420p\",\n" +
+                       "      \"disposition\": { \"default\": 1, \"forced\": 0 }\n" +
+                       "    }\n" +
+                       "  ],\n" +
+                       "  \"format\": {\n" +
+                       "    \"format_name\": \"mov,mp4,m4a,3gp,3g2,mj2\",\n" +
+                       "    \"size\": \"2048\",\n" +
+                       "    \"duration\": 1.0,\n" +
+                       "    \"bit_rate\": 800000\n" +
+                       "  }\n" +
+                       "}";
+            };
+
+            var results = await Task.WhenAll(
+                MediaOrchestrator.GetMediaInfo(inputPath),
+                MediaOrchestrator.GetMediaInfo(inputPath),
+                MediaOrchestrator.GetMediaInfo(inputPath)).ConfigureAwait(false);
+
+            Assert.Equal(1, invocationCount);
+            Assert.Equal(3, results.Length);
+            Assert.All(results, result => Assert.Single(result.VideoStreams));
         }
 
         private static string CreateTempDirectory()

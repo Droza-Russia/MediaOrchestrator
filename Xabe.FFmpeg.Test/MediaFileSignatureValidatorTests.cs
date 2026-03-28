@@ -2,10 +2,10 @@ using System;
 using System.IO;
 using System.Runtime.InteropServices;
 using System.Threading.Tasks;
-using Xabe.FFmpeg.Exceptions;
+using MediaOrchestrator.Exceptions;
 using Xunit;
 
-namespace Xabe.FFmpeg.Test
+namespace MediaOrchestrator.Test
 {
     public class MediaFileSignatureValidatorTests
     {

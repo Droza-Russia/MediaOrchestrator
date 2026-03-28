@@ -1,4 +1,4 @@
-namespace Xabe.FFmpeg
+namespace MediaOrchestrator
 {
     /// <summary>
     ///     Запись об устройстве захвата (камера, микрофон), распознанном через <c>ffmpeg -list_devices</c>.

@@ -2,7 +2,7 @@ using System;
 using System.Globalization;
 using System.Text;
 
-namespace Xabe.FFmpeg
+namespace MediaOrchestrator
 {
     internal static class FFmpegVideoFilterExpressions
     {

@@ -1,4 +1,4 @@
-namespace Xabe.FFmpeg
+namespace MediaOrchestrator
 {
     internal static class ErrorMessages
     {
@@ -88,13 +88,13 @@ namespace Xabe.FFmpeg
         internal static string StreamCodecNotSupported =>
             Get("Выбранный кодек потока не поддерживается для данной операции или контейнера.", "Selected stream codec is not supported for this operation or container.", "Der ausgewählte Stream-Codec wird für diesen Vorgang oder Container nicht unterstützt.");
         internal static string StreamMappingFailed =>
-            Get("Не удалось сопоставить указанные потоки FFmpeg.", "Failed to map the requested FFmpeg streams.", "Die angeforderten FFmpeg-Streams konnten nicht zugeordnet werden.");
+            Get("Не удалось сопоставить указанные потоки MediaOrchestrator.", "Failed to map the requested MediaOrchestrator streams.", "Die angeforderten MediaOrchestrator-Streams konnten nicht zugeordnet werden.");
         internal static string OutputPathAccessDenied =>
             Get("Не удалось получить доступ к выходному пути {0}. Проверьте права доступа и доступность локальной или сетевой папки.", "Failed to access output path {0}. Check permissions and the availability of the local or network folder.", "Auf den Ausgabepfad {0} konnte nicht zugegriffen werden. Prüfen Sie Berechtigungen und die Verfügbarkeit des lokalen oder Netzwerkordners.");
         internal static string OutputDirectoryIsNotWritable =>
             Get("Выходная директория {0} недоступна для записи. Проверьте права доступа и доступность локальной или сетевой папки.", "Output directory {0} is not writable. Check permissions and the availability of the local or network folder.", "Das Ausgabeverzeichnis {0} ist nicht beschreibbar. Prüfen Sie Berechtigungen und die Verfügbarkeit des lokalen oder Netzwerkordners.");
         internal static string ExecutablesPathAccessDenied =>
-            Get("Нет доступа к каталогу бинарных файлов FFmpeg {0}. Проверьте права доступа и доступность локальной или сетевой папки.", "Access denied to FFmpeg binaries directory {0}. Check permissions and the availability of the local or network folder.", "Zugriff auf das Verzeichnis der FFmpeg-Binärdateien {0} verweigert. Prüfen Sie Berechtigungen und die Verfügbarkeit des lokalen oder Netzwerkordners.");
+            Get("Нет доступа к каталогу бинарных файлов MediaOrchestrator {0}. Проверьте права доступа и доступность локальной или сетевой папки.", "Access denied to MediaOrchestrator binaries directory {0}. Check permissions and the availability of the local or network folder.", "Zugriff auf das Verzeichnis der MediaOrchestrator-Binärdateien {0} verweigert. Prüfen Sie Berechtigungen und die Verfügbarkeit des lokalen oder Netzwerkordners.");
         internal static string TimecodeOutOfRange =>
             Get("Таймкод {0} выходит за пределы длительности медиафайла.", "Timecode {0} is out of media duration range.", "Der Timecode {0} liegt außerhalb der Mediendauer.");
         internal static string SeekCannotExceedDuration =>
@@ -146,9 +146,9 @@ namespace Xabe.FFmpeg
         }
     }
 
-    // Технические паттерны stderr FFmpeg для распознавания ошибок.
-    // Не переводятся, потому что зависят от текста вывода FFmpeg.
-    internal static class FFmpegLogPatterns
+    // Технические паттерны stderr MediaOrchestrator для распознавания ошибок.
+    // Не переводятся, потому что зависят от текста вывода MediaOrchestrator.
+    internal static class MediaToolLogPatterns
     {
         internal const string OutputFileIsEmpty = "Output file is empty";
         internal const string InvalidNalUnitSize = "Invalid NAL unit size";

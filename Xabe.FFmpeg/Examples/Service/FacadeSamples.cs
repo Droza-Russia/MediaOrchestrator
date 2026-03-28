@@ -3,17 +3,17 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using Xabe.FFmpeg;
-using Xabe.FFmpeg.Streams.SubtitleStream;
+using MediaOrchestrator;
+using MediaOrchestrator.Streams.SubtitleStream;
 
-namespace Xabe.FFmpeg.Examples.Service
+namespace MediaOrchestrator.Examples.Service
 {
     public static class FacadeSamplesExample
     {
         public static async Task RunAsync(CancellationToken cancellationToken = default)
         {
             await EnsureBinariesAsync().ConfigureAwait(false);
-            var snippets = FFmpeg.Conversions.FromSnippet;
+            var snippets = MediaOrchestrator.Conversions.FromSnippet;
 
             var inputVideo = "service/input.mp4";
             var extraAudioTrack = "service/background.aac";
@@ -22,14 +22,14 @@ namespace Xabe.FFmpeg.Examples.Service
             var hlsUri = new Uri("https://example.com/live/playlist.m3u8");
             var rtspUri = new Uri("rtsp://127.0.0.1/live/stream");
 
-            var metadata = await FFmpeg.GetMediaInfo(inputVideo, cancellationToken).ConfigureAwait(false);
+            var metadata = await MediaOrchestrator.GetMediaInfo(inputVideo, cancellationToken).ConfigureAwait(false);
             Console.WriteLine($"Input duration: {metadata.Duration}");
 
-            var devices = await FFmpeg.GetAvailableDevices(cancellationToken).ConfigureAwait(false);
+            var devices = await MediaOrchestrator.GetAvailableDevices(cancellationToken).ConfigureAwait(false);
             Console.WriteLine($"Devices: {string.Join(", ", devices.Select(d => d.Name))}");
-            FFmpeg.ClearMediaInfoCache();
+            MediaOrchestrator.ClearMediaInfoCache();
 
-            var manualConversion = FFmpeg.Conversions.New()
+            var manualConversion = MediaOrchestrator.Conversions.New()
                 .AddStream(metadata.Streams.ToArray())
                 .SetOutput("service/manual.webm");
 
@@ -42,7 +42,7 @@ namespace Xabe.FFmpeg.Examples.Service
                     sampleRate: 44100,
                     cancellationToken: cancellationToken)
                 .ConfigureAwait(false);
-            var toWav = await FFmpeg.Conversions.FromSnippet.ConvertToWav(inputVideo, "service/audio.wav", 16000, 1, cancellationToken).ConfigureAwait(false);
+            var toWav = await MediaOrchestrator.Conversions.FromSnippet.ConvertToWav(inputVideo, "service/audio.wav", 16000, 1, cancellationToken).ConfigureAwait(false);
 
             var audioAdded = await snippets.AddAudio(inputVideo, extraAudioTrack, "service/with_audio.mp4", cancellationToken).ConfigureAwait(false);
             var splitAudio = await snippets.SplitAudioByTimecodes(
@@ -112,7 +112,7 @@ namespace Xabe.FFmpeg.Examples.Service
             var remuxString = await snippets.RemuxStream(hlsUri.ToString(), "service/remote.mp4", keepSubtitles: false, outputFormat: Format.mp4, cancellationToken).ConfigureAwait(false);
             var remuxUri = await snippets.RemuxStream(new Uri("https://media.example.com/live"), "service/remote.webm", keepSubtitles: false, outputFormat: Format.webm, cancellationToken).ConfigureAwait(false);
 
-            await FFmpeg.DownloadHostedVideoAsync(
+            await MediaOrchestrator.DownloadHostedVideoAsync(
                     "https://youtu.be/dQw4w9WgXcQ",
                     "service/hosted_download.mp4",
                     new HostedVideoDownloadSettings
@@ -159,12 +159,12 @@ namespace Xabe.FFmpeg.Examples.Service
 
         private static Task EnsureBinariesAsync()
         {
-            if (string.IsNullOrWhiteSpace(FFmpeg.ExecutablesPath))
+            if (string.IsNullOrWhiteSpace(MediaOrchestrator.ExecutablesPath))
             {
-                FFmpeg.SetExecutablesPath("/usr/local/bin", tryDetectHardwareAcceleration: false);
+                MediaOrchestrator.SetExecutablesPath("/usr/local/bin", tryDetectHardwareAcceleration: false);
             }
 
-            FFmpeg.SetLocalizationLanguage(LocalizationLanguage.English);
+            MediaOrchestrator.SetLocalizationLanguage(LocalizationLanguage.English);
             return Task.CompletedTask;
         }
     }

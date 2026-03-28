@@ -1,6 +1,6 @@
-using Xabe.FFmpeg.Streams.SubtitleStream;
+using MediaOrchestrator.Streams.SubtitleStream;
 
-namespace Xabe.FFmpeg
+namespace MediaOrchestrator
 {
     /// <summary>
     ///     Поток субтитров.

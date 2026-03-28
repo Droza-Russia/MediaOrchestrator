@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace Xabe.FFmpeg
+namespace MediaOrchestrator
 {
     /// <summary>
     ///     Информация о медиафайле.

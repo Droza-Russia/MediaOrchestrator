@@ -2,9 +2,9 @@ using System;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using Xabe.FFmpeg.Exceptions;
+using MediaOrchestrator.Exceptions;
 
-namespace Xabe.FFmpeg
+namespace MediaOrchestrator
 {
     public partial class Conversion
     {
@@ -17,12 +17,16 @@ namespace Xabe.FFmpeg
         /// <returns>Conversion result</returns>
         internal static async Task<IConversion> ToMp4(string inputPath, string outputPath, CancellationToken cancellationToken = default)
         {
-            IMediaInfo info = await FFmpeg.GetMediaInfo(inputPath, cancellationToken);
+            IMediaInfo info = await MediaOrchestrator.GetMediaInfo(inputPath, cancellationToken);
+            return ToMp4(info, outputPath);
+        }
 
+        internal static IConversion ToMp4(IMediaInfo info, string outputPath)
+        {
             IStream videoStream = info.VideoStreams.FirstOrDefault()
-                                      ?.SetCodec(FFmpeg.ResolveTranscodeVideoCodecToString(VideoCodec.h264));
+                                      ?.SetCodec(MediaOrchestrator.ResolveTranscodeVideoCodecToString(VideoCodec.h264));
             IStream audioStream = info.AudioStreams.FirstOrDefault()
-                                      ?.SetCodec(FFmpeg.ResolveTranscodeAudioCodecToString(AudioCodec.aac));
+                                      ?.SetCodec(MediaOrchestrator.ResolveTranscodeAudioCodecToString(AudioCodec.aac));
 
             return New()
                 .AddStream(videoStream, audioStream)
@@ -37,7 +41,7 @@ namespace Xabe.FFmpeg
         /// <returns>Conversion result</returns>
         internal static async Task<IConversion> ToTs(string inputPath, string outputPath, CancellationToken cancellationToken = default)
         {
-            IMediaInfo info = await FFmpeg.GetMediaInfo(inputPath, cancellationToken);
+            IMediaInfo info = await MediaOrchestrator.GetMediaInfo(inputPath, cancellationToken);
 
             IStream videoStream = info.VideoStreams.FirstOrDefault()
                                       ?.SetCodec(VideoCodec.mpeg2video);
@@ -57,12 +61,12 @@ namespace Xabe.FFmpeg
         /// <returns>Conversion result</returns>
         internal static async Task<IConversion> ToOgv(string inputPath, string outputPath, CancellationToken cancellationToken = default)
         {
-            IMediaInfo info = await FFmpeg.GetMediaInfo(inputPath, cancellationToken);
+            IMediaInfo info = await MediaOrchestrator.GetMediaInfo(inputPath, cancellationToken);
 
             IStream videoStream = info.VideoStreams.FirstOrDefault()
-                                      ?.SetCodec(FFmpeg.ResolveTranscodeVideoCodecToString(VideoCodec.theora));
+                                      ?.SetCodec(MediaOrchestrator.ResolveTranscodeVideoCodecToString(VideoCodec.theora));
             IStream audioStream = info.AudioStreams.FirstOrDefault()
-                                      ?.SetCodec(FFmpeg.ResolveTranscodeAudioCodecToString(AudioCodec.libvorbis));
+                                      ?.SetCodec(MediaOrchestrator.ResolveTranscodeAudioCodecToString(AudioCodec.libvorbis));
 
             return New()
                 .AddStream(videoStream, audioStream)
@@ -77,12 +81,12 @@ namespace Xabe.FFmpeg
         /// <returns>Conversion result</returns>
         internal static async Task<IConversion> ToWebM(string inputPath, string outputPath, CancellationToken cancellationToken = default)
         {
-            IMediaInfo info = await FFmpeg.GetMediaInfo(inputPath, cancellationToken);
+            IMediaInfo info = await MediaOrchestrator.GetMediaInfo(inputPath, cancellationToken);
 
             IStream videoStream = info.VideoStreams.FirstOrDefault()
-                                      ?.SetCodec(FFmpeg.ResolveTranscodeVideoCodecToString(VideoCodec.vp8));
+                                      ?.SetCodec(MediaOrchestrator.ResolveTranscodeVideoCodecToString(VideoCodec.vp8));
             IStream audioStream = info.AudioStreams.FirstOrDefault()
-                                      ?.SetCodec(FFmpeg.ResolveTranscodeAudioCodecToString(AudioCodec.libvorbis));
+                                      ?.SetCodec(MediaOrchestrator.ResolveTranscodeAudioCodecToString(AudioCodec.libvorbis));
 
             return New()
                 .AddStream(videoStream, audioStream)
@@ -125,7 +129,7 @@ namespace Xabe.FFmpeg
         /// <returns>Conversion result</returns>
         internal static async Task<IConversion> ToGif(string inputPath, string outputPath, int loop, int delay = 0, CancellationToken cancellationToken = default)
         {
-            IMediaInfo info = await FFmpeg.GetMediaInfo(inputPath, cancellationToken);
+            IMediaInfo info = await MediaOrchestrator.GetMediaInfo(inputPath, cancellationToken);
 
             IVideoStream videoStream = info.VideoStreams.FirstOrDefault();
             if (videoStream == null)

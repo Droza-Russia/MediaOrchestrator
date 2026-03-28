@@ -1,4 +1,4 @@
-namespace Xabe.FFmpeg.Exceptions
+namespace MediaOrchestrator.Exceptions
 {
     /// <summary>
     ///     Исключение, выбрасываемое, когда сигнатура входного медиафайла не соответствует заявленному типу.

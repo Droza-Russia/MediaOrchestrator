@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 
-namespace Xabe.FFmpeg
+namespace MediaOrchestrator
 {
     internal sealed class FFmpegFilter
     {

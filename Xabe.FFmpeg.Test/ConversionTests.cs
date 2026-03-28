@@ -1,25 +1,25 @@
 using System;
-using Xabe.FFmpeg.Test.TestSupport;
+using MediaOrchestrator.Test.TestSupport;
 using Xunit;
 
-namespace Xabe.FFmpeg.Test
+namespace MediaOrchestrator.Test
 {
     public class ConversionTests : IDisposable
     {
         public ConversionTests()
         {
-            FFmpeg.SetGlobalOutputLimits();
+            MediaOrchestrator.SetGlobalOutputLimits();
         }
 
         public void Dispose()
         {
-            FFmpeg.SetGlobalOutputLimits();
+            MediaOrchestrator.SetGlobalOutputLimits();
         }
 
         [Fact]
         public void Build_AppliesGlobalOutputLimits_WhenStreamsExceedCaps()
         {
-            FFmpeg.SetGlobalOutputLimits(maxOutputVideoFrameRate: 30, maxOutputAudioSampleRate: 48000, maxOutputAudioChannels: 2);
+            MediaOrchestrator.SetGlobalOutputLimits(maxOutputVideoFrameRate: 30, maxOutputAudioSampleRate: 48000, maxOutputAudioChannels: 2);
 
             var video = new VideoStream
             {
@@ -51,7 +51,7 @@ namespace Xabe.FFmpeg.Test
         [Fact]
         public void Build_DoesNotApplyGlobalOutputLimits_WhenSuppressed()
         {
-            FFmpeg.SetGlobalOutputLimits(maxOutputVideoFrameRate: 30, maxOutputAudioSampleRate: 48000, maxOutputAudioChannels: 2);
+            MediaOrchestrator.SetGlobalOutputLimits(maxOutputVideoFrameRate: 30, maxOutputAudioSampleRate: 48000, maxOutputAudioChannels: 2);
 
             var video = new VideoStream
             {

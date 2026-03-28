@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 
-namespace Xabe.FFmpeg.Streams
+namespace MediaOrchestrator.Streams
 {
     internal class ParametersList<T> : IEnumerable<T>
     {

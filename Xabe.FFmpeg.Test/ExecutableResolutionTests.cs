@@ -3,10 +3,10 @@ using System.IO;
 using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Threading;
-using Xabe.FFmpeg.Exceptions;
+using MediaOrchestrator.Exceptions;
 using Xunit;
 
-namespace Xabe.FFmpeg.Test
+namespace MediaOrchestrator.Test
 {
     public class ExecutableResolutionTests : IDisposable
     {
@@ -17,9 +17,9 @@ namespace Xabe.FFmpeg.Test
         {
             Environment.SetEnvironmentVariable("FFMPEG_EXECUTABLE", _originalFfmpegExecutable);
             Environment.SetEnvironmentVariable("FFPROBE_EXECUTABLE", _originalFfprobeExecutable);
-            FFmpeg.HardwareAccelerationProfileDetector = GetDefaultHardwareAccelerationProfileDetector();
-            FFmpeg.ApplyAutoHardwareAccelerationToConversions = true;
-            FFmpeg.SetExecutablesPath(null);
+            MediaOrchestrator.HardwareAccelerationProfileDetector = GetDefaultHardwareAccelerationProfileDetector();
+            MediaOrchestrator.ApplyAutoHardwareAccelerationToConversions = true;
+            MediaOrchestrator.SetExecutablesPath(null);
         }
 
         [Fact]
@@ -29,7 +29,7 @@ namespace Xabe.FFmpeg.Test
             var ffmpegPath = CreateFakeExecutable(tempDir, "ffmpeg");
             var ffprobePath = CreateFakeExecutable(tempDir, "ffprobe");
 
-            FFmpeg.SetExecutablesPath(tempDir);
+            MediaOrchestrator.SetExecutablesPath(tempDir);
 
             var accessor = new TestFFmpegAccessor();
 
@@ -44,7 +44,7 @@ namespace Xabe.FFmpeg.Test
             var ffmpegPath = CreateFakeExecutable(tempDir, "ffmpeg");
             var ffprobePath = CreateFakeExecutable(tempDir, "ffprobe");
 
-            FFmpeg.SetExecutablesPath(null);
+            MediaOrchestrator.SetExecutablesPath(null);
             Environment.SetEnvironmentVariable("FFMPEG_EXECUTABLE", ffmpegPath);
             Environment.SetEnvironmentVariable("FFPROBE_EXECUTABLE", ffprobePath);
 
@@ -68,7 +68,7 @@ namespace Xabe.FFmpeg.Test
 
             try
             {
-                FFmpeg.SetExecutablesPath(null);
+                MediaOrchestrator.SetExecutablesPath(null);
 
                 var accessor = new TestFFmpegAccessor();
 
@@ -85,11 +85,11 @@ namespace Xabe.FFmpeg.Test
         public void Initialization_WithMissingConfiguredDirectory_ThrowsFfmpegNotFoundException()
         {
             var missingDir = Path.Combine(Path.GetTempPath(), "xabe-missing-" + Guid.NewGuid().ToString("N"));
-            FFmpeg.SetExecutablesPath(missingDir);
+            MediaOrchestrator.SetExecutablesPath(missingDir);
 
-            var exception = Assert.Throws<FFmpegNotFoundException>(() => new TestFFmpegAccessor());
+            var exception = Assert.Throws<ToolchainNotFoundException>(() => new TestFFmpegAccessor());
 
-            Assert.Contains("Не удалось найти FFmpeg", exception.Message);
+            Assert.Contains("Не удалось найти MediaOrchestrator", exception.Message);
         }
 
         [Fact]
@@ -99,7 +99,7 @@ namespace Xabe.FFmpeg.Test
             File.WriteAllText(Path.Combine(tempDir, "ffmpeg"), "not-an-executable");
             CreateFakeExecutable(tempDir, "ffprobe");
 
-            FFmpeg.SetExecutablesPath(tempDir);
+            MediaOrchestrator.SetExecutablesPath(tempDir);
 
             var exception = Assert.Throws<ExecutableSignatureMismatchException>(() => new TestFFmpegAccessor());
 
@@ -121,7 +121,7 @@ namespace Xabe.FFmpeg.Test
             try
             {
                 File.SetUnixFileMode(tempDir, UnixFileMode.UserWrite | UnixFileMode.UserExecute);
-                FFmpeg.SetExecutablesPath(tempDir);
+                MediaOrchestrator.SetExecutablesPath(tempDir);
 
                 var exception = Assert.Throws<ExecutablesPathAccessDeniedException>(() => new TestFFmpegAccessor());
 
@@ -145,21 +145,21 @@ namespace Xabe.FFmpeg.Test
             CreateFakeExecutable(tempDir, "ffprobe");
 
             var detectionCalls = 0;
-            FFmpeg.HardwareAccelerationProfileDetector = (_, _) =>
+            MediaOrchestrator.HardwareAccelerationProfileDetector = (_, _) =>
             {
                 Interlocked.Increment(ref detectionCalls);
                 return new HardwareAccelerationProfile("cuda", "h264_cuvid", "h264_nvenc", "hevc_nvenc");
             };
 
-            FFmpeg.SetExecutablesPath(tempDir);
-            FFmpeg.EnsureExecutablesLocated();
-            FFmpeg.EnsureExecutablesLocated();
+            MediaOrchestrator.SetExecutablesPath(tempDir);
+            MediaOrchestrator.EnsureExecutablesLocated();
+            MediaOrchestrator.EnsureExecutablesLocated();
 
             Assert.Equal(1, detectionCalls);
-            Assert.True(FFmpeg.IsHardwareAccelerationProfileDetected);
-            Assert.Equal("cuda", FFmpeg.DetectedHardwareAcceleratorName);
-            Assert.Equal("h264_nvenc", FFmpeg.ResolveTranscodeVideoCodecToString(VideoCodec.h264));
-            Assert.Equal("hevc_nvenc", FFmpeg.ResolveTranscodeVideoCodecToString(VideoCodec.hevc));
+            Assert.True(MediaOrchestrator.IsHardwareAccelerationProfileDetected);
+            Assert.Equal("cuda", MediaOrchestrator.DetectedHardwareAcceleratorName);
+            Assert.Equal("h264_nvenc", MediaOrchestrator.ResolveTranscodeVideoCodecToString(VideoCodec.h264));
+            Assert.Equal("hevc_nvenc", MediaOrchestrator.ResolveTranscodeVideoCodecToString(VideoCodec.hevc));
 
             var video = new VideoStream
             {
@@ -249,7 +249,7 @@ namespace Xabe.FFmpeg.Test
             }
         }
 
-        private sealed class TestFFmpegAccessor : FFmpeg
+        private sealed class TestFFmpegAccessor : MediaOrchestrator
         {
             public string CurrentFFmpegPath => FFmpegPath;
 

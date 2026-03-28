@@ -1,4 +1,4 @@
-namespace Xabe.FFmpeg.Analytics.Models
+namespace MediaOrchestrator.Analytics.Models
 {
     /// <summary>
     ///     Целевой сценарий обработки медиа.

@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 
-namespace Xabe.FFmpeg
+namespace MediaOrchestrator
 {
     internal sealed class FFmpegFilterGraphBuilder
     {

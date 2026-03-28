@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace Xabe.FFmpeg.Events
+namespace MediaOrchestrator.Events
 {
     /// <summary>
     ///     Info about conversion progress

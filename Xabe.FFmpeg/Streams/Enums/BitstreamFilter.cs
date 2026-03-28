@@ -1,4 +1,4 @@
-﻿namespace Xabe.FFmpeg
+﻿namespace MediaOrchestrator
 {
     /// <summary>
     ///     A bitstream filter operates on the encoded stream data, and performs bitstream level modifications without performing decoding.

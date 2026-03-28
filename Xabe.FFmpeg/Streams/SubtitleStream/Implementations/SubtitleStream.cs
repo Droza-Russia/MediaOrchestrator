@@ -1,9 +1,9 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
-using Xabe.FFmpeg.Streams;
-using Xabe.FFmpeg.Streams.SubtitleStream;
+using MediaOrchestrator.Streams;
+using MediaOrchestrator.Streams.SubtitleStream;
 
-namespace Xabe.FFmpeg
+namespace MediaOrchestrator
 {
     /// <inheritdoc />
     public sealed class SubtitleStream : ISubtitleStream

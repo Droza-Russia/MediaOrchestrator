@@ -1,7 +1,7 @@
-namespace Xabe.FFmpeg.Exceptions
+namespace MediaOrchestrator.Exceptions
 {
     /// <summary>
-    ///     Исключение, выбрасываемое, когда FFmpeg не может сопоставить запрошенные потоки.
+    ///     Исключение, выбрасываемое, когда MediaOrchestrator не может сопоставить запрошенные потоки.
     /// </summary>
     public class StreamMappingException : ConversionException
     {

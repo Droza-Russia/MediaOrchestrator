@@ -1,6 +1,6 @@
 using System.Collections.Generic;
 
-namespace Xabe.FFmpeg
+namespace MediaOrchestrator
 {
     internal class ConversionParameter
     {

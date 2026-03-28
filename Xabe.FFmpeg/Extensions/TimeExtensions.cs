@@ -11,7 +11,7 @@ namespace System
         ///     Return ffmpeg formatted time
         /// </summary>
         /// <param name="ts">TimeSpan</param>
-        /// <returns>FFmpeg formated time</returns>
+        /// <returns>MediaOrchestrator formated time</returns>
         public static string ToFFmpeg(this TimeSpan ts)
         {
             var milliseconds = ts.Milliseconds;
@@ -23,9 +23,9 @@ namespace System
         }
 
         /// <summary>
-        ///     Parse FFmpeg formated time
+        ///     Parse MediaOrchestrator formated time
         /// </summary>
-        /// <param name="text">FFmpeg time</param>
+        /// <param name="text">MediaOrchestrator time</param>
         /// <returns>TimeSpan</returns>
         public static TimeSpan ParseFFmpegTime(this string text)
         {

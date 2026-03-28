@@ -1,7 +1,7 @@
 using System.Linq;
 using Xunit;
 
-namespace Xabe.FFmpeg.Test
+namespace MediaOrchestrator.Test
 {
     public class VideoStreamTests
     {

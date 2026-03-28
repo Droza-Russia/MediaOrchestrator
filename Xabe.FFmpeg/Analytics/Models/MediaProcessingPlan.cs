@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 
-namespace Xabe.FFmpeg.Analytics.Models
+namespace MediaOrchestrator.Analytics.Models
 {
     public sealed class MediaProcessingPlan
     {

@@ -1,10 +1,10 @@
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using Xabe.FFmpeg.Exceptions;
-using Xabe.FFmpeg.Streams.SubtitleStream;
+using MediaOrchestrator.Exceptions;
+using MediaOrchestrator.Streams.SubtitleStream;
 
-namespace Xabe.FFmpeg
+namespace MediaOrchestrator
 {
     public partial class Conversion
     {
@@ -17,7 +17,7 @@ namespace Xabe.FFmpeg
         /// <returns>Conversion result</returns>
         internal static async Task<IConversion> AddSubtitlesAsync(string inputPath, string outputPath, string subtitlesPath, CancellationToken cancellationToken = default)
         {
-            IMediaInfo info = await FFmpeg.GetMediaInfo(inputPath, cancellationToken);
+            IMediaInfo info = await MediaOrchestrator.GetMediaInfo(inputPath, cancellationToken);
 
             IVideoStream videoStream = RequireVideoStreamForSubtitles(info, nameof(inputPath))
                                            .AddSubtitles(subtitlesPath);
@@ -39,8 +39,8 @@ namespace Xabe.FFmpeg
         /// <returns>Conversion result</returns>
         internal static async Task<IConversion> AddSubtitleAsync(string inputPath, string outputPath, string subtitlePath, string language = null, CancellationToken cancellationToken = default)
         {
-            IMediaInfo mediaInfo = await FFmpeg.GetMediaInfo(inputPath, cancellationToken);
-            IMediaInfo subtitleInfo = await FFmpeg.GetMediaInfo(subtitlePath, cancellationToken);
+            IMediaInfo mediaInfo = await MediaOrchestrator.GetMediaInfo(inputPath, cancellationToken);
+            IMediaInfo subtitleInfo = await MediaOrchestrator.GetMediaInfo(subtitlePath, cancellationToken);
 
             ISubtitleStream subtitleStream = RequireSubtitleStream(subtitleInfo, nameof(subtitlePath))
                                                          .SetLanguage(language);
@@ -64,8 +64,8 @@ namespace Xabe.FFmpeg
         /// <returns>Conversion result</returns>
         internal static async Task<IConversion> AddSubtitleAsync(string inputPath, string outputPath, string subtitlePath, SubtitleCodec subtitleCodec, string language = null, CancellationToken cancellationToken = default)
         {
-            IMediaInfo mediaInfo = await FFmpeg.GetMediaInfo(inputPath, cancellationToken);
-            IMediaInfo subtitleInfo = await FFmpeg.GetMediaInfo(subtitlePath, cancellationToken);
+            IMediaInfo mediaInfo = await MediaOrchestrator.GetMediaInfo(inputPath, cancellationToken);
+            IMediaInfo subtitleInfo = await MediaOrchestrator.GetMediaInfo(subtitlePath, cancellationToken);
 
             ISubtitleStream subtitleStream = RequireSubtitleStream(subtitleInfo, nameof(subtitlePath))
                                                          .SetLanguage(language);

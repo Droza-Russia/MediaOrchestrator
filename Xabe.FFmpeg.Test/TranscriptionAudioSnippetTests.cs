@@ -2,22 +2,22 @@ using System;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
-using Xabe.FFmpeg.Exceptions;
-using Xabe.FFmpeg.Test.TestSupport;
+using MediaOrchestrator.Exceptions;
+using MediaOrchestrator.Test.TestSupport;
 using Xunit;
 
-namespace Xabe.FFmpeg.Test
+namespace MediaOrchestrator.Test
 {
     public class TranscriptionAudioSnippetTests : IDisposable
     {
-        private readonly Func<FFprobeWrapper, string, CancellationToken, Task<string>> _originalProbeExecutor = FFprobeWrapper.ProbeCommandExecutor;
+        private readonly Func<MediaProbeRunner, string, CancellationToken, Task<string>> _originalProbeExecutor = MediaProbeRunner.ProbeCommandExecutor;
 
         public void Dispose()
         {
-            FFprobeWrapper.ProbeCommandExecutor = _originalProbeExecutor;
-            FFmpeg.ClearMediaInfoCache();
-            FFmpeg.MediaInfoCacheEnabled = true;
-            FFmpeg.SetExecutablesPath(null);
+            MediaProbeRunner.ProbeCommandExecutor = _originalProbeExecutor;
+            MediaOrchestrator.ClearMediaInfoCache();
+            MediaOrchestrator.MediaInfoCacheEnabled = true;
+            MediaOrchestrator.SetExecutablesPath(null);
         }
 
         [Fact]
@@ -28,10 +28,10 @@ namespace Xabe.FFmpeg.Test
             File.WriteAllBytes(inputPath, CreateIsoBmffHeader());
             CreateFakeExecutable(tempDir, "ffmpeg");
             CreateFakeExecutable(tempDir, "ffprobe");
-            FFmpeg.SetExecutablesPath(tempDir);
-            FFprobeWrapper.ProbeCommandExecutor = (_, _, _) => Task.FromResult(CreateAudioProbeJson(audioStreamCount: 1));
+            MediaOrchestrator.SetExecutablesPath(tempDir);
+            MediaProbeRunner.ProbeCommandExecutor = (_, _, _) => Task.FromResult(CreateAudioProbeJson(audioStreamCount: 1));
 
-            var conversion = await FFmpeg.Conversions.FromSnippet
+            var conversion = await MediaOrchestrator.Conversions.FromSnippet
                 .NormalizeAudioForTranscription(inputPath, Path.Combine(tempDir, "transcription.wav"))
                 .ConfigureAwait(false);
 
@@ -53,10 +53,10 @@ namespace Xabe.FFmpeg.Test
             File.WriteAllBytes(inputPath, CreateIsoBmffHeader());
             CreateFakeExecutable(tempDir, "ffmpeg");
             CreateFakeExecutable(tempDir, "ffprobe");
-            FFmpeg.SetExecutablesPath(tempDir);
-            FFprobeWrapper.ProbeCommandExecutor = (_, _, _) => Task.FromResult(CreateAudioProbeJson(audioStreamCount: 2));
+            MediaOrchestrator.SetExecutablesPath(tempDir);
+            MediaProbeRunner.ProbeCommandExecutor = (_, _, _) => Task.FromResult(CreateAudioProbeJson(audioStreamCount: 2));
 
-            var conversion = await FFmpeg.Conversions.FromSnippet.NormalizeAudioForTranscription(
+            var conversion = await MediaOrchestrator.Conversions.FromSnippet.NormalizeAudioForTranscription(
                     inputPath,
                     Path.Combine(tempDir, "transcription.flac"),
                     new TranscriptionAudioSettings
@@ -85,11 +85,11 @@ namespace Xabe.FFmpeg.Test
             File.WriteAllBytes(inputPath, CreateIsoBmffHeader());
             CreateFakeExecutable(tempDir, "ffmpeg");
             CreateFakeExecutable(tempDir, "ffprobe");
-            FFmpeg.SetExecutablesPath(tempDir);
-            FFprobeWrapper.ProbeCommandExecutor = (_, _, _) => Task.FromResult(CreateAudioProbeJson(audioStreamCount: 0));
+            MediaOrchestrator.SetExecutablesPath(tempDir);
+            MediaProbeRunner.ProbeCommandExecutor = (_, _, _) => Task.FromResult(CreateAudioProbeJson(audioStreamCount: 0));
 
             await Assert.ThrowsAsync<AudioStreamNotFoundException>(() =>
-                    FFmpeg.Conversions.FromSnippet.NormalizeAudioForTranscription(
+                    MediaOrchestrator.Conversions.FromSnippet.NormalizeAudioForTranscription(
                         inputPath,
                         Path.Combine(tempDir, "transcription.wav")))
                 .ConfigureAwait(false);
@@ -103,11 +103,11 @@ namespace Xabe.FFmpeg.Test
             File.WriteAllBytes(inputPath, CreateIsoBmffHeader());
             CreateFakeExecutable(tempDir, "ffmpeg");
             CreateFakeExecutable(tempDir, "ffprobe");
-            FFmpeg.SetExecutablesPath(tempDir);
-            FFprobeWrapper.ProbeCommandExecutor = (_, _, _) => Task.FromResult(CreateAudioProbeJson(audioStreamCount: 1));
+            MediaOrchestrator.SetExecutablesPath(tempDir);
+            MediaProbeRunner.ProbeCommandExecutor = (_, _, _) => Task.FromResult(CreateAudioProbeJson(audioStreamCount: 1));
 
             await Assert.ThrowsAsync<StreamIndexOutOfRangeException>(() =>
-                    FFmpeg.Conversions.FromSnippet.NormalizeAudioForTranscription(
+                    MediaOrchestrator.Conversions.FromSnippet.NormalizeAudioForTranscription(
                         inputPath,
                         Path.Combine(tempDir, "transcription.wav"),
                         new TranscriptionAudioSettings { AudioStreamIndex = 1 }))

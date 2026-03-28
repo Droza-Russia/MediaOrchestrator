@@ -2,17 +2,17 @@ using System;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using Xabe.FFmpeg;
-using Xabe.FFmpeg.Events;
+using MediaOrchestrator;
+using MediaOrchestrator.Events;
 
-namespace Xabe.FFmpeg.Examples.Service
+namespace MediaOrchestrator.Examples.Service
 {
     public static class StreamRemuxExample
     {
         public static async Task RunAsync()
         {
             await EnsureBinariesAsync().ConfigureAwait(false);
-            var snippets = FFmpeg.Conversions.FromSnippet;
+            var snippets = MediaOrchestrator.Conversions.FromSnippet;
 
             var liveSource = new Uri("https://example.com/live/playlist.m3u8");
             var outputPath = "stream_copy.webm";
@@ -25,7 +25,7 @@ namespace Xabe.FFmpeg.Examples.Service
             }));
             await conversion.Start().ConfigureAwait(false);
 
-            var mediaInfo = await FFmpeg.GetMediaInfo(liveSource.ToString(), CancellationToken.None).ConfigureAwait(false);
+            var mediaInfo = await MediaOrchestrator.GetMediaInfo(liveSource.ToString(), CancellationToken.None).ConfigureAwait(false);
             var audioStreams = mediaInfo.AudioStreams.ToArray();
             if (!audioStreams.Any())
             {
@@ -33,7 +33,7 @@ namespace Xabe.FFmpeg.Examples.Service
                 return;
             }
 
-            var audioOnly = FFmpeg.Conversions.New()
+            var audioOnly = MediaOrchestrator.Conversions.New()
                 .AddStream(audioStreams.Select(a => a.SetCodec(AudioCodec.copy)).ToArray())
                 .SetOutput(audioOnlyPath);
             await audioOnly.Start().ConfigureAwait(false);
@@ -43,9 +43,9 @@ namespace Xabe.FFmpeg.Examples.Service
 
         private static Task EnsureBinariesAsync()
         {
-            if (string.IsNullOrWhiteSpace(FFmpeg.ExecutablesPath))
+            if (string.IsNullOrWhiteSpace(MediaOrchestrator.ExecutablesPath))
             {
-                FFmpeg.SetExecutablesPath("/usr/local/bin", tryDetectHardwareAcceleration: false);
+                MediaOrchestrator.SetExecutablesPath("/usr/local/bin", tryDetectHardwareAcceleration: false);
             }
 
             return Task.CompletedTask;

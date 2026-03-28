@@ -2,23 +2,23 @@ using System;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
-using Xabe.FFmpeg;
-using Xabe.FFmpeg.Events;
+using MediaOrchestrator;
+using MediaOrchestrator.Events;
 
-namespace Xabe.FFmpeg.Examples.Service
+namespace MediaOrchestrator.Examples.Service
 {
     public static class StreamCaptureExample
     {
         public static async Task RunAsync(CancellationToken cancellationToken = default)
         {
             await EnsureBinariesAsync().ConfigureAwait(false);
-            var snippets = FFmpeg.Conversions.FromSnippet;
+            var snippets = MediaOrchestrator.Conversions.FromSnippet;
 
             var hlsUri = new Uri("https://example.com/live/playlist.m3u8");
             var rtspUri = new Uri("rtsp://127.0.0.1/live/stream");
             var httpAudioUri = new Uri("https://example.com/audio_only.m3u8");
 
-            FFmpeg.SetGlobalOutputLimits(maxOutputVideoFrameRate: 30, maxOutputAudioSampleRate: 48000, maxOutputAudioChannels: 2);
+            MediaOrchestrator.SetGlobalOutputLimits(maxOutputVideoFrameRate: 30, maxOutputAudioSampleRate: 48000, maxOutputAudioChannels: 2);
 
             var remuxConversion = await snippets.RemuxStream(
                     hlsUri,
@@ -62,9 +62,9 @@ namespace Xabe.FFmpeg.Examples.Service
 
         private static Task EnsureBinariesAsync()
         {
-            if (string.IsNullOrWhiteSpace(FFmpeg.ExecutablesPath))
+            if (string.IsNullOrWhiteSpace(MediaOrchestrator.ExecutablesPath))
             {
-                FFmpeg.SetExecutablesPath("/usr/local/bin", tryDetectHardwareAcceleration: false);
+                MediaOrchestrator.SetExecutablesPath("/usr/local/bin", tryDetectHardwareAcceleration: false);
             }
 
             return Task.CompletedTask;

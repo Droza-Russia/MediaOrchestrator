@@ -1,6 +1,6 @@
 using System;
 
-namespace Xabe.FFmpeg.Analytics.Models
+namespace MediaOrchestrator.Analytics.Models
 {
     public sealed class ProcessingConstraints
     {

@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Xunit;
 
-namespace Xabe.FFmpeg.Test.TestSupport
+namespace MediaOrchestrator.Test.TestSupport
 {
     internal sealed class ConversionCommandAssertions
     {

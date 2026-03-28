@@ -1,7 +1,7 @@
-namespace Xabe.FFmpeg
+namespace MediaOrchestrator
 {
     /// <summary>
-    ///     Профиль настройки кодировщика FFmpeg (`-tune`).
+    ///     Профиль настройки кодировщика MediaOrchestrator (`-tune`).
     /// </summary>
     public enum ConversionTune
     {

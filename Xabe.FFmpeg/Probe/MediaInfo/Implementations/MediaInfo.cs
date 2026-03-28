@@ -5,14 +5,15 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using Xabe.FFmpeg.Exceptions;
+using MediaOrchestrator.Exceptions;
 
-namespace Xabe.FFmpeg
+namespace MediaOrchestrator
 {
     /// <inheritdoc cref="IMediaInfo" />
     internal class MediaInfo : IMediaInfo
     {
         private static readonly ConcurrentDictionary<string, CacheEntry> _cache = new ConcurrentDictionary<string, CacheEntry>();
+        private static readonly ConcurrentDictionary<string, Lazy<Task<IMediaInfo>>> _inflight = new ConcurrentDictionary<string, Lazy<Task<IMediaInfo>>>();
 
         private sealed class CacheEntry
         {
@@ -70,29 +71,42 @@ namespace Xabe.FFmpeg
         /// <param name="cancellationToken">Cancellation token</param>
         internal static async Task<IMediaInfo> Get(string filePath, CancellationToken cancellationToken)
         {
-            await MediaFileSignatureValidator.ValidateOrThrowAsync(filePath, cancellationToken).ConfigureAwait(false);
             var cacheKey = BuildCacheKey(filePath);
-            var cacheEnabled = FFmpeg.MediaInfoCacheEnabled;
-            var cacheLifetime = FFmpeg.MediaInfoCacheLifetime;
+            var cacheEnabled = MediaOrchestrator.MediaInfoCacheEnabled;
+            var cacheLifetime = MediaOrchestrator.MediaInfoCacheLifetime;
             IMediaInfo cached;
             if (cacheEnabled && TryGetFromCache(cacheKey, out cached))
             {
                 return Clone(cached);
             }
 
-            var mediaInfo = new MediaInfo(filePath);
-            var wrapper = new FFprobeWrapper();
-            mediaInfo = await wrapper.SetProperties(mediaInfo, cancellationToken);
-            if (cacheEnabled)
+            if (!cacheEnabled)
             {
+                return await LoadMediaInfoAsync(filePath, cancellationToken).ConfigureAwait(false);
+            }
+
+            var loader = _inflight.GetOrAdd(
+                cacheKey,
+                _ => new Lazy<Task<IMediaInfo>>(
+                    () => LoadMediaInfoAsync(filePath, CancellationToken.None),
+                    LazyThreadSafetyMode.ExecutionAndPublication));
+
+            try
+            {
+                var mediaInfo = await loader.Value.ConfigureAwait(false);
                 _cache[cacheKey] = new CacheEntry
                 {
                     Value = Clone(mediaInfo),
                     ExpiresAtUtc = DateTimeOffset.UtcNow.Add(cacheLifetime)
                 };
-            }
 
-            return mediaInfo;
+                cancellationToken.ThrowIfCancellationRequested();
+                return Clone(mediaInfo);
+            }
+            finally
+            {
+                _inflight.TryRemove(cacheKey, out _);
+            }
         }
 
         /// <summary>
@@ -112,6 +126,15 @@ namespace Xabe.FFmpeg
         internal static void ClearCache()
         {
             _cache.Clear();
+            _inflight.Clear();
+        }
+
+        private static async Task<IMediaInfo> LoadMediaInfoAsync(string filePath, CancellationToken cancellationToken)
+        {
+            await MediaFileSignatureValidator.ValidateOrThrowAsync(filePath, cancellationToken).ConfigureAwait(false);
+            var mediaInfo = new MediaInfo(filePath);
+            var wrapper = new MediaProbeRunner();
+            return await wrapper.SetProperties(mediaInfo, cancellationToken).ConfigureAwait(false);
         }
 
         private static bool TryGetFromCache(string key, out IMediaInfo mediaInfo)
