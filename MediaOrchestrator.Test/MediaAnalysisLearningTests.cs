@@ -550,6 +550,12 @@ namespace MediaOrchestrator.Test
 
             public long Size => 1024;
 
+            public string FormatName => "mp4";
+
+            public long Bitrate => 1024;
+
+            public IReadOnlyDictionary<string, string> Metadata => new Dictionary<string, string>();
+
             public IEnumerable<IVideoStream> VideoStreams { get; }
 
             public IEnumerable<IAudioStream> AudioStreams { get; }

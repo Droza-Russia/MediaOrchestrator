@@ -1,4 +1,8 @@
-﻿namespace MediaOrchestrator
+﻿using System.Collections.Generic;
+using System.Text.Json;
+using System.Text.Json.Serialization;
+
+namespace MediaOrchestrator
 {
     internal class ProbeModel
     {
@@ -85,6 +89,9 @@
         internal class FormatTags
         {
             public string CreationTime { get; set; }
+
+            [JsonExtensionData]
+            public Dictionary<string, JsonElement> AdditionalTags { get; set; }
         }
 
         internal class ProbeFormat

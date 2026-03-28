@@ -131,6 +131,9 @@ namespace MediaOrchestrator
         public long Bitrate { get; internal set; }
 
         /// <inheritdoc />
+        public string Title { get; internal set; }
+
+        /// <inheritdoc />
         public IVideoStream CopyStream()
         {
             _outputUsesCopyCodec = true;

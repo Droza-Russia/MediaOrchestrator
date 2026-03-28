@@ -34,6 +34,21 @@ namespace MediaOrchestrator
         long Size { get; }
 
         /// <summary>
+        ///     Имя формата контейнера из ffprobe.
+        /// </summary>
+        string FormatName { get; }
+
+        /// <summary>
+        ///     Суммарный битрейт контейнера.
+        /// </summary>
+        long Bitrate { get; }
+
+        /// <summary>
+        ///     Метаданные контейнера из format.tags.
+        /// </summary>
+        IReadOnlyDictionary<string, string> Metadata { get; }
+
+        /// <summary>
         ///     Видеопотоки.
         /// </summary>
         IEnumerable<IVideoStream> VideoStreams { get; }

@@ -140,6 +140,9 @@ namespace MediaOrchestrator.Test
             public TimeSpan Duration { get; } = TimeSpan.Zero;
             public DateTime? CreationTime { get; } = null;
             public long Size { get; } = 0;
+            public string FormatName { get; } = string.Empty;
+            public long Bitrate { get; } = 0;
+            public IReadOnlyDictionary<string, string> Metadata { get; } = new Dictionary<string, string>();
             public IEnumerable<IVideoStream> VideoStreams { get; } = Array.Empty<IVideoStream>();
             public IEnumerable<IAudioStream> AudioStreams { get; } = Array.Empty<IAudioStream>();
             public IEnumerable<ISubtitleStream> SubtitleStreams { get; } = Array.Empty<ISubtitleStream>();
