@@ -116,7 +116,7 @@ jobs:
   Solution_Name: MediaOrchestrator.sln
   Test_Project_Path: MediaOrchestrator.Tests/MediaOrchestrator.Tests.csproj
   Wap_Project_Directory: MediaOrchestrator.Package
-  Wap_Project_Path: MediaOrchestrator.Package/MediaOrchestrator.Package.wapproj.
+  Wap_Project_Path: MediaOrchestrator.Package/MediaOrchestrator.Package.wapproj
 
     steps:
     - name: Checkout
