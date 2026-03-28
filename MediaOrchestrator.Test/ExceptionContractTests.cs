@@ -32,7 +32,7 @@ namespace MediaOrchestrator.Test
         [Fact]
         public void CreateOutputDirectoryIfNotExists_ThrowsTypedException_WhenPathCollidesWithFile()
         {
-            var directory = Path.Combine(Path.GetTempPath(), "xabe-output-" + Guid.NewGuid().ToString("N"));
+            var directory = Path.Combine(Path.GetTempPath(), "media-orchestrator-output-" + Guid.NewGuid().ToString("N"));
             Directory.CreateDirectory(directory);
             var blockingFile = Path.Combine(directory, "existing.file");
             File.WriteAllText(blockingFile, "content");

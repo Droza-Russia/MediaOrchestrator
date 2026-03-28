@@ -22,7 +22,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Xabe.FFmpeg\Xabe.FFmpeg.csproj" />
+    <ProjectReference Include="..\MediaOrchestrator\MediaOrchestrator.csproj" />
   </ItemGroup>
 
 </Project>

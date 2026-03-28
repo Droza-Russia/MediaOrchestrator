@@ -17,7 +17,7 @@ namespace MediaOrchestrator.Test
         [Fact]
         public async Task WaitUntilStableAsync_Throws_ForDirectoryPath()
         {
-            var directory = Path.Combine(Path.GetTempPath(), "xabe-readiness-" + Guid.NewGuid().ToString("N"));
+            var directory = Path.Combine(Path.GetTempPath(), "media-orchestrator-readiness-" + Guid.NewGuid().ToString("N"));
             Directory.CreateDirectory(directory);
 
             var exception = await Assert.ThrowsAsync<InvalidInputException>(() =>
@@ -33,7 +33,7 @@ namespace MediaOrchestrator.Test
         [Fact]
         public async Task WaitUntilStableAsync_ThrowsInputFileStillBeingWritten_WhenFileKeepsChanging()
         {
-            var directory = Path.Combine(Path.GetTempPath(), "xabe-readiness-" + Guid.NewGuid().ToString("N"));
+            var directory = Path.Combine(Path.GetTempPath(), "media-orchestrator-readiness-" + Guid.NewGuid().ToString("N"));
             Directory.CreateDirectory(directory);
             var path = Path.Combine(directory, "growing.mp4");
             File.WriteAllBytes(path, new byte[] { 0x00 });

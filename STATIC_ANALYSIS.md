@@ -1,9 +1,9 @@
 # Static Analysis Report (FEATURE.md execution)
 
 ## Scope
-- Decision layer implementation (`Xabe.FFmpeg/Analytics/**`).
-- Integration point in facade (`Xabe.FFmpeg/FFmpegFacade.cs`).
-- Added tests (`Xabe.FFmpeg.Test/MediaProcessingAnalyticsTests.cs`).
+- Decision layer implementation (`MediaOrchestrator/Analytics/**`).
+- Integration point in facade (`MediaOrchestrator/MediaOrchestratorFacade.cs`).
+- Added tests (`MediaOrchestrator.Test/MediaProcessingAnalyticsTests.cs`).
 
 ## Bottlenecks (hot paths)
 1. `DecideProcessingPlanAsync` always calls `FFmpeg.GetMediaInfo(...)`, which can trigger `ffprobe` process startup.

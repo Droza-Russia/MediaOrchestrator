@@ -87,7 +87,7 @@ namespace MediaOrchestrator
         public static TimeSpan MediaInfoCacheLifetime { get; set; } = TimeSpan.FromMinutes(10);
 
         private static readonly object _mediaAnalysisStoreSync = new object();
-        private static string _mediaAnalysisStoreDirectory = Path.Combine(Path.GetTempPath(), "xabe-ffmpeg-media-analysis");
+        private static string _mediaAnalysisStoreDirectory = Path.Combine(Path.GetTempPath(), "media-orchestrator-media-analysis");
         private static IMediaAnalysisStore _mediaAnalysisStore = CreateMediaAnalysisStore(_mediaAnalysisStoreDirectory);
 
         /// <summary>
@@ -305,7 +305,7 @@ namespace MediaOrchestrator
             lock (_mediaAnalysisStoreSync)
             {
                 _mediaAnalysisStoreDirectory = string.IsNullOrWhiteSpace(directory)
-                    ? Path.Combine(Path.GetTempPath(), "xabe-ffmpeg-media-analysis")
+                    ? Path.Combine(Path.GetTempPath(), "media-orchestrator-media-analysis")
                     : new DirectoryInfo(directory).FullName;
                 _mediaAnalysisStore = CreateMediaAnalysisStore(_mediaAnalysisStoreDirectory);
             }

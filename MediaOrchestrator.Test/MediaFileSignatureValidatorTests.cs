@@ -23,7 +23,7 @@ namespace MediaOrchestrator.Test
         [Fact]
         public async Task ValidateOrThrowAsync_ThrowsInvalidInput_ForMissingFile()
         {
-            var missingPath = Path.Combine(Path.GetTempPath(), "xabe-missing-" + Guid.NewGuid().ToString("N") + ".mp4");
+            var missingPath = Path.Combine(Path.GetTempPath(), "media-orchestrator-missing-" + Guid.NewGuid().ToString("N") + ".mp4");
 
             var exception = await Assert.ThrowsAsync<InvalidInputException>(() =>
                 MediaFileSignatureValidator.ValidateOrThrowAsync(missingPath)).ConfigureAwait(false);
@@ -122,7 +122,7 @@ namespace MediaOrchestrator.Test
 
         private static string CreateTempDirectory()
         {
-            var path = Path.Combine(Path.GetTempPath(), "xabe-tests-" + Guid.NewGuid().ToString("N"));
+            var path = Path.Combine(Path.GetTempPath(), "media-orchestrator-tests-" + Guid.NewGuid().ToString("N"));
             Directory.CreateDirectory(path);
             return path;
         }

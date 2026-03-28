@@ -194,7 +194,7 @@ Every public library exception exposes:
 - `ErrorCode`
 - `ErrorCodeId`
 
-Error codes are documented in [ERROR_CODES.md](/Users/andrej/Git/Xabe.FFMpeg.Custom/ERROR_CODES.md).
+Error codes are documented in [ERROR_CODES.md](ERROR_CODES.md).
 
 Current error-code domains:
 - `MOR-IN-*` input errors;
@@ -314,8 +314,8 @@ This revision adds or significantly extends:
 ## Build And Test
 
 ```bash
-dotnet build ./Xabe.FFmpeg/Xabe.FFmpeg.csproj
-dotnet test ./Xabe.FFmpeg/Xabe.FFmpeg.sln
+dotnet build ./MediaOrchestrator/MediaOrchestrator.csproj
+dotnet test ./MediaOrchestrator/MediaOrchestrator.sln
 ```
 
 ## Notes
@@ -326,4 +326,4 @@ dotnet test ./Xabe.FFmpeg/Xabe.FFmpeg.sln
 
 ## License
 
-See [LICENSE.md](/Users/andrej/Git/Xabe.FFMpeg.Custom/LICENSE.md).
+See [LICENSE.md](LICENSE.md).

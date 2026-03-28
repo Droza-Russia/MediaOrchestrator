@@ -84,7 +84,7 @@ namespace MediaOrchestrator.Test
         [Fact]
         public void Initialization_WithMissingConfiguredDirectory_ThrowsFfmpegNotFoundException()
         {
-            var missingDir = Path.Combine(Path.GetTempPath(), "xabe-missing-" + Guid.NewGuid().ToString("N"));
+            var missingDir = Path.Combine(Path.GetTempPath(), "media-orchestrator-missing-" + Guid.NewGuid().ToString("N"));
             MediaOrchestrator.SetExecutablesPath(missingDir);
 
             var exception = Assert.Throws<ToolchainNotFoundException>(() => new TestFFmpegAccessor());
@@ -179,7 +179,7 @@ namespace MediaOrchestrator.Test
 
         private static string CreateTempDirectory()
         {
-            var path = Path.Combine(Path.GetTempPath(), "xabe-tests-" + Guid.NewGuid().ToString("N"));
+            var path = Path.Combine(Path.GetTempPath(), "media-orchestrator-tests-" + Guid.NewGuid().ToString("N"));
             Directory.CreateDirectory(path);
             return path;
         }

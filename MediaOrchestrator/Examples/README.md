@@ -1,15 +1,15 @@
-# Service-ready примеры для Xabe.FFmpeg.Custom
+# Service-ready примеры для MediaOrchestrator
 
-Примеры теперь оформлены как отдельный demo-проект `Examples/Xabe.FFmpeg.Examples.csproj`. Он ссылается на библиотеку и позволяет запускать сценарии по имени, не смешивая demo-код со сборкой NuGet-пакета.
+Примеры теперь оформлены как отдельный demo-проект `Examples/MediaOrchestrator.Examples.csproj`. Он ссылается на библиотеку и позволяет запускать сценарии по имени, не смешивая demo-код со сборкой NuGet-пакета.
 
 Запуск:
 
 ```bash
-dotnet run --project Xabe.FFmpeg/Examples/Xabe.FFmpeg.Examples.csproj -- help
-dotnet run --project Xabe.FFmpeg/Examples/Xabe.FFmpeg.Examples.csproj -- facade
-dotnet run --project Xabe.FFmpeg/Examples/Xabe.FFmpeg.Examples.csproj -- stream-capture
-dotnet run --project Xabe.FFmpeg/Examples/Xabe.FFmpeg.Examples.csproj -- stream-remux
-dotnet run --project Xabe.FFmpeg/Examples/Xabe.FFmpeg.Examples.csproj -- overlay-timecode
+dotnet run --project MediaOrchestrator/Examples/MediaOrchestrator.Examples.csproj -- help
+dotnet run --project MediaOrchestrator/Examples/MediaOrchestrator.Examples.csproj -- facade
+dotnet run --project MediaOrchestrator/Examples/MediaOrchestrator.Examples.csproj -- stream-capture
+dotnet run --project MediaOrchestrator/Examples/MediaOrchestrator.Examples.csproj -- stream-remux
+dotnet run --project MediaOrchestrator/Examples/MediaOrchestrator.Examples.csproj -- overlay-timecode
 ```
 
 Сценарии находятся в `Examples/Service`:
