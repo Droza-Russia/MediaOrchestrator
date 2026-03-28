@@ -5,6 +5,7 @@ using System.IO;
 using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
+using Xabe.FFmpeg.Analytics;
 using Xabe.FFmpeg.Streams.SubtitleStream;
 
 namespace Xabe.FFmpeg
@@ -87,6 +88,11 @@ namespace Xabe.FFmpeg
         /// </summary>
         /// <returns>Объект IConversion.</returns>
         public static Conversions Conversions = new Conversions();
+
+        /// <summary>
+        ///     Слой аналитики и выбора сценариев обработки.
+        /// </summary>
+        public static MediaProcessingAnalytics Analytics { get; } = new MediaProcessingAnalytics();
 
         /// <summary>
         ///     Получает MediaInfo из файла.
