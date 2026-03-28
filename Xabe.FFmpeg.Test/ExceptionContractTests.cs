@@ -45,6 +45,27 @@ namespace Xabe.FFmpeg.Test
             Assert.Contains("out.mp4", exception.Message);
         }
 
+
+        [Fact]
+        public void FFmpegExceptionCatcher_DoesNotThrow_WhenOutputIsNull()
+        {
+            var catcher = new FFmpegExceptionCatcher();
+
+            var exception = Record.Exception(() => catcher.CatchFFmpegErrors(null, "-i in.mp4"));
+
+            Assert.Null(exception);
+        }
+
+        [Fact]
+        public void FFmpegExceptionCatcher_DetectsInsufficientDiskSpace_CaseInsensitive()
+        {
+            var catcher = new FFmpegExceptionCatcher();
+
+            var exception = Assert.Throws<InsufficientDiskSpaceException>(() =>
+                catcher.CatchFFmpegErrors("write failed: no space left on device", "-i in.mp4 out.mp4"));
+
+            Assert.Equal(ErrorMessages.InsufficientDiskSpace, exception.Message);
+        }
         [Fact]
         public void FFmpegExceptionCatcher_ThrowsStreamMappingException_ForMissingMappedStream()
         {
