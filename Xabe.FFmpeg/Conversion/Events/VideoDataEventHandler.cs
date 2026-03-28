@@ -12,7 +12,7 @@ namespace Xabe.FFmpeg.Events
     /// <summary>
     ///     Video data
     /// </summary>
-    public class VideoDataEventArgs : EventArgs
+    public sealed class VideoDataEventArgs : EventArgs
     {
         /// <inheritdoc />
         public VideoDataEventArgs(byte[] data)

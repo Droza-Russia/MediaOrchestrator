@@ -1,12 +1,10 @@
-using System.IO;
-
 namespace Xabe.FFmpeg.Exceptions
 {
     /// <inheritdoc />
     /// <summary>
     ///     Исключение, выбрасываемое, когда входной файл не существует.
     /// </summary>
-    public class InvalidInputException : FileNotFoundException
+    public class InvalidInputException : XabeFFmpegException
     {
         /// <summary>
         ///     Исключение, выбрасываемое, когда входной файл не существует.

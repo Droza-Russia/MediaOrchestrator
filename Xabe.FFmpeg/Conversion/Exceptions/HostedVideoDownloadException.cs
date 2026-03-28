@@ -5,7 +5,7 @@ namespace Xabe.FFmpeg.Exceptions
     /// <summary>
     ///     Ошибка скачивания видео с видеохостинга.
     /// </summary>
-    public class HostedVideoDownloadException : Exception
+    public class HostedVideoDownloadException : XabeFFmpegException
     {
         public HostedVideoDownloadException(string message, string sourceUrl, string outputPath, string downloaderPath, string rawOutput = null, Exception innerException = null)
             : base(message, innerException)

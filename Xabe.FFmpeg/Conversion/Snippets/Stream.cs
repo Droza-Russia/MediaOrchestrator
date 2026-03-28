@@ -14,12 +14,12 @@ namespace Xabe.FFmpeg
         {
             if (string.IsNullOrWhiteSpace(inputPath))
             {
-                throw new ArgumentException("Input path must be provided.", nameof(inputPath));
+                throw new ArgumentException(ErrorMessages.InputPathMustBeProvided, nameof(inputPath));
             }
 
             if (string.IsNullOrWhiteSpace(outputPath))
             {
-                throw new ArgumentException("Output path must be provided.", nameof(outputPath));
+                throw new ArgumentException(ErrorMessages.OutputPathMustBeProvided, nameof(outputPath));
             }
 
             IMediaInfo info = await FFmpeg.GetMediaInfo(inputPath, cancellationToken);
@@ -57,7 +57,7 @@ namespace Xabe.FFmpeg
 
             if (string.IsNullOrWhiteSpace(outputPath))
             {
-                throw new ArgumentException("Output path must be provided.", nameof(outputPath));
+                throw new ArgumentException(ErrorMessages.OutputPathMustBeProvided, nameof(outputPath));
             }
 
             var conversion = New()
@@ -83,7 +83,7 @@ namespace Xabe.FFmpeg
 
             if (string.IsNullOrWhiteSpace(outputPath))
             {
-                throw new ArgumentException("Output path must be provided.", nameof(outputPath));
+                throw new ArgumentException(ErrorMessages.OutputPathMustBeProvided, nameof(outputPath));
             }
 
             var conversion = New()
@@ -109,12 +109,12 @@ namespace Xabe.FFmpeg
         {
             if (string.IsNullOrWhiteSpace(inputPath))
             {
-                throw new ArgumentException("Input path must be provided.", nameof(inputPath));
+                throw new ArgumentException(ErrorMessages.InputPathMustBeProvided, nameof(inputPath));
             }
 
             if (string.IsNullOrWhiteSpace(outputPath))
             {
-                throw new ArgumentException("Output path must be provided.", nameof(outputPath));
+                throw new ArgumentException(ErrorMessages.OutputPathMustBeProvided, nameof(outputPath));
             }
 
             IMediaInfo info = await FFmpeg.GetMediaInfo(inputPath, cancellationToken);

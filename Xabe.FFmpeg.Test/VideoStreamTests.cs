@@ -36,7 +36,7 @@ namespace Xabe.FFmpeg.Test
 
             stream.SetRightSideDrawText("Hello: world", fontColor: "yellow", fontSize: 18, marginRight: 12, marginY: 8, verticalAlign: DrawTextVerticalAlign.Top);
 
-            var drawText = stream.GetFilters().Single().Filters[StreamFilterName.DrawText.ToArgumentName()];
+            var drawText = ((IFilterable)stream).GetFilters().Single().Filters[StreamFilterName.DrawText.ToArgumentName()];
             var expected = FFmpegVideoFilterExpressions.BuildDrawText(
                 FFmpegVideoFilterExpressions.BuildDrawTextClause("Hello: world"),
                 "yellow",
@@ -70,7 +70,7 @@ namespace Xabe.FFmpeg.Test
 
             stream.SetWatermark("wm.png", Position.UpperRight);
 
-            var overlay = stream.GetFilters().Single().Filters[StreamFilterName.Overlay.ToArgumentName()];
+            var overlay = ((IFilterable)stream).GetFilters().Single().Filters[StreamFilterName.Overlay.ToArgumentName()];
             Assert.Equal(FFmpegVideoFilterExpressions.BuildOverlayPosition(Position.UpperRight), overlay);
         }
 
@@ -81,7 +81,7 @@ namespace Xabe.FFmpeg.Test
 
             stream.AddSubtitles("subs.srt", VideoSize.Hd1080, "utf-8", "FontSize=18");
 
-            var subtitles = stream.GetFilters().Single().Filters[StreamFilterName.Subtitles.ToArgumentName()];
+            var subtitles = ((IFilterable)stream).GetFilters().Single().Filters[StreamFilterName.Subtitles.ToArgumentName()];
             Assert.Equal(
                 FFmpegVideoFilterExpressions.BuildSubtitles("subs.srt", VideoSize.Hd1080, "utf-8", "FontSize=18"),
                 subtitles);

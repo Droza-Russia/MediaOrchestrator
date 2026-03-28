@@ -116,9 +116,21 @@ namespace Xabe.FFmpeg
 
             IMediaInfo audioInfo = await FFmpeg.GetMediaInfo(audioPath, cancellationToken);
 
+            var videoStream = videoInfo.VideoStreams.FirstOrDefault();
+            if (videoStream == null)
+            {
+                throw new VideoStreamNotFoundException(ErrorMessages.InputFileDoesNotContainVideoStream, nameof(videoPath));
+            }
+
+            var audioStream = audioInfo.AudioStreams.FirstOrDefault();
+            if (audioStream == null)
+            {
+                throw new AudioStreamNotFoundException(ErrorMessages.InputFileDoesNotContainAudioStream, nameof(audioPath));
+            }
+
             return New()
-                .AddStream(videoInfo.VideoStreams.FirstOrDefault())
-                .AddStream(audioInfo.AudioStreams.FirstOrDefault())
+                .AddStream(videoStream)
+                .AddStream(audioStream)
                 .AddStream(videoInfo.SubtitleStreams.ToArray())
                 .SetOutput(outputPath);
         }
@@ -144,6 +156,11 @@ namespace Xabe.FFmpeg
             IMediaInfo inputInfo = await FFmpeg.GetMediaInfo(inputPath, cancellationToken);
             IAudioStream audioStream = inputInfo.AudioStreams.FirstOrDefault();
             IVideoStream videoStream = inputInfo.VideoStreams.FirstOrDefault();
+            if (audioStream == null)
+            {
+                throw new AudioStreamNotFoundException(ErrorMessages.InputFileDoesNotContainAudioStream, nameof(inputPath));
+            }
+
             var graph = FFmpegFilterGraphs.BuildAudioVisualisation(mode, frequencyScale, amplitudeScale, pixelFormat, size);
 
             return New(suppressGlobalOutputLimits: true)

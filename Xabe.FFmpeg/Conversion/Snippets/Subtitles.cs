@@ -1,6 +1,7 @@
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Xabe.FFmpeg.Exceptions;
 using Xabe.FFmpeg.Streams.SubtitleStream;
 
 namespace Xabe.FFmpeg
@@ -18,8 +19,8 @@ namespace Xabe.FFmpeg
         {
             IMediaInfo info = await FFmpeg.GetMediaInfo(inputPath, cancellationToken);
 
-            IVideoStream videoStream = info.VideoStreams.FirstOrDefault()
-                                           ?.AddSubtitles(subtitlesPath);
+            IVideoStream videoStream = RequireVideoStreamForSubtitles(info, nameof(inputPath))
+                                           .AddSubtitles(subtitlesPath);
 
             return New()
                 .AddStream(videoStream)
@@ -41,7 +42,7 @@ namespace Xabe.FFmpeg
             IMediaInfo mediaInfo = await FFmpeg.GetMediaInfo(inputPath, cancellationToken);
             IMediaInfo subtitleInfo = await FFmpeg.GetMediaInfo(subtitlePath, cancellationToken);
 
-            ISubtitleStream subtitleStream = subtitleInfo.SubtitleStreams.First()
+            ISubtitleStream subtitleStream = RequireSubtitleStream(subtitleInfo, nameof(subtitlePath))
                                                          .SetLanguage(language);
 
             return New()
@@ -66,7 +67,7 @@ namespace Xabe.FFmpeg
             IMediaInfo mediaInfo = await FFmpeg.GetMediaInfo(inputPath, cancellationToken);
             IMediaInfo subtitleInfo = await FFmpeg.GetMediaInfo(subtitlePath, cancellationToken);
 
-            ISubtitleStream subtitleStream = subtitleInfo.SubtitleStreams.First()
+            ISubtitleStream subtitleStream = RequireSubtitleStream(subtitleInfo, nameof(subtitlePath))
                                                          .SetLanguage(language);
 
             return New()
@@ -74,6 +75,28 @@ namespace Xabe.FFmpeg
                 .AddStream(mediaInfo.AudioStreams)
                 .AddStream(subtitleStream.SetCodec(subtitleCodec))
                 .SetOutput(outputPath);
+        }
+
+        private static IVideoStream RequireVideoStreamForSubtitles(IMediaInfo info, string paramName)
+        {
+            var videoStream = info.VideoStreams.FirstOrDefault();
+            if (videoStream == null)
+            {
+                throw new VideoStreamNotFoundException(ErrorMessages.InputFileDoesNotContainVideoStream, paramName);
+            }
+
+            return videoStream;
+        }
+
+        private static ISubtitleStream RequireSubtitleStream(IMediaInfo info, string paramName)
+        {
+            var subtitleStream = info.SubtitleStreams.FirstOrDefault();
+            if (subtitleStream == null)
+            {
+                throw new SubtitleStreamNotFoundException(ErrorMessages.InputFileDoesNotContainSubtitleStream, paramName);
+            }
+
+            return subtitleStream;
         }
     }
 }

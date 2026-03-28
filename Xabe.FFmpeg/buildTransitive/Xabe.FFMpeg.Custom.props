@@ -1,0 +1,9 @@
+<Project>
+  <PropertyGroup>
+    <XabeFFmpegInstallLocalizedXmlDocumentation Condition="'$(XabeFFmpegInstallLocalizedXmlDocumentation)' == ''">true</XabeFFmpegInstallLocalizedXmlDocumentation>
+    <XabeFFmpegDocumentationLanguage Condition="'$(XabeFFmpegDocumentationLanguage)' == '' and '$(PreferredUILang)' != ''">$(PreferredUILang)</XabeFFmpegDocumentationLanguage>
+    <XabeFFmpegDocumentationLanguage Condition="'$(XabeFFmpegDocumentationLanguage)' == '' and '$(UICulture)' != ''">$(UICulture)</XabeFFmpegDocumentationLanguage>
+    <XabeFFmpegDocumentationLanguage Condition="'$(XabeFFmpegDocumentationLanguage)' == '' and '$(Culture)' != ''">$(Culture)</XabeFFmpegDocumentationLanguage>
+    <XabeFFmpegDocumentationLanguage Condition="'$(XabeFFmpegDocumentationLanguage)' == ''">en</XabeFFmpegDocumentationLanguage>
+  </PropertyGroup>
+</Project>

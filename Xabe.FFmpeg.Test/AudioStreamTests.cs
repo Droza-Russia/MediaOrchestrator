@@ -38,7 +38,7 @@ namespace Xabe.FFmpeg.Test
 
             stream.ChangeSpeed(1.25);
 
-            var filters = stream.GetFilters().GetEnumerator();
+            var filters = ((IFilterable)stream).GetFilters().GetEnumerator();
             Assert.True(filters.MoveNext());
             Assert.Equal(FFmpegAudioFilterExpressions.ChangeTempo(1.25), filters.Current.Filters[StreamFilterName.Atempo.ToArgumentName()]);
         }

@@ -2,6 +2,7 @@ using System;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Xabe.FFmpeg.Exceptions;
 
 namespace Xabe.FFmpeg
 {
@@ -126,8 +127,13 @@ namespace Xabe.FFmpeg
         {
             IMediaInfo info = await FFmpeg.GetMediaInfo(inputPath, cancellationToken);
 
-            IVideoStream videoStream = info.VideoStreams.FirstOrDefault()
-                                           ?.SetLoop(loop, delay);
+            IVideoStream videoStream = info.VideoStreams.FirstOrDefault();
+            if (videoStream == null)
+            {
+                throw new VideoStreamNotFoundException(ErrorMessages.InputFileDoesNotContainVideoStream, nameof(inputPath));
+            }
+
+            videoStream = videoStream.SetLoop(loop, delay);
 
             return New()
                 .AddStream(videoStream)

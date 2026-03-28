@@ -32,12 +32,12 @@ namespace Xabe.FFmpeg
             {
                 if (string.IsNullOrWhiteSpace(sourceUrl))
                 {
-                    throw new ArgumentException("Source URL must be provided.", nameof(sourceUrl));
+                    throw new ArgumentException(ErrorMessages.SourceUrlMustBeProvided, nameof(sourceUrl));
                 }
 
                 if (string.IsNullOrWhiteSpace(outputPath))
                 {
-                    throw new ArgumentException("Output path must be provided.", nameof(outputPath));
+                    throw new ArgumentException(ErrorMessages.OutputPathMustBeProvided, nameof(outputPath));
                 }
 
                 settings = NormalizeSettings(settings);

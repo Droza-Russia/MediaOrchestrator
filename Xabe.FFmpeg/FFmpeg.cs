@@ -30,12 +30,14 @@ namespace Xabe.FFmpeg
         /// null: резолв ещё не выполнялся; пустая строка: успешный авто-поиск без <see cref="ExecutablesPath"/>; иначе последний закэшированный каталог из <see cref="SetExecutablesPath"/>.
         /// </summary>
         private static string _lastExecutablePathMarker;
+        private static string _lastHardwareAccelerationDetectionMarker;
 
         /// <summary>
         ///     Синхронизация путей к бинарникам, каталога ExecutablesPath, фильтра имён и профиля HW-ускорения.
         ///     Чтение путей — короткий read lock; полный поиск и смена конфигурации — write lock. Определение -hwaccels не держит write lock.
         /// </summary>
         private static readonly ReaderWriterLockSlim _executableConfigurationLock = new ReaderWriterLockSlim(LockRecursionPolicy.NoRecursion);
+        private static readonly object _hardwareAccelerationDetectionGate = new object();
 
         private static string _executablesPath;
         private static FileNameFilterMethod _filterMethod;
@@ -45,6 +47,7 @@ namespace Xabe.FFmpeg
         private static string _ffprobeExecutableName = "ffprobe";
 
         private static HardwareAccelerationProfile _autoDetectedHardwareAccelerationProfile;
+        internal static Func<string, CancellationToken, HardwareAccelerationProfile> HardwareAccelerationProfileDetector { get; set; } = DetectAutoHardwareAccelerationProfile;
 
         /// <summary>
         ///     Верхняя граница частоты кадров выходного видео. Не применяется к извлечению аудио, чисто аудио конвертации,
@@ -113,7 +116,7 @@ namespace Xabe.FFmpeg
         /// 
         protected FFmpeg()
         {
-            EnsureExecutablePathsResolved();
+            EnsureExecutablePathsResolved(CancellationToken.None);
         }
 
         /// <summary>
@@ -124,10 +127,10 @@ namespace Xabe.FFmpeg
         public static void EnsureExecutablesLocated(CancellationToken cancellationToken = default)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            EnsureExecutablePathsResolved();
+            EnsureExecutablePathsResolved(cancellationToken);
         }
 
-        private static void EnsureExecutablePathsResolved()
+        private static void EnsureExecutablePathsResolved(CancellationToken cancellationToken)
         {
             _executableConfigurationLock.EnterReadLock();
             try
@@ -156,6 +159,8 @@ namespace Xabe.FFmpeg
             {
                 _executableConfigurationLock.ExitWriteLock();
             }
+
+            EnsureHardwareAccelerationProfileResolved(cancellationToken);
         }
 
         private static bool IsExecutableResolutionCacheValid()
@@ -178,6 +183,90 @@ namespace Xabe.FFmpeg
             return _lastExecutablePathMarker.Length == 0;
         }
 
+        private static string GetCurrentHardwareAccelerationDetectionMarker()
+        {
+            if (string.IsNullOrWhiteSpace(_ffmpegPath) || _lastExecutablePathMarker == null)
+            {
+                return null;
+            }
+
+            return _lastExecutablePathMarker + "|" + _ffmpegPath;
+        }
+
+        private static bool IsHardwareAccelerationProfileCacheValid()
+        {
+            var currentMarker = GetCurrentHardwareAccelerationDetectionMarker();
+            return !string.IsNullOrWhiteSpace(currentMarker) &&
+                   string.Equals(_lastHardwareAccelerationDetectionMarker, currentMarker, StringComparison.Ordinal);
+        }
+
+        private static void EnsureHardwareAccelerationProfileResolved(CancellationToken cancellationToken)
+        {
+            string detectionMarker;
+            string ffmpegExecutablePath;
+
+            _executableConfigurationLock.EnterReadLock();
+            try
+            {
+                if (IsHardwareAccelerationProfileCacheValid())
+                {
+                    return;
+                }
+
+                detectionMarker = GetCurrentHardwareAccelerationDetectionMarker();
+                ffmpegExecutablePath = _ffmpegPath;
+            }
+            finally
+            {
+                _executableConfigurationLock.ExitReadLock();
+            }
+
+            if (string.IsNullOrWhiteSpace(detectionMarker) || string.IsNullOrWhiteSpace(ffmpegExecutablePath))
+            {
+                return;
+            }
+
+            lock (_hardwareAccelerationDetectionGate)
+            {
+                _executableConfigurationLock.EnterReadLock();
+                try
+                {
+                    if (IsHardwareAccelerationProfileCacheValid())
+                    {
+                        return;
+                    }
+
+                    detectionMarker = GetCurrentHardwareAccelerationDetectionMarker();
+                    ffmpegExecutablePath = _ffmpegPath;
+                }
+                finally
+                {
+                    _executableConfigurationLock.ExitReadLock();
+                }
+
+                if (string.IsNullOrWhiteSpace(detectionMarker) || string.IsNullOrWhiteSpace(ffmpegExecutablePath))
+                {
+                    return;
+                }
+
+                var profile = HardwareAccelerationProfileDetector(ffmpegExecutablePath, cancellationToken);
+
+                _executableConfigurationLock.EnterWriteLock();
+                try
+                {
+                    if (string.Equals(GetCurrentHardwareAccelerationDetectionMarker(), detectionMarker, StringComparison.Ordinal))
+                    {
+                        _autoDetectedHardwareAccelerationProfile = profile;
+                        _lastHardwareAccelerationDetectionMarker = detectionMarker;
+                    }
+                }
+                finally
+                {
+                    _executableConfigurationLock.ExitWriteLock();
+                }
+            }
+        }
+
         /// <summary>
         ///     Вызывать только при удерживаемом write lock после успешного определения путей.
         /// </summary>
@@ -198,7 +287,24 @@ namespace Xabe.FFmpeg
 
             if (!string.IsNullOrWhiteSpace(_executablesPath))
             {
-                var files = new DirectoryInfo(_executablesPath).GetFiles();
+                if (!Directory.Exists(_executablesPath))
+                {
+                    ValidateResolvedExecutablesPresentOrThrow();
+                    return;
+                }
+                FileInfo[] files;
+                try
+                {
+                    files = new DirectoryInfo(_executablesPath).GetFiles();
+                }
+                catch (UnauthorizedAccessException)
+                {
+                    throw new ExecutablesPathAccessDeniedException(string.Format(ErrorMessages.ExecutablesPathAccessDenied, _executablesPath));
+                }
+                catch (IOException)
+                {
+                    throw new ExecutablesPathAccessDeniedException(string.Format(ErrorMessages.ExecutablesPathAccessDenied, _executablesPath));
+                }
                 Func<string, string, IFormatProvider, bool> compareMethod;
                 switch (_filterMethod)
                 {
@@ -592,8 +698,7 @@ namespace Xabe.FFmpeg
             HardwareAccelerationProfile profile = null;
             if (attemptDetect && !string.IsNullOrWhiteSpace(ffmpegExecutablePath) && File.Exists(ffmpegExecutablePath))
             {
-                var os = new OperatingSystemProvider().GetOperatingSystem();
-                HardwareAccelerationAutoDetector.TryDetect(ffmpegExecutablePath, os, cancellationToken, out profile);
+                profile = DetectAutoHardwareAccelerationProfile(ffmpegExecutablePath, cancellationToken);
             }
 
             _executableConfigurationLock.EnterWriteLock();
@@ -605,6 +710,14 @@ namespace Xabe.FFmpeg
             {
                 _executableConfigurationLock.ExitWriteLock();
             }
+        }
+
+        private static HardwareAccelerationProfile DetectAutoHardwareAccelerationProfile(string ffmpegExecutablePath, CancellationToken cancellationToken)
+        {
+            var os = new OperatingSystemProvider().GetOperatingSystem();
+            return HardwareAccelerationAutoDetector.TryDetect(ffmpegExecutablePath, os, cancellationToken, out var profile)
+                ? profile
+                : null;
         }
 
         /// <summary>

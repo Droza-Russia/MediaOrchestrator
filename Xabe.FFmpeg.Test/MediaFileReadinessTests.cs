@@ -29,5 +29,33 @@ namespace Xabe.FFmpeg.Test
 
             Assert.Contains(directory, exception.Message);
         }
+
+        [Fact]
+        public async Task WaitUntilStableAsync_ThrowsInputFileStillBeingWritten_WhenFileKeepsChanging()
+        {
+            var directory = Path.Combine(Path.GetTempPath(), "xabe-readiness-" + Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(directory);
+            var path = Path.Combine(directory, "growing.mp4");
+            File.WriteAllBytes(path, new byte[] { 0x00 });
+
+            var writer = Task.Run(async () =>
+            {
+                for (var i = 0; i < 8; i++)
+                {
+                    await File.AppendAllTextAsync(path, "x").ConfigureAwait(false);
+                    await Task.Delay(20).ConfigureAwait(false);
+                }
+            });
+
+            var exception = await Assert.ThrowsAsync<InputFileStillBeingWrittenException>(() =>
+                MediaFileReadiness.WaitUntilStableAsync(
+                    path,
+                    stabilityQuietPeriod: TimeSpan.FromMilliseconds(50),
+                    pollInterval: TimeSpan.FromMilliseconds(10),
+                    maximumWait: TimeSpan.FromMilliseconds(120))).ConfigureAwait(false);
+
+            await writer.ConfigureAwait(false);
+            Assert.Contains(path, exception.Message);
+        }
     }
 }

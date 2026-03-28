@@ -6,7 +6,7 @@ namespace Xabe.FFmpeg.Exceptions
     /// <summary>
     ///     Исключение, выбрасываемое, когда процесс FFmpeg завершился с ошибкой.
     /// </summary>
-    public class ConversionException : Exception
+    public class ConversionException : XabeFFmpegException
     {
         /// <inheritdoc />
         /// <summary>

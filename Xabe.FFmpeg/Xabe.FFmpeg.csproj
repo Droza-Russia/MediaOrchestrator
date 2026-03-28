@@ -23,6 +23,9 @@
     <SignAssembly>false</SignAssembly>
     <DelaySign>false</DelaySign>
     <PackageRequireLicenseAcceptance>true</PackageRequireLicenseAcceptance>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <DocumentationFile>bin\$(Configuration)\$(TargetFramework)\Xabe.FFmpeg.xml</DocumentationFile>
+    <NoWarn>$(NoWarn);1571;1572;1573;1591</NoWarn>
     
     <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
   </PropertyGroup>
@@ -36,6 +39,9 @@
   <ItemGroup>
     <None Include="..\LICENSE.md" Pack="true" PackagePath="\" Link="LICENSE.md" />
     <None Include="..\README.md" Pack="true" PackagePath="\" Link="README.md" />
+    <None Include="buildTransitive\Xabe.FFMpeg.Custom.props" Pack="true" PackagePath="buildTransitive\" />
+    <None Include="buildTransitive\Xabe.FFMpeg.Custom.targets" Pack="true" PackagePath="buildTransitive\" />
+    <None Include="docs\intellisense\**\*.xml" Pack="true" PackagePath="docs\intellisense\" />
     <Compile Remove="Examples/**/*.cs" />
     <None Include="Examples/**/*.cs" />
   </ItemGroup>

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Xabe.FFmpeg.Exceptions;
 using Xabe.FFmpeg.Streams.SubtitleStream;
 
 namespace Xabe.FFmpeg
@@ -22,7 +23,7 @@ namespace Xabe.FFmpeg
         {
             IMediaInfo info = await FFmpeg.GetMediaInfo(inputPath, cancellationToken);
 
-            IVideoStream videoStream = info.VideoStreams.FirstOrDefault()
+            IVideoStream videoStream = RequireVideoStream(info, nameof(inputPath))
                                            .SetWatermark(inputImage, position);
 
             return New()
@@ -48,7 +49,7 @@ namespace Xabe.FFmpeg
                                        ?.SetRightSideDrawText(text, fontColor, fontSize, marginRight, marginY, verticalAlign, fontFilePath);
             if (videoStream == null)
             {
-                throw new ArgumentException(ErrorMessages.InputFileDoesNotContainVideoStream, nameof(inputPath));
+                throw new VideoStreamNotFoundException(ErrorMessages.InputFileDoesNotContainVideoStream, nameof(inputPath));
             }
 
             return New()
@@ -76,7 +77,7 @@ namespace Xabe.FFmpeg
                                        ?.SetRightSidePtsTimeOverlay(prefix, suffix, useLocalWallClock, fontColor, fontSize, marginRight, marginY, verticalAlign, fontFilePath);
             if (videoStream == null)
             {
-                throw new ArgumentException(ErrorMessages.InputFileDoesNotContainVideoStream, nameof(inputPath));
+                throw new VideoStreamNotFoundException(ErrorMessages.InputFileDoesNotContainVideoStream, nameof(inputPath));
             }
 
             return New()
@@ -103,7 +104,7 @@ namespace Xabe.FFmpeg
                                        ?.SetRightSideSmpteTimecodeOverlay(startTimecode, frameRate, fontColor, fontSize, marginRight, marginY, verticalAlign, fontFilePath);
             if (videoStream == null)
             {
-                throw new ArgumentException(ErrorMessages.InputFileDoesNotContainVideoStream, nameof(inputPath));
+                throw new VideoStreamNotFoundException(ErrorMessages.InputFileDoesNotContainVideoStream, nameof(inputPath));
             }
 
             return New()
@@ -122,7 +123,7 @@ namespace Xabe.FFmpeg
         {
             IMediaInfo info = await FFmpeg.GetMediaInfo(inputPath, cancellationToken);
 
-            IVideoStream videoStream = info.VideoStreams.FirstOrDefault();
+            IVideoStream videoStream = RequireVideoStream(info, nameof(inputPath));
 
             return New()
                 .AddStream(videoStream)
@@ -140,7 +141,7 @@ namespace Xabe.FFmpeg
         {
             IMediaInfo info = await FFmpeg.GetMediaInfo(inputPath, cancellationToken);
 
-            IVideoStream videoStream = info.VideoStreams.FirstOrDefault()
+            IVideoStream videoStream = RequireVideoStream(info, nameof(inputPath))
                                            .SetOutputFramesCount(1)
                                            .SetSeek(captureTime);
 
@@ -161,7 +162,7 @@ namespace Xabe.FFmpeg
         {
             IMediaInfo info = await FFmpeg.GetMediaInfo(inputPath, cancellationToken);
 
-            IVideoStream videoStream = info.VideoStreams.FirstOrDefault()
+            IVideoStream videoStream = RequireVideoStream(info, nameof(inputPath))
                                            .SetSize(width, height);
             return New()
                 .AddStream(videoStream)
@@ -181,7 +182,7 @@ namespace Xabe.FFmpeg
         {
             IMediaInfo info = await FFmpeg.GetMediaInfo(inputPath, cancellationToken);
 
-            IVideoStream videoStream = info.VideoStreams.FirstOrDefault()
+            IVideoStream videoStream = RequireVideoStream(info, nameof(inputPath))
                                            .SetSize(size);
             return New()
                 .AddStream(videoStream)
@@ -344,6 +345,17 @@ namespace Xabe.FFmpeg
             }
 
             return conversion;
+        }
+
+        private static IVideoStream RequireVideoStream(IMediaInfo info, string paramName)
+        {
+            var videoStream = info.VideoStreams.FirstOrDefault();
+            if (videoStream == null)
+            {
+                throw new VideoStreamNotFoundException(ErrorMessages.InputFileDoesNotContainVideoStream, paramName);
+            }
+
+            return videoStream;
         }
     }
 }

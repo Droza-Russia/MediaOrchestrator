@@ -12,7 +12,7 @@ namespace Xabe.FFmpeg.Events
     /// <summary>
     ///     Conversion information
     /// </summary>
-    public class ConversionProgressEventArgs : EventArgs
+    public sealed class ConversionProgressEventArgs : EventArgs
     {
         /// <inheritdoc />
         public ConversionProgressEventArgs(TimeSpan timeSpan, TimeSpan totalTime, int processId)

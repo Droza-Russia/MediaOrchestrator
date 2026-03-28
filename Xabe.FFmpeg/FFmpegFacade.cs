@@ -157,8 +157,10 @@ namespace Xabe.FFmpeg
                 _ffmpegExecutableName = ffmpegExeutableName;
                 _ffprobeExecutableName = ffprobeExecutableName;
                 _lastExecutablePathMarker = null;
+                _lastHardwareAccelerationDetectionMarker = null;
                 _ffmpegPath = null;
                 _ffprobePath = null;
+                _autoDetectedHardwareAccelerationProfile = null;
             }
             finally
             {
@@ -175,31 +177,8 @@ namespace Xabe.FFmpeg
             {
                 return;
             }
-
-            string ffmpegPathToProbe = null;
-            _executableConfigurationLock.EnterReadLock();
-            try
-            {
-                if (_executablesPath != null)
-                {
-                    ffmpegPathToProbe = Path.Combine(_executablesPath, ffmpegExeutableName);
-                    if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows) &&
-                        !ffmpegPathToProbe.EndsWith(".exe", StringComparison.OrdinalIgnoreCase) &&
-                        !File.Exists(ffmpegPathToProbe))
-                    {
-                        ffmpegPathToProbe = Path.Combine(_executablesPath, ffmpegExeutableName + ".exe");
-                    }
-                }
-            }
-            finally
-            {
-                _executableConfigurationLock.ExitReadLock();
-            }
-
-            RefreshAutoHardwareAccelerationProfile(
-                ffmpegPathToProbe != null && File.Exists(ffmpegPathToProbe) ? ffmpegPathToProbe : null,
-                true,
-                cancellationToken);
+            
+            EnsureExecutablesLocated(cancellationToken);
         }
 
         /// <summary>
@@ -274,7 +253,7 @@ namespace Xabe.FFmpeg
         }
     }
 
-    public class Conversions
+    public sealed class Conversions
     {
         /// <summary>
         ///     Получает новый экземпляр Conversion.
@@ -297,7 +276,7 @@ namespace Xabe.FFmpeg
         }
     }
 
-    public class Snippets
+    public sealed class Snippets
     {
         internal Snippets()
         {

@@ -1,2 +1,6 @@
-Xabe.FFmpeg/obj
-Xabe.FFmpeg/bin
+**/bin/
+**/obj/
+.idea/
+.DS_Store
+**/.DS_Store
+artifacts

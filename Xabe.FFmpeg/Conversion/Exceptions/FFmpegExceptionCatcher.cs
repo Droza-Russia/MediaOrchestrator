@@ -48,6 +48,10 @@ namespace Xabe.FFmpeg.Exceptions
             _checks.Add(new ExceptionCheck(FFmpegLogPatterns.UnableToFindSuitableOutputFormat), (output, args) => throw new FFmpegNoSuitableOutputFormatFoundException(output, args));
 
             _checks.Add(new ExceptionCheck(FFmpegLogPatterns.NotSupportedByBitstreamFilter), (output, args) => throw new InvalidBitstreamFilterException(output, args));
+            _checks.Add(new ExceptionCheck(FFmpegLogPatterns.StreamMatchesNoStreams), (output, args) => throw new StreamMappingException(ErrorMessages.StreamMappingFailed, output, args));
+            _checks.Add(new ExceptionCheck(FFmpegLogPatterns.CodecNotCurrentlySupportedInContainer), (output, args) => throw new StreamCodecNotSupportedException(ErrorMessages.StreamCodecNotSupported, output, args));
+            _checks.Add(new ExceptionCheck(FFmpegLogPatterns.CouldNotFindTagForCodec), (output, args) => throw new StreamCodecNotSupportedException(ErrorMessages.StreamCodecNotSupported, output, args));
+            _checks.Add(new ExceptionCheck(FFmpegLogPatterns.UnsupportedCodec), (output, args) => throw new StreamCodecNotSupportedException(ErrorMessages.StreamCodecNotSupported, output, args));
         }
 
         internal void CatchFFmpegErrors(string output, string args)
