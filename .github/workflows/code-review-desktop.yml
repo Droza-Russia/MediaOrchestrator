@@ -1,0 +1,62 @@
+name: Code Review for Desktop
+
+on:
+  pull_request:
+    branches:
+      - main
+  push:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Set up environment
+        run: |
+          # Commands to set up your environment, e.g., install dependencies
+          echo "Setting up environment"
+
+      - name: Build
+        run: |
+          # Commands to build your project
+          echo "Building project"
+
+  test:
+    runs-on: windows-latest
+    needs: build
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Run Tests
+        run: |
+          # Commands to run your tests
+          echo "Running tests"
+
+  code-analysis:
+    runs-on: windows-latest
+    needs: build
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Run Code Analysis
+        run: |
+          # Commands to perform code analysis
+          echo "Performing code analysis"
+
+  coverage-report:
+    runs-on: windows-latest
+    needs: [build, test]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Generate Coverage Report
+        run: |
+          # Commands to generate coverage report
+          echo "Generating coverage report"
