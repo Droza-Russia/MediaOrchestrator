@@ -14,7 +14,7 @@ All notable changes to this project will be documented in this file.
   - inaccessible `ffmpeg` / `ffprobe` executable locations
 - Added localized NuGet XML documentation support:
   - `ru` and `en` XML templates
-  - `buildTransitive` language selection based on developer locale
+  - `buildTransitive` default set to English with optional explicit locale override
   - one final `Xabe.FFmpeg.xml` file consumed by the IDE
 - Added explicit packaging scripts:
   - `scripts/pack.sh`
@@ -45,13 +45,13 @@ All notable changes to this project will be documented in this file.
   - moved internal-only types to `internal`
   - sealed safe leaf classes
 - Unified exception handling around a library-level exception contract suitable for external service integration.
-- Localization now initializes automatically from `CurrentUICulture`, while explicit API language selection still takes precedence.
+- Localization defaults to English for exceptions, while explicit API language selection still takes precedence.
 - Hardware acceleration auto-detection now uses a one-time cached initialization flow after executable discovery.
 - Updated README to reflect the new architecture, exception model, and IntelliSense packaging behavior.
 
 ### Fixed
 - Removed redundant `ffprobe` calls: a single `GetMediaInfo(...)` cache miss now uses one process execution.
-- Fixed localization initialization when no explicit language was set.
+- Fixed localization defaults so exception messages are English when language is not explicitly set.
 - Replaced raw system exceptions during executable resolution with library-specific typed exceptions.
 - Localized and normalized file, stream, and access-denied error messages.
 - Cleaned up broken and mixed-language blocks in the English IntelliSense XML.

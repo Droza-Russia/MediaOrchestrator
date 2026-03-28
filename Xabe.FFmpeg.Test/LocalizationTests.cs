@@ -21,7 +21,7 @@ namespace Xabe.FFmpeg.Test
             finally
             {
                 CultureInfo.CurrentUICulture = originalCulture;
-                LocalizationManager.Initialize(LocalizationLanguage.Russian);
+                LocalizationManager.Initialize(LocalizationLanguage.English);
             }
         }
 
@@ -35,12 +35,12 @@ namespace Xabe.FFmpeg.Test
         }
 
         [Fact]
-        public void SetExecutablesPath_DefaultLanguage_IsRussian()
+        public void SetExecutablesPath_DefaultLanguage_IsEnglish()
         {
             FFmpeg.SetExecutablesPath(null);
 
-            Assert.Equal(LocalizationLanguage.Russian, LocalizationManager.CurrentLanguage);
-            Assert.Equal("Конвертация уже была запущена.", ErrorMessages.ConversionAlreadyStarted);
+            Assert.Equal(LocalizationLanguage.English, LocalizationManager.CurrentLanguage);
+            Assert.Equal("Conversion has already been started.", ErrorMessages.ConversionAlreadyStarted);
         }
 
         [Fact]

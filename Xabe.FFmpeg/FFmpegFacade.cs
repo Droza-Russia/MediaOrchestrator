@@ -141,7 +141,7 @@ namespace Xabe.FFmpeg
             string ffprobeExecutableName = "ffprobe",
             FileNameFilterMethod filteringMethod = FileNameFilterMethod.Contains,
             IFormatProvider formatprovider = null,
-            LocalizationLanguage language = LocalizationLanguage.Russian,
+            LocalizationLanguage language = LocalizationLanguage.English,
             double? maxOutputVideoFrameRate = null,
             int? maxOutputAudioSampleRate = null,
             int? maxOutputAudioChannels = null,
@@ -213,7 +213,7 @@ namespace Xabe.FFmpeg
         ///     Устанавливает язык локализации сообщений исключений.
         /// </summary>
         /// <param name="language">Язык локализации.</param>
-        public static void SetLocalizationLanguage(LocalizationLanguage language = LocalizationLanguage.Russian)
+        public static void SetLocalizationLanguage(LocalizationLanguage language = LocalizationLanguage.English)
         {
             LocalizationManager.Initialize(language);
         }
