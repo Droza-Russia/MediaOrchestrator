@@ -6,11 +6,11 @@ namespace Xabe.FFmpeg
     internal static class LocalizationManager
     {
         private static readonly object _sync = new object();
-        private static LocalizationLanguage _currentLanguage = LocalizationLanguage.Russian;
+        private static LocalizationLanguage _currentLanguage = LocalizationLanguage.English;
 
         static LocalizationManager()
         {
-            InitializeFromCulture();
+            Initialize(LocalizationLanguage.English);
         }
 
         internal static LocalizationLanguage CurrentLanguage
@@ -24,7 +24,7 @@ namespace Xabe.FFmpeg
             }
         }
 
-        internal static void Initialize(LocalizationLanguage language = LocalizationLanguage.Russian)
+        internal static void Initialize(LocalizationLanguage language = LocalizationLanguage.English)
         {
             lock (_sync)
             {
@@ -46,7 +46,7 @@ namespace Xabe.FFmpeg
                         _currentLanguage = LocalizationLanguage.German;
                         break;
                     default:
-                        _currentLanguage = LocalizationLanguage.Russian;
+                        _currentLanguage = LocalizationLanguage.English;
                         break;
                 }
             }
