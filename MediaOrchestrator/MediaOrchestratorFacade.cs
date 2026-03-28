@@ -1074,7 +1074,7 @@ namespace MediaOrchestrator
 
         /// <summary>
         ///     Вшивает у правого края динамическое время: по умолчанию по PTS (ЧЧ:ММ:СС), опционально локальное время системы.
-        ///     Для таймкода с полем «кадр» и заданным fps используйте <see cref="BurnRightSideSmpteTimecode"/>.
+        ///     Для таймкода с полем «кадр» и заданным fps используйте метод <c>BurnRightSideSmpteTimecode(...)</c>.
         /// </summary>
         /// <param name="inputPath">Входной путь к видео.</param>
         /// <param name="outputPath">Выходной файл.</param>

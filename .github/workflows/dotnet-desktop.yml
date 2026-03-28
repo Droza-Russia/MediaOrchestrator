@@ -1,0 +1,46 @@
+name: .NET CI
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+    branches: ["main"]
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
+jobs:
+  build-and-test:
+    runs-on: windows-latest
+
+    strategy:
+      matrix:
+        configuration: [Debug, Release]
+
+    env:
+      SOLUTION_PATH: MediaOrchestrator/MediaOrchestrator.sln
+      TEST_PROJECT_PATH: MediaOrchestrator.Test/MediaOrchestrator.Test.csproj
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Install .NET
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: 9.0.x
+
+      - name: Restore solution
+        run: dotnet restore $env:SOLUTION_PATH
+
+      - name: Build solution
+        run: dotnet build $env:SOLUTION_PATH --configuration $env:CONFIGURATION --no-restore
+        env:
+          CONFIGURATION: ${{ matrix.configuration }}
+
+      - name: Execute unit tests
+        run: dotnet test $env:TEST_PROJECT_PATH --configuration $env:CONFIGURATION --no-build
+        env:
+          CONFIGURATION: ${{ matrix.configuration }}
