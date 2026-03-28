@@ -104,6 +104,55 @@ namespace Xabe.FFmpeg
         }
 
         /// <summary>
+        ///     Normalizes audio for speech-to-text transcription.
+        ///     By default, outputs mono WAV PCM s16le at 16 kHz.
+        /// </summary>
+        internal static async Task<IConversion> NormalizeAudioForTranscription(
+            string inputPath,
+            string outputPath,
+            TranscriptionAudioSettings settings = null,
+            CancellationToken cancellationToken = default)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            settings = settings ?? new TranscriptionAudioSettings();
+
+            if (settings.SampleRate <= 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(TranscriptionAudioSettings.SampleRate), ErrorMessages.SampleRateMustBeGreaterThanZeroForSettings);
+            }
+
+            if (settings.Channels <= 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(TranscriptionAudioSettings.Channels), ErrorMessages.ChannelsMustBeGreaterThanZero);
+            }
+
+            IMediaInfo info = await FFmpeg.GetMediaInfo(inputPath, cancellationToken).ConfigureAwait(false);
+            var audioStreams = info.AudioStreams.ToList();
+            if (!audioStreams.Any())
+            {
+                throw new AudioStreamNotFoundException(ErrorMessages.InputFileDoesNotContainAudioStream, nameof(inputPath));
+            }
+
+            var audioStreamIndex = settings.AudioStreamIndex ?? 0;
+            if (audioStreamIndex < 0 || audioStreamIndex >= audioStreams.Count)
+            {
+                throw new StreamIndexOutOfRangeException(nameof(TranscriptionAudioSettings.AudioStreamIndex), ErrorMessages.StreamIndexOutOfRange);
+            }
+
+            var conversion = New(suppressGlobalOutputLimits: true)
+                .AddInput(inputPath)
+                .MapAudioStream(0, audioStreamIndex)
+                .DisableVideo()
+                .SetAudioCodec(settings.Codec)
+                .SetAudioSampleRate(settings.SampleRate)
+                .SetAudioChannels(settings.Channels)
+                .SetOutputFormat(settings.Format)
+                .SetOutput(outputPath);
+
+            return conversion;
+        }
+
+        /// <summary>
         ///     Add audio stream to video file
         /// </summary>
         /// <param name="videoPath">Video</param>

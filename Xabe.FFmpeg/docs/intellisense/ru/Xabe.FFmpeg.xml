@@ -9454,6 +9454,46 @@
                 Ожидаемое общее число байт, если оно известно.
             </summary>
         </member>
+        <member name="T:Xabe.FFmpeg.TranscriptionAudioSettings">
+            <summary>
+                Настройки нормализации аудио перед транскрибацией речи в текст.
+            </summary>
+        </member>
+        <member name="P:Xabe.FFmpeg.TranscriptionAudioSettings.AudioStreamIndex">
+            <summary>
+                Нулевой индекс аудиодорожки среди найденных входных аудиопотоков. Если не указан, используется первая аудиодорожка.
+            </summary>
+        </member>
+        <member name="P:Xabe.FFmpeg.TranscriptionAudioSettings.SampleRate">
+            <summary>
+                Целевая частота дискретизации в Гц. По умолчанию 16000.
+            </summary>
+        </member>
+        <member name="P:Xabe.FFmpeg.TranscriptionAudioSettings.Channels">
+            <summary>
+                Целевое число каналов. По умолчанию 1 (моно).
+            </summary>
+        </member>
+        <member name="P:Xabe.FFmpeg.TranscriptionAudioSettings.Codec">
+            <summary>
+                Целевой аудиокодек. По умолчанию <c>pcm_s16le</c>.
+            </summary>
+        </member>
+        <member name="P:Xabe.FFmpeg.TranscriptionAudioSettings.Format">
+            <summary>
+                Целевой формат контейнера. По умолчанию <c>wav</c>.
+            </summary>
+        </member>
+        <member name="M:Xabe.FFmpeg.Snippets.NormalizeAudioForTranscription(System.String,System.String,System.Threading.CancellationToken)">
+            <summary>
+                Нормализует аудио для транскрибации речи в текст по умолчанию: mono WAV PCM s16le 16 kHz.
+            </summary>
+        </member>
+        <member name="M:Xabe.FFmpeg.Snippets.NormalizeAudioForTranscription(System.String,System.String,Xabe.FFmpeg.TranscriptionAudioSettings,System.Threading.CancellationToken)">
+            <summary>
+                Нормализует аудио для транскрибации речи в текст с пользовательскими настройками.
+            </summary>
+        </member>
         <member name="T:Xabe.FFmpeg.XabeFFmpegException">
             <summary>
                 Базовое исключение библиотеки Xabe.FFmpeg.

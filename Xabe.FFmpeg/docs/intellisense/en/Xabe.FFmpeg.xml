@@ -9525,6 +9525,46 @@
                 Gets or sets the expected total number of bytes, when known.
             </summary>
         </member>
+        <member name="T:Xabe.FFmpeg.TranscriptionAudioSettings">
+            <summary>
+                Settings for normalizing audio before speech-to-text transcription.
+            </summary>
+        </member>
+        <member name="P:Xabe.FFmpeg.TranscriptionAudioSettings.AudioStreamIndex">
+            <summary>
+                Zero-based index of the audio stream within the discovered input audio streams. If not set, the first audio stream is used.
+            </summary>
+        </member>
+        <member name="P:Xabe.FFmpeg.TranscriptionAudioSettings.SampleRate">
+            <summary>
+                Target sample rate in Hz. Default is 16000.
+            </summary>
+        </member>
+        <member name="P:Xabe.FFmpeg.TranscriptionAudioSettings.Channels">
+            <summary>
+                Target channel count. Default is 1 (mono).
+            </summary>
+        </member>
+        <member name="P:Xabe.FFmpeg.TranscriptionAudioSettings.Codec">
+            <summary>
+                Target audio codec. Default is <c>pcm_s16le</c>.
+            </summary>
+        </member>
+        <member name="P:Xabe.FFmpeg.TranscriptionAudioSettings.Format">
+            <summary>
+                Target output container format. Default is <c>wav</c>.
+            </summary>
+        </member>
+        <member name="M:Xabe.FFmpeg.Snippets.NormalizeAudioForTranscription(System.String,System.String,System.Threading.CancellationToken)">
+            <summary>
+                Normalizes audio for speech-to-text transcription using the default contract: mono WAV PCM s16le at 16 kHz.
+            </summary>
+        </member>
+        <member name="M:Xabe.FFmpeg.Snippets.NormalizeAudioForTranscription(System.String,System.String,Xabe.FFmpeg.TranscriptionAudioSettings,System.Threading.CancellationToken)">
+            <summary>
+                Normalizes audio for speech-to-text transcription using custom settings.
+            </summary>
+        </member>
         <member name="T:Xabe.FFmpeg.XabeFFmpegException">
             <summary>
                 Base exception for library-specific failures.

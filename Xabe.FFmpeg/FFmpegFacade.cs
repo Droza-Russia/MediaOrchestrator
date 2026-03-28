@@ -329,6 +329,36 @@ namespace Xabe.FFmpeg
         }
 
         /// <summary>
+        ///     Normalizes audio for speech-to-text transcription.
+        ///     By default, exports the first audio stream as mono WAV PCM s16le at 16 kHz.
+        /// </summary>
+        /// <param name="inputPath">Path to the input media file.</param>
+        /// <param name="outputPath">Path to the normalized output audio file.</param>
+        /// <param name="cancellationToken">Cancellation token.</param>
+        /// <returns>Configured conversion.</returns>
+        public Task<IConversion> NormalizeAudioForTranscription(string inputPath, string outputPath, CancellationToken cancellationToken = default)
+        {
+            return Conversion.NormalizeAudioForTranscription(inputPath, outputPath, null, cancellationToken);
+        }
+
+        /// <summary>
+        ///     Normalizes audio for speech-to-text transcription using custom settings.
+        /// </summary>
+        /// <param name="inputPath">Path to the input media file.</param>
+        /// <param name="outputPath">Path to the normalized output audio file.</param>
+        /// <param name="settings">Normalization settings for transcription audio.</param>
+        /// <param name="cancellationToken">Cancellation token.</param>
+        /// <returns>Configured conversion.</returns>
+        public Task<IConversion> NormalizeAudioForTranscription(
+            string inputPath,
+            string outputPath,
+            TranscriptionAudioSettings settings,
+            CancellationToken cancellationToken = default)
+        {
+            return Conversion.NormalizeAudioForTranscription(inputPath, outputPath, settings, cancellationToken);
+        }
+
+        /// <summary>
         ///     Добавляет аудиопоток к видеофайлу
         /// </summary>
         /// <param name="videoPath">Видео</param>
