@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using MediaOrchestrator.Test.TestSupport;
 using Xunit;
 
@@ -137,6 +138,24 @@ namespace MediaOrchestrator.Test
                 .SetOutput("output.mp4");
 
             conversion.Should().Video.ShouldUseHardwareAcceleration("cuda", "h264_cuvid", "h264_nvenc", 1);
+        }
+
+        [Fact]
+        public void Build_UsesTypedAudioMixFilterGraph()
+        {
+            var graph = FilterGraphs.BuildAudioMix(2, AudioMixDurationMode.Longest, normalize: true);
+
+            var conversion = new Conversion()
+                .AddInput("voice.wav")
+                .AddInput("music.wav")
+                .UseFilterGraph(graph)
+                .MapFilterOutputs(graph.Outputs.ToArray())
+                .SetOutput("mix.mp3");
+
+            var args = conversion.Build();
+
+            Assert.Contains("-filter_complex \"[0:a:0][1:a:0]amix=inputs=2:duration=longest:normalize=1 [mixed]\"", args);
+            Assert.Contains("-map \"[mixed]\"", args);
         }
     }
 }

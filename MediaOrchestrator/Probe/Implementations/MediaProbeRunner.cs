@@ -28,7 +28,7 @@ namespace MediaOrchestrator
         private async Task<ProbeModel> GetProbeData(string videoPath, CancellationToken cancellationToken)
         {
             var stringResult = await Start(
-                $"-v panic -print_format json=c=1 -show_streams -show_entries format=format_name,size,duration,bit_rate:format_tags=creation_time {videoPath}",
+                $"-v panic -print_format json=c=1 -show_streams -show_entries format=format_name,size,duration,bit_rate:format_tags {videoPath}",
                 cancellationToken);
             if (string.IsNullOrEmpty(stringResult))
             {
@@ -161,6 +161,10 @@ namespace MediaOrchestrator
                 mediaInfo.Size = long.Parse(format.Size);
             }
 
+            mediaInfo.FormatName = format?.FormatName ?? string.Empty;
+            mediaInfo.Bitrate = Math.Abs(format?.BitRate ?? 0);
+            mediaInfo.Metadata = BuildContainerMetadata(format?.Tags);
+
             if (!string.IsNullOrWhiteSpace(format?.Tags?.CreationTime) && DateTimeOffset.TryParse(format.Tags.CreationTime, out var creationdate))
             {
                 mediaInfo.CreationTime = creationdate.UtcDateTime;
@@ -229,9 +233,23 @@ namespace MediaOrchestrator
                 Bitrate = Math.Abs(model.BitRate) > 0.01 ? model.BitRate : (format?.BitRate ?? 0),
                 PixelFormat = model.PixFmt,
                 Default = model.Disposition?.Default,
+                Title = model.Tags?.Title,
                 Forced = model.Disposition?.Forced,
                 Rotation = model.Tags?.Rotate
             });
+        }
+
+        private static IReadOnlyDictionary<string, string> BuildContainerMetadata(ProbeModel.FormatTags tags)
+        {
+            if (tags?.AdditionalTags == null || tags.AdditionalTags.Count == 0)
+            {
+                return new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            }
+
+            return tags.AdditionalTags
+                .Select(pair => new KeyValuePair<string, string>(pair.Key, pair.Value.ValueKind == JsonValueKind.String ? pair.Value.GetString() : pair.Value.ToString()))
+                .Where(pair => !string.IsNullOrWhiteSpace(pair.Key) && !string.IsNullOrWhiteSpace(pair.Value))
+                .ToDictionary(pair => pair.Key, pair => pair.Value, StringComparer.OrdinalIgnoreCase);
         }
     }
 }

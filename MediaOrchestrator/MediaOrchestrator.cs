@@ -455,6 +455,7 @@ namespace MediaOrchestrator
             }
 
             var osFolder = GetCurrentOsFolderName();
+            var legacyRidFolder = GetCurrentLegacyPackRid();
             var searchRoots = new List<string> { startupDirectory };
             var current = startupDirectory;
             for (var level = 0; level < 3; level++)
@@ -472,6 +473,8 @@ namespace MediaOrchestrator
             var candidates = new List<string>();
             foreach (var root in searchRoots.Distinct())
             {
+                candidates.Add(Path.Combine(root, "ffmpegpack", legacyRidFolder));
+                candidates.Add(Path.Combine(root, "ffmpeg-pack", legacyRidFolder));
                 candidates.Add(Path.Combine(root, "ffmpeg-binaries", osFolder));
                 candidates.Add(Path.Combine(root, "ffpmeg-binaries", osFolder));
                 candidates.Add(Path.Combine(root, "ffmpeg-binaries"));
@@ -501,6 +504,22 @@ namespace MediaOrchestrator
                     return "linux";
                 default:
                     return "linux";
+            }
+        }
+
+        private static string GetCurrentLegacyPackRid()
+        {
+            var os = new OperatingSystemProvider().GetOperatingSystem();
+            switch (os)
+            {
+                case OperatingSystem.Windows:
+                    return "win-x64";
+                case OperatingSystem.Osx:
+                    return "osx-x64";
+                case OperatingSystem.Linux:
+                    return "linux-x64";
+                default:
+                    return "linux-x64";
             }
         }
 
