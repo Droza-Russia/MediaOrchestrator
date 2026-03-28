@@ -5,12 +5,12 @@
     <TargetFramework>net9.0</TargetFramework>
     <ImplicitUsings>disable</ImplicitUsings>
     <Nullable>disable</Nullable>
-    <AssemblyName>Xabe.FFmpeg.Examples</AssemblyName>
-    <RootNamespace>Xabe.FFmpeg.Examples</RootNamespace>
+    <AssemblyName>MediaOrchestrator.Examples</AssemblyName>
+    <RootNamespace>MediaOrchestrator.Examples</RootNamespace>
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Xabe.FFmpeg.csproj" />
+    <ProjectReference Include="..\MediaOrchestrator.csproj" />
   </ItemGroup>
 
 </Project>

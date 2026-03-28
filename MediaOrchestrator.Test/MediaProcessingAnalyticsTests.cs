@@ -182,7 +182,7 @@ namespace MediaOrchestrator.Test
     {
         internal static string CreateTempDirectory()
         {
-            var path = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "xabe-tests-" + Guid.NewGuid().ToString("N"));
+            var path = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "media-orchestrator-tests-" + Guid.NewGuid().ToString("N"));
             System.IO.Directory.CreateDirectory(path);
             return path;
         }

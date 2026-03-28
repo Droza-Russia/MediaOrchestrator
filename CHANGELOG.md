@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file.
 ## [1.0.3] - 2026-03-28
 
 ### Added
-- Added a unified library exception base type: `XabeFFmpegException`.
+- Added a unified library exception base type: `MediaOrchestratorException`.
 - Added typed exception families for:
   - locked, empty, unstable, unreadable input files
   - access-denied scenarios for input, output, executable, and network paths
@@ -15,7 +15,7 @@ All notable changes to this project will be documented in this file.
 - Added localized NuGet XML documentation support:
   - `ru` and `en` XML templates
   - `buildTransitive` default set to English with optional explicit locale override
-  - one final `Xabe.FFmpeg.xml` file consumed by the IDE
+  - one final `MediaOrchestrator.xml` file consumed by the IDE
 - Added explicit packaging scripts:
   - `scripts/pack.sh`
   - `scripts/pack.ps1`

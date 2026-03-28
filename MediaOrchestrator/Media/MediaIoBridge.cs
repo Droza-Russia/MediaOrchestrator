@@ -107,7 +107,7 @@ namespace MediaOrchestrator
 
         private static string CreateTempDirectoryPath()
         {
-            var directory = Path.Combine(Path.GetTempPath(), "xabe-media-io");
+            var directory = Path.Combine(Path.GetTempPath(), "media-orchestrator-media-io");
             Directory.CreateDirectory(directory);
             return directory;
         }

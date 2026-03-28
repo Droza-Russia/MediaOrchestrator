@@ -90,7 +90,7 @@ namespace MediaOrchestrator.Test
 
         private static string CreateTempDirectory()
         {
-            var path = Path.Combine(Path.GetTempPath(), "xabe-tests-" + Guid.NewGuid().ToString("N"));
+            var path = Path.Combine(Path.GetTempPath(), "media-orchestrator-tests-" + Guid.NewGuid().ToString("N"));
             Directory.CreateDirectory(path);
             return path;
         }

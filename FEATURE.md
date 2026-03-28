@@ -735,4 +735,4 @@ var conversion = await FFmpeg.Conversions.FromSnippet.RemuxIfPossibleElseTransco
 
 Рабочий шаблон для инвентаризации пакетов:
 
-- [TOOLCHAIN_PACKAGE_INVENTORY.md](/Users/andrej/Git/Xabe.FFMpeg.Custom/TOOLCHAIN_PACKAGE_INVENTORY.md)
+- [TOOLCHAIN_PACKAGE_INVENTORY.md](TOOLCHAIN_PACKAGE_INVENTORY.md)

@@ -14,7 +14,7 @@ namespace MediaOrchestrator.Test
 {
     public class MediaAnalysisLearningTests : IDisposable
     {
-        private readonly string _storeDirectory = Path.Combine(Path.GetTempPath(), "xabe-analysis-" + Guid.NewGuid().ToString("N"));
+        private readonly string _storeDirectory = Path.Combine(Path.GetTempPath(), "media-orchestrator-analysis-" + Guid.NewGuid().ToString("N"));
 
         public MediaAnalysisLearningTests()
         {
@@ -153,7 +153,7 @@ namespace MediaOrchestrator.Test
         [Fact]
         public async Task CachedStore_UsesMemoryImmediately_AndFlushesPersistentStoreLazily()
         {
-            var persistentDirectory = Path.Combine(Path.GetTempPath(), "xabe-analysis-persistent-" + Guid.NewGuid().ToString("N"));
+            var persistentDirectory = Path.Combine(Path.GetTempPath(), "media-orchestrator-analysis-persistent-" + Guid.NewGuid().ToString("N"));
             var persistentStore = new FileMediaAnalysisStore(persistentDirectory);
             var cachedStore = new CachedMediaAnalysisStore(persistentStore, TimeSpan.FromMinutes(5));
             var record = MediaAnalysisRecord.Create(
@@ -247,7 +247,7 @@ namespace MediaOrchestrator.Test
         [Fact]
         public async Task FileStore_UsesShardedDirectories()
         {
-            var persistentDirectory = Path.Combine(Path.GetTempPath(), "xabe-analysis-sharded-" + Guid.NewGuid().ToString("N"));
+            var persistentDirectory = Path.Combine(Path.GetTempPath(), "media-orchestrator-analysis-sharded-" + Guid.NewGuid().ToString("N"));
             var fileStore = new FileMediaAnalysisStore(persistentDirectory);
             var record = MediaAnalysisRecord.Create(
                 "sharded-key",
