@@ -37,6 +37,15 @@ namespace MediaOrchestrator
         public long Size { get; internal set; }
 
         /// <inheritdoc />
+        public string FormatName { get; internal set; }
+
+        /// <inheritdoc />
+        public long Bitrate { get; internal set; }
+
+        /// <inheritdoc />
+        public IReadOnlyDictionary<string, string> Metadata { get; internal set; } = new Dictionary<string, string>();
+
+        /// <inheritdoc />
         public DateTime? CreationTime { get; internal set; }
 
         /// <inheritdoc />
@@ -199,6 +208,10 @@ namespace MediaOrchestrator
             {
                 Duration = source.Duration,
                 Size = source.Size,
+                FormatName = source.FormatName,
+                Bitrate = source.Bitrate,
+                Metadata = source.Metadata?.ToDictionary(pair => pair.Key, pair => pair.Value)
+                           ?? new Dictionary<string, string>(),
                 CreationTime = source.CreationTime,
                 VideoStreams = source.VideoStreams.Select(CloneVideo).ToList(),
                 AudioStreams = source.AudioStreams.Select(CloneAudio).ToList(),
@@ -222,6 +235,7 @@ namespace MediaOrchestrator
                 Ratio = source.Ratio,
                 Bitrate = source.Bitrate,
                 Default = source.Default,
+                Title = source.Title,
                 Forced = source.Forced,
                 PixelFormat = source.PixelFormat,
                 Rotation = source.Rotation

@@ -47,5 +47,14 @@ namespace MediaOrchestrator
                 FFmpegFilterArgument.Named("v", videoOutputCount.ToString()),
                 FFmpegFilterArgument.Named("a", audioOutputCount.ToString()));
         }
+
+        internal static FFmpegFilter Amix(int inputCount, AudioMixDurationMode durationMode, bool normalize)
+        {
+            return new FFmpegFilter(
+                "amix",
+                FFmpegFilterArgument.Named("inputs", inputCount.ToString()),
+                FFmpegFilterArgument.Named("duration", durationMode.ToString().ToLowerInvariant()),
+                FFmpegFilterArgument.Named("normalize", normalize ? "1" : "0"));
+        }
     }
 }

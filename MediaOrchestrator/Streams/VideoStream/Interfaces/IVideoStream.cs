@@ -43,6 +43,11 @@ namespace MediaOrchestrator
         int? Default { get; }
 
         /// <summary>
+        ///     Заголовок потока.
+        /// </summary>
+        string Title { get; }
+
+        /// <summary>
         ///     Принудительно
         /// </summary>
         int? Forced { get; }

@@ -82,6 +82,33 @@ namespace MediaOrchestrator.Test
         }
 
         [Fact]
+        public void Initialization_FindsExecutablesInStartupLegacyFfmpegPackDirectory()
+        {
+            var startupDirectory = Path.GetDirectoryName(Assembly.GetEntryAssembly()?.Location);
+            Assert.False(string.IsNullOrWhiteSpace(startupDirectory));
+
+            var binariesDirectory = Path.Combine(startupDirectory, "ffmpegpack", GetCurrentLegacyPackRid());
+            Directory.CreateDirectory(binariesDirectory);
+
+            var ffmpegPath = CreateFakeExecutable(binariesDirectory, "ffmpeg");
+            var ffprobePath = CreateFakeExecutable(binariesDirectory, "ffprobe");
+
+            try
+            {
+                MediaOrchestrator.SetExecutablesPath(null);
+
+                var accessor = new TestFFmpegAccessor();
+
+                Assert.Equal(ffmpegPath, accessor.CurrentFFmpegPath);
+                Assert.Equal(ffprobePath, accessor.CurrentFFprobePath);
+            }
+            finally
+            {
+                TryDeleteDirectory(Path.Combine(startupDirectory, "ffmpegpack"));
+            }
+        }
+
+        [Fact]
         public void Initialization_WithMissingConfiguredDirectory_ThrowsFfmpegNotFoundException()
         {
             var missingDir = Path.Combine(Path.GetTempPath(), "media-orchestrator-missing-" + Guid.NewGuid().ToString("N"));
@@ -197,6 +224,21 @@ namespace MediaOrchestrator.Test
             }
 
             return "linux";
+        }
+
+        private static string GetCurrentLegacyPackRid()
+        {
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            {
+                return "win-x64";
+            }
+
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
+            {
+                return "osx-x64";
+            }
+
+            return "linux-x64";
         }
 
         private static string CreateFakeExecutable(string directory, string baseName)
