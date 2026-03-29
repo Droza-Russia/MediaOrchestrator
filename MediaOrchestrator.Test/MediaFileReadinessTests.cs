@@ -77,21 +77,28 @@ namespace MediaOrchestrator.Test
                 throw new Xunit.Sdk.XunitException("The background writer did not grow the test file before the timeout elapsed.");
             }
 
-            var exception = await Assert.ThrowsAsync<InputFileStillBeingWrittenException>(() =>
-                MediaFileReadiness.WaitUntilStableAsync(
-                    path,
-                    stabilityQuietPeriod: TimeSpan.FromMilliseconds(25),
-                    pollInterval: TimeSpan.FromMilliseconds(2),
-                    maximumWait: TimeSpan.FromMilliseconds(200))).ConfigureAwait(false);
-
-            writerCancellation.Cancel();
+            InputFileStillBeingWrittenException exception;
             try
             {
-                await writer.ConfigureAwait(false);
+                exception = await Assert.ThrowsAsync<InputFileStillBeingWrittenException>(() =>
+                    MediaFileReadiness.WaitUntilStableAsync(
+                        path,
+                        stabilityQuietPeriod: TimeSpan.FromMilliseconds(25),
+                        pollInterval: TimeSpan.FromMilliseconds(2),
+                        maximumWait: TimeSpan.FromMilliseconds(200))).ConfigureAwait(false);
             }
-            catch (OperationCanceledException)
+            finally
             {
+                writerCancellation.Cancel();
+                try
+                {
+                    await writer.ConfigureAwait(false);
+                }
+                catch (OperationCanceledException)
+                {
+                }
             }
+
             Assert.Contains(path, exception.Message);
         }
     }
