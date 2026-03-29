@@ -70,6 +70,11 @@ All notable changes to this project will be documented in this file.
   - Proper disposal on cancellation via `using` block
 
 ### Fixed
+- Fixed LruCache thread-safety: `TryGet` now properly upgrades to write lock before modifying linked list
+- Fixed SemaphoreSlim disposal in CachedMediaAnalysisStore: proper try/finally to ensure release on any exit path
+- Fixed memory leak in MediaIoBridge: `_cleanupErrors` dictionary now has max size and periodic cleanup
+- Fixed exception visibility: cleanup errors now store exception type and message instead of just boolean flag
+
 - Fixed MediaOrchestratorMetrics compilation errors:
   - Added `Count` property to `CachedMediaAnalysisStore`
   - Added public static `FFmpegExecutablePath` and `FFprobeExecutablePath` properties to `MediaOrchestrator`

@@ -13,8 +13,10 @@ namespace MediaOrchestrator
         private const int MinimumBufferSize = 81920;
         private const int MaxRetryAttempts = 3;
         private const int RetryDelayMs = 100;
+        private const int MaxCleanupErrors = 1000;
 
-        private static readonly ConcurrentDictionary<string, bool> _cleanupErrors = new ConcurrentDictionary<string, bool>();
+        private static readonly ConcurrentDictionary<string, string> _cleanupErrors = new ConcurrentDictionary<string, string>();
+        private static readonly object _cleanupErrorsGate = new object();
 
         private static string GetIsolatedTempDirectory()
         {
@@ -414,9 +416,25 @@ namespace MediaOrchestrator
         private static void LogCleanupError(string path, Exception ex)
         {
             var key = path + "_" + DateTime.UtcNow.ToString("yyyyMMddHHmmss");
+            var errorMessage = ex?.GetType().Name + ": " + (ex?.Message ?? "Unknown error");
             if (!_cleanupErrors.ContainsKey(key))
             {
-                _cleanupErrors.TryAdd(key, true);
+                _cleanupErrors.TryAdd(key, errorMessage);
+            }
+
+            if (_cleanupErrors.Count > MaxCleanupErrors)
+            {
+                lock (_cleanupErrorsGate)
+                {
+                    if (_cleanupErrors.Count > MaxCleanupErrors)
+                    {
+                        var keysToRemove = _cleanupErrors.Keys.Take(_cleanupErrors.Count / 2).ToList();
+                        foreach (var k in keysToRemove)
+                        {
+                            _cleanupErrors.TryRemove(k, out _);
+                        }
+                    }
+                }
             }
         }
 

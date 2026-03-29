@@ -47,18 +47,40 @@ namespace MediaOrchestrator.Analytics.Stores
             {
                 if (_map.TryGetValue(key, out var node))
                 {
-                    // Check if expired
                     if (node.IsExpired)
                     {
-                        RemoveNode(node);
-                        _map.Remove(key);
+                        _lock.EnterWriteLock();
+                        try
+                        {
+                            if (_map.TryGetValue(key, out var expiredNode) && expiredNode.IsExpired)
+                            {
+                                RemoveNode(expiredNode);
+                                _map.Remove(key);
+                            }
+                        }
+                        finally
+                        {
+                            _lock.ExitWriteLock();
+                        }
                         value = default;
                         return false;
                     }
 
-                    // Move to head (most recently used)
-                    MoveToHead(node);
-                    value = node.Value;
+                    _lock.EnterWriteLock();
+                    try
+                    {
+                        if (_map.TryGetValue(key, out var validNode) && !validNode.IsExpired)
+                        {
+                            MoveToHead(validNode);
+                            value = validNode.Value;
+                            return true;
+                        }
+                    }
+                    finally
+                    {
+                        _lock.ExitWriteLock();
+                    }
+                    value = default;
                     return true;
                 }
 
