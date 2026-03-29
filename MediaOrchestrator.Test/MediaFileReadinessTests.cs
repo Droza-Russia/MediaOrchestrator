@@ -68,10 +68,12 @@ namespace MediaOrchestrator.Test
             if (firstGrowthCompleted != firstGrowthObserved.Task)
             {
                 writerCancellation.Cancel();
-
-                if (firstGrowthCompleted == writer)
+                try
                 {
                     await writer.ConfigureAwait(false);
+                }
+                catch (OperationCanceledException)
+                {
                 }
 
                 throw new Xunit.Sdk.XunitException("The background writer did not grow the test file before the timeout elapsed.");
