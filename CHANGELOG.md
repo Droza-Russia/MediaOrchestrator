@@ -85,6 +85,13 @@ All notable changes to this project will be documented in this file.
   - Added public static `FFmpegExecutablePath` and `FFprobeExecutablePath` properties to `MediaOrchestrator`
   - Updated metrics to use new property names
 
+- Fixed FileMediaAnalysisStore old compressed file cleanup logic
+  - Now correctly checks for alternative format (if writing .json.gz, check for .json; if writing .json, check for .json.gz)
+  - Fixed bug where path + ".gz" would look for .gz.gz when compression already enabled
+
+- Fixed FileMediaAnalysisStore duplicate catch blocks
+  - Combined IOException and UnauthorizedAccessException handlers using `when` clause
+
 - Fixed extension methods namespace from `System` to `MediaOrchestrator.Extensions`
   - `StringExtensions`, `TimeExtensions`, `DoubleExtensions`
 - Fixed `Streams.Collections` namespace to match directory structure

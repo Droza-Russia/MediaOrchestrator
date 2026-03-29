@@ -195,8 +195,8 @@ namespace MediaOrchestrator.Analytics.Stores
 
                 File.Move(tempPath, path);
 
-                string oldPath = _enableCompression 
-                    ? Path.ChangeExtension(path, null) 
+                string oldPath = _enableCompression
+                    ? Path.ChangeExtension(path, null)
                     : path + ".gz";
                 if (File.Exists(oldPath))
                 {
