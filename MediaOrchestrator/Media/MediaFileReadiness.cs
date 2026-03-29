@@ -3,6 +3,7 @@ using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using MediaOrchestrator.Exceptions;
+using MediaOrchestrator.Extensions;
 
 namespace MediaOrchestrator
 {
@@ -163,13 +164,7 @@ namespace MediaOrchestrator
             snapshot = default;
             try
             {
-                if (!File.Exists(fullPath))
-                {
-                    return false;
-                }
-
-                var info = new FileInfo(fullPath);
-                if (!info.Exists)
+                if (!FileHelper.TryGetFileInfo(fullPath, out var info))
                 {
                     return false;
                 }

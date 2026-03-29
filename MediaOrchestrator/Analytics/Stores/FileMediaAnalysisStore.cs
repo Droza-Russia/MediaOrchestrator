@@ -11,6 +11,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Linq;
 using MediaOrchestrator.Analytics.Models;
+using MediaOrchestrator.Extensions;
 
 namespace MediaOrchestrator.Analytics.Stores
 {
@@ -198,18 +199,11 @@ namespace MediaOrchestrator.Analytics.Stores
                 string oldPath = _enableCompression
                     ? Path.ChangeExtension(path, null)
                     : path + ".gz";
-                if (File.Exists(oldPath))
-                {
-                    try { File.Delete(oldPath); } catch { }
-                }
+                FileHelper.SafeDeleteFile(oldPath);
             }
             catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException)
             {
-                string tempPath = path + ".tmp";
-                if (File.Exists(tempPath))
-                {
-                    try { File.Delete(tempPath); } catch { }
-                }
+                FileHelper.SafeDeleteTempFiles(path);
                 throw;
             }
             finally
