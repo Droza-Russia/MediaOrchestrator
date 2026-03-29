@@ -73,17 +73,6 @@ jobs:
         run: |
           echo "Skipping Gemini review for draft or fork pull request."
 
-      - name: Mint identity token
-        id: mint_identity_token
-        if: ${{ steps.pr_context.outputs.should_review == 'true' && vars.APP_ID && secrets.APP_PRIVATE_KEY }}
-        uses: actions/create-github-app-token@v2
-        with:
-          app-id: ${{ vars.APP_ID }}
-          private-key: ${{ secrets.APP_PRIVATE_KEY }}
-          permission-contents: read
-          permission-issues: write
-          permission-pull-requests: write
-
       - name: Extract review context
         id: review_context
         if: ${{ steps.pr_context.outputs.should_review == 'true' }}
@@ -126,7 +115,7 @@ jobs:
         if: ${{ steps.pr_context.outputs.should_review == 'true' }}
         uses: google-github-actions/run-gemini-cli@9dbec29a20fab3f35017a40ad0eb798a257d4d51
         env:
-          GITHUB_TOKEN: ${{ steps.mint_identity_token.outputs.token || secrets.GITHUB_TOKEN || github.token }}
+          GITHUB_TOKEN: ${{ github.token }}
           GOOGLE_GENAI_USE_GCA: "true"
           ISSUE_TITLE: ${{ steps.pr_context.outputs.title }}
           ISSUE_BODY: ${{ steps.pr_context.outputs.body }}
