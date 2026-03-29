@@ -100,10 +100,10 @@ namespace MediaOrchestrator.Analytics.Stores
             }
 
             var jsonFiles = Directory.GetFiles(_directoryPath, "*.json", SearchOption.AllDirectories);
-            var gzFiles = _enableCompression 
-                ? Directory.GetFiles(_directoryPath, "*.json.gz", SearchOption.AllDirectories) 
+            var gzFiles = _enableCompression
+                ? Directory.GetFiles(_directoryPath, "*.json.gz", SearchOption.AllDirectories)
                 : Array.Empty<string>();
-            
+
             var files = jsonFiles.Concat(gzFiles).ToArray();
             var result = new List<MediaAnalysisRecord>(files.Length);
 
