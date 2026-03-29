@@ -87,17 +87,17 @@ namespace MediaOrchestrator
             try
             {
                 using (var p = new Process
-                       {
-                           StartInfo =
-                           {
-                               FileName = ffmpegPath,
-                               Arguments = "-hide_banner -hwaccels",
-                               UseShellExecute = false,
-                               RedirectStandardOutput = true,
-                               RedirectStandardError = true,
-                               CreateNoWindow = true,
-                           }
-                       })
+                {
+                    StartInfo =
+                    {
+                        FileName = ffmpegPath,
+                        Arguments = "-hide_banner -hwaccels",
+                        UseShellExecute = false,
+                        RedirectStandardOutput = true,
+                        RedirectStandardError = true,
+                        CreateNoWindow = true,
+                    }
+                })
                 {
                     using (cancellationToken.Register(() =>
                            {
