@@ -107,8 +107,10 @@ jobs:
           GOOGLE_GENAI_USE_GCA: "true"
           GEMINI_CLI_VERSION: ${{ vars.GEMINI_CLI_VERSION || '0.35.3' }}
         run: |
+          mkdir -p "$HOME/.gemini"
+          printf '{}' > "$HOME/.gemini/projects.json"
           npm install -g "@google/gemini-cli@${GEMINI_CLI_VERSION}"
-          gemini extensions install https://github.com/gemini-cli-extensions/code-review --ref dd1a10d2c9d07b2ebade866590fdfa59cd8f9d04 --consent --skip-settings
+          gemini extensions install https://github.com/gemini-cli-extensions/code-review --ref dd1a10d2c9d07b2ebade866590fdfa59cd8f9d04 --consent
 
       - name: Run Gemini pull request review
         id: gemini_pr_review
