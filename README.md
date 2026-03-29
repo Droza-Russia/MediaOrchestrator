@@ -325,7 +325,7 @@ The repository includes a GitHub Actions workflow at [.github/workflows/gemini-c
 Behavior:
 - automatic review on `pull_request` open, reopen, ready-for-review and new commits;
 - manual rerun from a pull request comment: `@gemini-cli /review`;
-- manual review comments are accepted only from `OWNER`, `MEMBER` or `COLLABORATOR`;
+- manual review requests are accepted only from `OWNER`, `MEMBER` or `COLLABORATOR`;
 - automatic review is skipped for forked pull requests for safety.
 
 If Gemini Code Assist is already installed for this repository in GitHub, the workflow uses it directly via `use_gemini_code_assist: true`.
