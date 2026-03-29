@@ -5,6 +5,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using MediaOrchestrator.Exceptions;
+using MediaOrchestrator.Extensions;
 
 namespace MediaOrchestrator
 {

@@ -25,6 +25,8 @@ namespace MediaOrchestrator
         private List<string> _outputLog;
         private TimeSpan _totalTime;
         private bool _wasKilled = false;
+        private DateTime _progressStartTime;
+        private double _lastProgressDurationSeconds;
         internal Analytics.Models.ExecutionResourceMetrics LastExecutionResourceMetrics { get; private set; }
 
         /// <summary>
@@ -236,7 +238,8 @@ namespace MediaOrchestrator
                 var ts = GetTimeSpanValue(match);
                 if (ts.TotalMilliseconds > 0)
                 {
-                    OnProgress(this, new ConversionProgressEventArgs(ts, _totalTime, processId));
+                    var progressArgs = CreateEnhancedProgressArgs(ts, _totalTime, processId, e.Data);
+                    OnProgress(this, progressArgs);
                 }
             }
         }
@@ -333,6 +336,95 @@ namespace MediaOrchestrator
             }
 
             return string.Empty;
+        }
+
+        private ConversionProgressEventArgs CreateEnhancedProgressArgs(TimeSpan duration, TimeSpan totalLength, int processId, string ffmpegOutputLine)
+        {
+            if (_progressStartTime == DateTime.MinValue)
+            {
+                _progressStartTime = DateTime.UtcNow;
+                _lastProgressDurationSeconds = 0;
+            }
+
+            TimeSpan? estimatedTimeRemaining = null;
+            double? speedMultiplier = null;
+            double? currentBitrateMbps = null;
+
+            if (duration.TotalSeconds > 0 && _lastProgressDurationSeconds > 0)
+            {
+                var progressDelta = duration.TotalSeconds - _lastProgressDurationSeconds;
+                var timeDelta = (DateTime.UtcNow - _progressStartTime).TotalSeconds;
+
+                if (progressDelta > 0 && timeDelta > 0)
+                {
+                    speedMultiplier = progressDelta / timeDelta;
+
+                    if (speedMultiplier.HasValue && speedMultiplier.Value > 0.1)
+                    {
+                        var remainingDuration = totalLength.TotalSeconds - duration.TotalSeconds;
+                        if (remainingDuration > 0)
+                        {
+                            var etaSeconds = remainingDuration / speedMultiplier.Value;
+                            estimatedTimeRemaining = TimeSpan.FromSeconds(etaSeconds);
+                        }
+                    }
+                }
+            }
+
+            _lastProgressDurationSeconds = duration.TotalSeconds;
+
+            if (totalLength.TotalSeconds > 0)
+            {
+                currentBitrateMbps = ParseBitrateFromOutput(ffmpegOutputLine);
+            }
+
+            return new ConversionProgressEventArgs(
+                duration,
+                totalLength,
+                processId,
+                estimatedTimeRemaining,
+                speedMultiplier,
+                currentBitrateMbps);
+        }
+
+        private double? ParseBitrateFromOutput(string outputLine)
+        {
+            if (string.IsNullOrWhiteSpace(outputLine))
+            {
+                return null;
+            }
+
+            try
+            {
+                var bitrateMatch = System.Text.RegularExpressions.Regex.Match(
+                    outputLine,
+                    @"bitrate\s*=\s*(\d+\.?\d*)\s*(\w+)",
+                    System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+
+                if (bitrateMatch.Success && bitrateMatch.Groups.Count >= 3)
+                {
+                    var value = double.Parse(bitrateMatch.Groups[1].Value);
+                    var unit = bitrateMatch.Groups[2].Value.ToUpperInvariant();
+
+                    switch (unit)
+                    {
+                        case "MB/S":
+                        case "MBPS":
+                            return value;
+                        case "KB/S":
+                        case "KBPS":
+                            return value / 1000.0;
+                        case "B/S":
+                        case "BPS":
+                            return value / 1000000.0;
+                    }
+                }
+            }
+            catch
+            {
+            }
+
+            return null;
         }
     }
 }

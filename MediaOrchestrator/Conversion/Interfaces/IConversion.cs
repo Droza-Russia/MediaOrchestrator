@@ -298,6 +298,16 @@ namespace MediaOrchestrator
         Task<IConversionResult> Start(string parameters, CancellationToken cancellationToken = default, IProgress<ConversionProgressEventArgs> progress = null);
 
         /// <summary>
+        ///     Останавливает выполняемую конвертацию. Работает только если конвертация уже запущена.
+        ///     Генерирует <see cref="TaskCanceledException"/> после остановки процесса ffmpeg.
+        /// </summary>
+        /// <remarks>
+        ///     Альтернатива внешнему <see cref="CancellationToken"/>. Позволяет остановить конвертацию без создания внешнего токена.
+        /// </remarks>
+        /// <exception cref="InvalidOperationException">Возникает, если конвертация не была запущена.</exception>
+        void Stop();
+
+        /// <summary>
         ///     Добавляет дополнительный параметр в аргументы MediaOrchestrator.
         /// </summary>
         /// <param name="parameter">Параметр в виде строки.</param>

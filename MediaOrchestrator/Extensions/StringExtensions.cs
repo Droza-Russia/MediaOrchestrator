@@ -1,33 +1,38 @@
-﻿using System.Linq;
+using System.Linq;
 
-namespace System
+namespace MediaOrchestrator.Extensions
 {
     public static class StringExtensions
     {
         public static string Escape(this string output)
         {
-            if (output == null)
+            if (string.IsNullOrEmpty(output))
             {
                 return output;
             }
 
-            if ((output.Last() == '\"' && output.First() == '\"') || (output.Last() == '\'' && output.First() == '\''))
+            var lastChar = output[output.Length - 1];
+            var firstChar = output[0];
+
+            if ((lastChar == '"' && firstChar == '"') || (lastChar == '\'' && firstChar == '\''))
             {
                 output = output.Substring(1, output.Length - 2);
             }
 
-            output = $"\"{output}\"";
-            return output;
+            return $"\"{output}\"";
         }
 
         public static string Unescape(this string output)
         {
-            if (output == null || output.Length < 2)
+            if (string.IsNullOrEmpty(output) || output.Length < 2)
             {
                 return output;
             }
 
-            if ((output.Last() == '\"' && output.First() == '\"') || (output.Last() == '\'' && output.First() == '\''))
+            var lastChar = output[output.Length - 1];
+            var firstChar = output[0];
+
+            if ((lastChar == '"' && firstChar == '"') || (lastChar == '\'' && firstChar == '\''))
             {
                 return output.Substring(1, output.Length - 2);
             }

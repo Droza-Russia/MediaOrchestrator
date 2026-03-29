@@ -258,6 +258,19 @@ namespace MediaOrchestrator.Analytics
 
             UpdateStrategyStatistics(record.GetStrategyStatistics(session.Plan.Strategy), sample);
             await store.SaveAsync(record, CancellationToken.None).ConfigureAwait(false);
+
+            var operationDuration = endTime - startTime;
+            var operationKey = MediaOrchestrator.BuildOperationKey(
+                session.AnalysisKey,
+                string.Empty,
+                session.Scenario,
+                session.Plan.Strategy,
+                session.ProbeSnapshot?.PrimaryVideoCodec,
+                session.ProbeSnapshot?.PrimaryAudioCodec,
+                session.ProbeSnapshot?.DurationSeconds,
+                sample.UsedHardwareAcceleration);
+
+            MediaOrchestrator.RecordOperationDuration(operationKey, operationDuration, succeeded);
         }
 
         private async Task<IConversion> BuildConversionAsync(

@@ -1,24 +1,31 @@
 using System;
+using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.IO;
+using System.IO.Compression;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Threading;
 using System.Threading.Tasks;
-using System.Collections.Generic;
 using System.Linq;
 using MediaOrchestrator.Analytics.Models;
 
 namespace MediaOrchestrator.Analytics.Stores
 {
-    internal sealed class FileMediaAnalysisStore : IMediaAnalysisStore
+    internal sealed class FileMediaAnalysisStore : IMediaAnalysisStore, IDisposable
     {
         private readonly string _directoryPath;
         private readonly JsonSerializerOptions _jsonSerializerOptions;
         private readonly SemaphoreSlim _gate = new SemaphoreSlim(1, 1);
+        private readonly int _bufferSize;
+        private readonly bool _enableCompression;
+        private volatile bool _isDisposed;
 
-        public FileMediaAnalysisStore(string directoryPath)
+        private static readonly ConcurrentDictionary<string, string> _hashCache = new ConcurrentDictionary<string, string>();
+
+        public FileMediaAnalysisStore(string directoryPath, bool enableCompression = false)
         {
             if (string.IsNullOrWhiteSpace(directoryPath))
             {
@@ -26,6 +33,9 @@ namespace MediaOrchestrator.Analytics.Stores
             }
 
             _directoryPath = Path.GetFullPath(directoryPath);
+            _bufferSize = 81920;
+            _enableCompression = enableCompression;
+
             _jsonSerializerOptions = new JsonSerializerOptions
             {
                 WriteIndented = true
@@ -35,7 +45,7 @@ namespace MediaOrchestrator.Analytics.Stores
 
         public async Task<MediaAnalysisRecord> GetAsync(string analysisKey, CancellationToken cancellationToken = default)
         {
-            if (string.IsNullOrWhiteSpace(analysisKey))
+            if (_isDisposed || string.IsNullOrWhiteSpace(analysisKey))
             {
                 return null;
             }
@@ -55,12 +65,25 @@ namespace MediaOrchestrator.Analytics.Stores
                 }
 
                 string json;
-                using (var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read, 4096, useAsync: true))
-                using (var reader = new StreamReader(stream, Encoding.UTF8))
+                if (_enableCompression && IsCompressedFile(path))
                 {
-                    cancellationToken.ThrowIfCancellationRequested();
-                    json = await reader.ReadToEndAsync().ConfigureAwait(false);
+                    using (var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read, _bufferSize, useAsync: true))
+                    using (var decompressStream = new GZipStream(stream, CompressionMode.Decompress))
+                    using (var reader = new StreamReader(decompressStream, Encoding.UTF8))
+                    {
+                        json = await reader.ReadToEndAsync().ConfigureAwait(false);
+                    }
                 }
+                else
+                {
+                    using (var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read, _bufferSize, useAsync: true))
+                    using (var reader = new StreamReader(stream, Encoding.UTF8))
+                    {
+                        cancellationToken.ThrowIfCancellationRequested();
+                        json = await reader.ReadToEndAsync().ConfigureAwait(false);
+                    }
+                }
+
                 return JsonSerializer.Deserialize<MediaAnalysisRecord>(json, _jsonSerializerOptions);
             }
             finally
@@ -71,7 +94,7 @@ namespace MediaOrchestrator.Analytics.Stores
 
         public async Task<IReadOnlyCollection<MediaAnalysisRecord>> GetAllAsync(CancellationToken cancellationToken = default)
         {
-            if (!Directory.Exists(_directoryPath))
+            if (_isDisposed || !Directory.Exists(_directoryPath))
             {
                 return Array.Empty<MediaAnalysisRecord>();
             }
@@ -85,11 +108,24 @@ namespace MediaOrchestrator.Analytics.Stores
                 foreach (var path in files)
                 {
                     cancellationToken.ThrowIfCancellationRequested();
+
                     string json;
-                    using (var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read, 4096, useAsync: true))
-                    using (var reader = new StreamReader(stream, Encoding.UTF8))
+                    if (_enableCompression && IsCompressedFile(path))
                     {
-                        json = await reader.ReadToEndAsync().ConfigureAwait(false);
+                        using (var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read, _bufferSize, useAsync: true))
+                        using (var decompressStream = new GZipStream(stream, CompressionMode.Decompress))
+                        using (var reader = new StreamReader(decompressStream, Encoding.UTF8))
+                        {
+                            json = await reader.ReadToEndAsync().ConfigureAwait(false);
+                        }
+                    }
+                    else
+                    {
+                        using (var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read, _bufferSize, useAsync: true))
+                        using (var reader = new StreamReader(stream, Encoding.UTF8))
+                        {
+                            json = await reader.ReadToEndAsync().ConfigureAwait(false);
+                        }
                     }
 
                     var record = JsonSerializer.Deserialize<MediaAnalysisRecord>(json, _jsonSerializerOptions);
@@ -109,7 +145,7 @@ namespace MediaOrchestrator.Analytics.Stores
 
         public async Task SaveAsync(MediaAnalysisRecord record, CancellationToken cancellationToken = default)
         {
-            if (record == null || string.IsNullOrWhiteSpace(record.AnalysisKey))
+            if (_isDisposed || record == null || string.IsNullOrWhiteSpace(record.AnalysisKey))
             {
                 return;
             }
@@ -121,13 +157,60 @@ namespace MediaOrchestrator.Analytics.Stores
             await _gate.WaitAsync(cancellationToken).ConfigureAwait(false);
             try
             {
-                using (var stream = new FileStream(path, FileMode.Create, FileAccess.Write, FileShare.None, 4096, useAsync: true))
-                using (var writer = new StreamWriter(stream, Encoding.UTF8))
+                string tempPath = path + ".tmp";
+
+                if (_enableCompression)
                 {
-                    cancellationToken.ThrowIfCancellationRequested();
-                    await writer.WriteAsync(json).ConfigureAwait(false);
-                    await writer.FlushAsync().ConfigureAwait(false);
+                    using (var stream = new FileStream(tempPath, FileMode.Create, FileAccess.Write, FileShare.None, _bufferSize, useAsync: true))
+                    using (var compressStream = new GZipStream(stream, CompressionLevel.Optimal))
+                    using (var writer = new StreamWriter(compressStream, Encoding.UTF8))
+                    {
+                        cancellationToken.ThrowIfCancellationRequested();
+                        await writer.WriteAsync(json).ConfigureAwait(false);
+                        await writer.FlushAsync().ConfigureAwait(false);
+                    }
                 }
+                else
+                {
+                    using (var stream = new FileStream(tempPath, FileMode.Create, FileAccess.Write, FileShare.None, _bufferSize, useAsync: true))
+                    using (var writer = new StreamWriter(stream, Encoding.UTF8))
+                    {
+                        cancellationToken.ThrowIfCancellationRequested();
+                        await writer.WriteAsync(json).ConfigureAwait(false);
+                        await writer.FlushAsync().ConfigureAwait(false);
+                    }
+                }
+
+                if (File.Exists(path))
+                {
+                    File.Delete(path);
+                }
+
+                File.Move(tempPath, path);
+
+                string oldCompressed = path + ".gz";
+                if (File.Exists(oldCompressed))
+                {
+                    try { File.Delete(oldCompressed); } catch { }
+                }
+            }
+            catch (IOException)
+            {
+                string tempPath = path + ".tmp";
+                if (File.Exists(tempPath))
+                {
+                    try { File.Delete(tempPath); } catch { }
+                }
+                throw;
+            }
+            catch (UnauthorizedAccessException)
+            {
+                string tempPath = path + ".tmp";
+                if (File.Exists(tempPath))
+                {
+                    try { File.Delete(tempPath); } catch { }
+                }
+                throw;
             }
             finally
             {
@@ -144,6 +227,8 @@ namespace MediaOrchestrator.Analytics.Stores
                 {
                     Directory.Delete(_directoryPath, recursive: true);
                 }
+
+                _hashCache.Clear();
             }
             finally
             {
@@ -153,15 +238,27 @@ namespace MediaOrchestrator.Analytics.Stores
 
         private string GetRecordPath(string analysisKey)
         {
-            string hash = ComputeHash(analysisKey);
+            string hash = GetCachedHash(analysisKey);
             string shardLevelOne = hash.Substring(0, 2);
             string shardLevelTwo = hash.Substring(2, 2);
             string directory = Path.Combine(_directoryPath, shardLevelOne, shardLevelTwo);
             Directory.CreateDirectory(directory);
-            return Path.Combine(directory, hash + ".json");
+            string extension = _enableCompression ? ".json.gz" : ".json";
+            return Path.Combine(directory, hash + extension);
         }
 
-        private static string ComputeHash(string value)
+        private static string GetCachedHash(string value)
+        {
+            return _hashCache.GetOrAdd(value, v => ComputeHashInternal(v));
+        }
+
+        private static string GetCachedHash(string value, bool useCompression)
+        {
+            var key = useCompression ? value + "_compressed" : value;
+            return _hashCache.GetOrAdd(key, k => ComputeHashInternal(k.Replace("_compressed", "")));
+        }
+
+        private static string ComputeHashInternal(string value)
         {
             using (var sha = SHA256.Create())
             {
@@ -174,6 +271,23 @@ namespace MediaOrchestrator.Analytics.Stores
 
                 return builder.ToString();
             }
+        }
+
+        private static bool IsCompressedFile(string path)
+        {
+            return path.EndsWith(".gz", StringComparison.OrdinalIgnoreCase);
+        }
+
+        public void Dispose()
+        {
+            if (_isDisposed)
+            {
+                return;
+            }
+
+            _isDisposed = true;
+            _gate.Dispose();
+            _hashCache.Clear();
         }
     }
 }

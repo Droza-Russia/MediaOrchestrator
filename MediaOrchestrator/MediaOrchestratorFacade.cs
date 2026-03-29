@@ -7,6 +7,7 @@ using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 using MediaOrchestrator.Analytics;
+using MediaOrchestrator.Analytics.Models;
 using MediaOrchestrator.Analytics.Reports;
 using MediaOrchestrator.Analytics.Stores;
 using MediaOrchestrator.Streams.SubtitleStream;
@@ -94,6 +95,18 @@ namespace MediaOrchestrator
         ///     Включает накопление статистики по решениям analytics и адаптацию будущих решений на её основе.
         /// </summary>
         public static bool MediaAnalysisLearningEnabled { get; set; } = true;
+
+        /// <summary>
+        ///     Включает сжатие JSON файлов статистики (GZIP). Уменьшает размер хранилища, увеличивает CPU usage.
+        /// </summary>
+        public static bool MediaAnalysisStoreCompressionEnabled { get; set; } = false;
+
+        private static CircuitBreaker _ffmpegCircuitBreaker = new CircuitBreaker();
+
+        /// <summary>
+        ///     Проверяет доступность ffmpeg операций через Circuit Breaker.
+        /// </summary>
+        public static bool IsFfmpegOperationAllowed => _ffmpegCircuitBreaker.IsAllowed;
 
         internal static IMediaAnalysisStore MediaAnalysisStore
         {
@@ -359,9 +372,115 @@ namespace MediaOrchestrator
             return MediaAnalyticsReportBuilder.Build(records, query);
         }
 
+        private static readonly object _operationDurationCacheSync = new object();
+        private static OperationDurationLruCache _operationDurationCache;
+
+        private static OperationDurationLruCache OperationDurationCache
+        {
+            get
+            {
+                lock (_operationDurationCacheSync)
+                {
+                    if (_operationDurationCache == null)
+                        _operationDurationCache = new OperationDurationLruCache(capacity: 500, safetyFactor: 2.0);
+                    return _operationDurationCache;
+                }
+            }
+        }
+
+        /// <summary>
+        ///     Получает адаптивный timeout для операции на основе исторических данных.
+        ///     Если исторических данных нет - возвращает defaultTimeout.
+        /// </summary>
+        /// <param name="operationKey">Ключ операции ( buildOperationKey )</param>
+        /// <param name="defaultTimeout">Timeout по умолчанию, если нет исторических данных</param>
+        /// <returns>Адаптивный или default timeout</returns>
+        public static TimeSpan GetAdaptiveTimeout(string operationKey, TimeSpan defaultTimeout)
+        {
+            return OperationDurationCache.GetEstimatedTimeout(operationKey, defaultTimeout);
+        }
+
+        /// <summary>
+        ///     Создаёт CancellationToken с адаптивным timeout на основе исторических данных.
+        /// </summary>
+        /// <param name="operationKey">Ключ операции</param>
+        /// <param name="defaultTimeout">Timeout по умолчанию</param>
+        /// <param name="linkedToken">Токен для связывания (опционально)</param>
+        /// <returns> CancellationTokenSource с адаптивным timeout</returns>
+        public static CancellationTokenSource CreateAdaptiveCancellationTokenSource(
+            string operationKey,
+            TimeSpan defaultTimeout,
+            CancellationToken linkedToken = default)
+        {
+            var adaptiveTimeout = OperationDurationCache.GetEstimatedTimeout(operationKey, defaultTimeout);
+            var timeoutCts = new CancellationTokenSource(adaptiveTimeout);
+
+            if (linkedToken.CanBeCanceled)
+            {
+                var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(linkedToken, timeoutCts.Token);
+                timeoutCts.Dispose();
+                return linkedCts;
+            }
+
+            return timeoutCts;
+        }
+
+        /// <summary>
+        ///     Записывает фактическую продолжительность операции для обновления адаптивного timeout.
+        ///     Вызывается после завершения операции.
+        /// </summary>
+        /// <param name="operationKey">Ключ операции</param>
+        /// <param name="actualDuration">Фактическая продолжительность</param>
+        /// <param name="succeeded">true если операция завершилась успешно</param>
+        public static void RecordOperationDuration(string operationKey, TimeSpan actualDuration, bool succeeded)
+        {
+            OperationDurationCache.RecordDuration(operationKey, actualDuration, succeeded);
+        }
+
+        /// <summary>
+        ///     Очищает кэш адаптивных timeout.
+        /// </summary>
+        public static void ClearAdaptiveTimeoutCache()
+        {
+            OperationDurationCache.Clear();
+        }
+
+        /// <summary>
+        ///     Возвращает количество записей в кэше продолжительности операций.
+        /// </summary>
+        public static int GetOperationDurationCacheCount()
+        {
+            return OperationDurationCache.Count;
+        }
+
+        /// <summary>
+        ///     Создаёт ключ операции для LRU кэша продолжительности.
+        /// </summary>
+        public static string BuildOperationKey(
+            string inputPath,
+            string outputPath,
+            ProcessingScenario scenario,
+            MediaProcessingStrategy strategy,
+            string videoCodec = null,
+            string audioCodec = null,
+            double? videoDurationSeconds = null,
+            bool usesHardwareAcceleration = false)
+        {
+            return OperationDurationLruCache.BuildOperationKey(
+                inputPath,
+                outputPath,
+                scenario,
+                strategy,
+                videoCodec,
+                audioCodec,
+                videoDurationSeconds,
+                usesHardwareAcceleration);
+        }
+
         private static IMediaAnalysisStore CreateMediaAnalysisStore(string directoryPath)
         {
-            return new CachedMediaAnalysisStore(new FileMediaAnalysisStore(directoryPath));
+            var store = new FileMediaAnalysisStore(directoryPath, MediaAnalysisStoreCompressionEnabled);
+            return new CachedMediaAnalysisStore(store, null, 1000, TimeSpan.FromHours(1));
         }
 
         /// <summary>

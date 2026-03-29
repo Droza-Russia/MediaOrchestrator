@@ -11,7 +11,9 @@ using System.Threading.Tasks;
 using MediaOrchestrator.Analytics.Models;
 using MediaOrchestrator.Events;
 using MediaOrchestrator.Exceptions;
+using MediaOrchestrator.Extensions;
 using MediaOrchestrator.Streams;
+using MediaOrchestrator.Streams.Collections;
 
 namespace MediaOrchestrator
 {
@@ -45,6 +47,7 @@ namespace MediaOrchestrator
         private MediaAnalysisSession _analyticsSession;
         private Func<CancellationToken, Task> _onSuccessAsync;
         private Func<Task> _onFinallyAsync;
+        private CancellationTokenSource _internalCts;
 
         public Conversion()
             : this(suppressGlobalOutputLimits: false, suppressAutoHardwareAcceleration: false)
@@ -176,6 +179,20 @@ namespace MediaOrchestrator
             return Start(Build(), cancellationToken, progress);
         }
 
+        /// <inheritdoc />
+        public void Stop()
+        {
+            if (_ffmpeg == null)
+            {
+                throw new InvalidOperationException("Conversion has not been started.");
+            }
+
+            if (_internalCts != null)
+            {
+                _internalCts.Cancel();
+            }
+        }
+
         /// <summary>
         ///     Запускает MediaOrchestrator с заданными параметрами и токеном отмены.
         /// </summary>
@@ -188,6 +205,12 @@ namespace MediaOrchestrator
             if (_ffmpeg != null)
             {
                 throw new InvalidOperationException(ErrorMessages.ConversionAlreadyStarted);
+            }
+
+            if (!cancellationToken.CanBeCanceled)
+            {
+                _internalCts = new CancellationTokenSource();
+                cancellationToken = _internalCts.Token;
             }
 
             DateTime startTime = DateTime.Now;
@@ -256,6 +279,13 @@ namespace MediaOrchestrator
                 Arguments = parameters
             };
             await ReportAnalyticsExecutionAsync(parameters, result.StartTime, result.EndTime, succeeded: true, failureType: null).ConfigureAwait(false);
+
+            if (_internalCts != null)
+            {
+                _internalCts.Dispose();
+                _internalCts = null;
+            }
+
             return result;
         }
 

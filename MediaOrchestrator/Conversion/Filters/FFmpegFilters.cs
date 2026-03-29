@@ -1,3 +1,5 @@
+using MediaOrchestrator.Extensions;
+
 namespace MediaOrchestrator
 {
     internal static class FFmpegFilters

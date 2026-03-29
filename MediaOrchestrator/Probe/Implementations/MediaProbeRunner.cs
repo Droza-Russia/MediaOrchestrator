@@ -6,6 +6,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Threading;
 using System.Threading.Tasks;
+using MediaOrchestrator.Extensions;
 
 namespace MediaOrchestrator
 {
@@ -54,10 +55,15 @@ namespace MediaOrchestrator
             {
                 return Math.Round(frameCount / duration, 3);
             }
-            else
+            else if (fr.Length == 2 &&
+                     double.TryParse(fr[0], out var nume) &&
+                     double.TryParse(fr[1], out var deno) &&
+                     deno > 0)
             {
-                return Math.Round(double.Parse(fr[0]) / double.Parse(fr[1]), 3);
+                return Math.Round(nume / deno, 3);
             }
+
+            return 0;
         }
 
         private long GetFrameCount(ProbeModel.Stream vid)
