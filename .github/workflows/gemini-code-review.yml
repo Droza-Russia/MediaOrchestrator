@@ -69,11 +69,17 @@ jobs:
           fetch-depth: 0
           ref: ${{ github.event_name == 'issue_comment' && format('refs/pull/{0}/head', github.event.issue.number) || github.event.pull_request.head.sha }}
 
+      - name: Prepare Gemini directories
+        run: |
+          mkdir -p "$HOME/.gemini"
+          mkdir -p .gemini
+
       - name: Run Gemini pull request review
         id: gemini_pr_review
         uses: google-github-actions/run-gemini-cli@main
         env:
           GITHUB_TOKEN: ${{ steps.mint_identity_token.outputs.token || secrets.GITHUB_TOKEN || github.token }}
+          GOOGLE_GENAI_USE_GCA: "true"
           ISSUE_TITLE: ${{ github.event.pull_request.title || github.event.issue.title }}
           ISSUE_BODY: ${{ github.event.pull_request.body || github.event.issue.body }}
           PULL_REQUEST_NUMBER: ${{ github.event.pull_request.number || github.event.issue.number }}
