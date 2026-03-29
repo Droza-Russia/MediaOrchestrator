@@ -101,17 +101,6 @@ jobs:
           mkdir -p "$HOME/.gemini"
           mkdir -p .gemini
 
-      - name: Install pinned code review extension
-        if: ${{ steps.pr_context.outputs.should_review == 'true' }}
-        env:
-          GOOGLE_GENAI_USE_GCA: "true"
-          GEMINI_CLI_VERSION: ${{ vars.GEMINI_CLI_VERSION || '0.35.3' }}
-        run: |
-          mkdir -p "$HOME/.gemini"
-          printf '{}' > "$HOME/.gemini/projects.json"
-          npm install -g "@google/gemini-cli@${GEMINI_CLI_VERSION}"
-          gemini extensions install https://github.com/gemini-cli-extensions/code-review --ref dd1a10d2c9d07b2ebade866590fdfa59cd8f9d04 --consent
-
       - name: Run Gemini pull request review
         id: gemini_pr_review
         if: ${{ steps.pr_context.outputs.should_review == 'true' }}
@@ -172,4 +161,19 @@ jobs:
                 ]
               }
             }
-          prompt: /pr-code-review
+          prompt: |
+            Review pull request #${{ steps.pr_context.outputs.number }} in repository ${{ github.repository }}.
+
+            Title: ${{ steps.pr_context.outputs.title }}
+            Body:
+            ${{ steps.pr_context.outputs.body }}
+
+            Additional reviewer context:
+            ${{ steps.review_context.outputs.additional_context }}
+
+            Instructions:
+            - Review the checked out pull request changes for correctness, regressions, security, tests, and maintainability.
+            - Use the GitHub MCP review tools to read the pull request and submit a review.
+            - If you find actionable issues, create concise review comments tied to the relevant lines when possible.
+            - If there are no material issues, submit an approval-style summary comment instead of inventing feedback.
+            - Do not modify repository files.
