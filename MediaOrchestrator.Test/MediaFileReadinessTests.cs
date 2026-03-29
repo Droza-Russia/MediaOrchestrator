@@ -60,7 +60,22 @@ namespace MediaOrchestrator.Test
                 }
             }, writerCancellation.Token);
 
-            await firstGrowthObserved.Task.ConfigureAwait(false);
+            var firstGrowthCompleted = await Task.WhenAny(
+                firstGrowthObserved.Task,
+                writer,
+                Task.Delay(TimeSpan.FromSeconds(2))).ConfigureAwait(false);
+
+            if (firstGrowthCompleted != firstGrowthObserved.Task)
+            {
+                writerCancellation.Cancel();
+
+                if (firstGrowthCompleted == writer)
+                {
+                    await writer.ConfigureAwait(false);
+                }
+
+                throw new Xunit.Sdk.XunitException("The background writer did not grow the test file before the timeout elapsed.");
+            }
 
             var exception = await Assert.ThrowsAsync<InputFileStillBeingWrittenException>(() =>
                 MediaFileReadiness.WaitUntilStableAsync(
