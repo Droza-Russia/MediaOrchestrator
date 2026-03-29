@@ -13,7 +13,7 @@ namespace MediaOrchestrator
     /// </summary>
     internal static class HardwareAccelerationAutoDetector
     {
-        private static readonly ConcurrentDictionary<string, HardwareAccelerationProfile> _detectionCache = 
+        private static readonly ConcurrentDictionary<string, HardwareAccelerationProfile> _detectionCache =
             new ConcurrentDictionary<string, HardwareAccelerationProfile>();
 
         private const int DefaultCacheLifetimeMinutes = 30;

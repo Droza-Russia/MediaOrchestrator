@@ -37,13 +37,13 @@ namespace MediaOrchestrator
         public static StreamingOutput CreateFileStream(string filePath, bool append = false)
         {
             var fileStream = new FileStream(
-                filePath, 
-                append ? FileMode.Append : FileMode.Create, 
-                FileAccess.Write, 
-                FileShare.None, 
-                bufferSize: 81920, 
+                filePath,
+                append ? FileMode.Append : FileMode.Create,
+                FileAccess.Write,
+                FileShare.None,
+                bufferSize: 81920,
                 useAsync: true);
-            
+
             return new StreamingOutput(fileStream, leaveOpen: false);
         }
 
@@ -56,7 +56,7 @@ namespace MediaOrchestrator
         }
 
         internal Stream OutputStream => _outputStream;
-        
+
         internal bool CanWrite => _outputStream?.CanWrite ?? false;
 
         /// <summary>

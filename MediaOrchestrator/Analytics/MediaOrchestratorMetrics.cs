@@ -14,7 +14,7 @@ namespace MediaOrchestrator.Analytics
         /// <summary>
         ///     Current state of the ffmpeg circuit breaker.
         /// </summary>
-        public string FfmpegCircuitBreakerState => 
+        public string FfmpegCircuitBreakerState =>
             MediaOrchestrator.IsFfmpegOperationAllowed ? "Closed" : "Open";
 
         /// <summary>
@@ -39,25 +39,25 @@ namespace MediaOrchestrator.Analytics
         /// <summary>
         ///     Number of entries in the operation duration LRU cache.
         /// </summary>
-        public int OperationDurationCacheCount => 
+        public int OperationDurationCacheCount =>
             MediaOrchestrator.GetOperationDurationCacheCount();
 
         /// <summary>
         ///     Current media info cache lifetime in minutes.
         /// </summary>
-        public double MediaInfoCacheLifetimeMinutes => 
+        public double MediaInfoCacheLifetimeMinutes =>
             MediaOrchestrator.MediaInfoCacheLifetime.TotalMinutes;
 
         /// <summary>
         ///     Whether analytics learning is enabled.
         /// </summary>
-        public bool IsAnalyticsLearningEnabled => 
+        public bool IsAnalyticsLearningEnabled =>
             MediaOrchestrator.MediaAnalysisLearningEnabled;
 
         /// <summary>
         ///     Whether compression is enabled for analytics store.
         /// </summary>
-        public bool IsAnalyticsCompressionEnabled => 
+        public bool IsAnalyticsCompressionEnabled =>
             MediaOrchestrator.MediaAnalysisStoreCompressionEnabled;
 
         /// <summary>
@@ -162,7 +162,7 @@ namespace MediaOrchestrator.Analytics
     public sealed class HealthCheckResult
     {
         public bool IsHealthy { get; set; }
-        public System.Collections.Generic.List<string> Issues { get; set; } = 
+        public System.Collections.Generic.List<string> Issues { get; set; } =
             new System.Collections.Generic.List<string>();
         public DateTimeOffset CheckedAt { get; set; }
 
