@@ -361,19 +361,7 @@ namespace MediaOrchestrator
                 return;
             }
 
-            try
-            {
-                if (File.Exists(path))
-                {
-                    File.Delete(path);
-                }
-            }
-            catch (IOException)
-            {
-            }
-            catch (UnauthorizedAccessException)
-            {
-            }
+            FileHelper.SafeDeleteFile(path);
         }
 
         /// <summary>

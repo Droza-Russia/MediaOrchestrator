@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using MediaOrchestrator.Extensions;
 
 namespace MediaOrchestrator
 {
@@ -395,22 +396,7 @@ namespace MediaOrchestrator
 
         private static void CleanupTempFileOnError(string path)
         {
-            try
-            {
-                if (File.Exists(path))
-                {
-                    File.Delete(path);
-                }
-
-                var tempWithExt = path + ".tmp";
-                if (File.Exists(tempWithExt))
-                {
-                    File.Delete(tempWithExt);
-                }
-            }
-            catch
-            {
-            }
+            FileHelper.SafeDeleteTempFiles(path);
         }
 
         private static void LogCleanupError(string path, Exception ex)

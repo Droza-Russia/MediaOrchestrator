@@ -6,6 +6,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using MediaOrchestrator.Exceptions;
+using MediaOrchestrator.Extensions;
 
 namespace MediaOrchestrator
 {
@@ -184,8 +185,7 @@ namespace MediaOrchestrator
 
             try
             {
-                var fileInfo = new FileInfo(fullPath);
-                if (!fileInfo.Exists)
+                if (!FileHelper.TryGetFileInfo(fullPath, out var fileInfo))
                 {
                     return $"path::{fullPath}";
                 }
