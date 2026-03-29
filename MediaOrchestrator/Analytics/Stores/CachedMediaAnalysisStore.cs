@@ -110,11 +110,8 @@ namespace MediaOrchestrator.Analytics.Stores
             bool acquired = false;
             try
             {
-                acquired = await _flushGate.WaitAsync(cancellationToken).ConfigureAwait(false);
-                if (!acquired)
-                {
-                    return;
-                }
+                await _flushGate.WaitAsync(cancellationToken).ConfigureAwait(false);
+                acquired = true;
 
                 var dirtyRecords = new List<MediaAnalysisRecord>();
                 foreach (var pair in _cache.GetAll())
@@ -182,11 +179,8 @@ namespace MediaOrchestrator.Analytics.Stores
             bool acquired = false;
             try
             {
-                acquired = await _flushGate.WaitAsync(0, cancellationToken).ConfigureAwait(false);
-                if (!acquired)
-                {
-                    return;
-                }
+                await _flushGate.WaitAsync(0, cancellationToken).ConfigureAwait(false);
+                acquired = true;
 
                 var dirtyRecords = new List<MediaAnalysisRecord>();
                 foreach (var pair in _cache.GetAll())
