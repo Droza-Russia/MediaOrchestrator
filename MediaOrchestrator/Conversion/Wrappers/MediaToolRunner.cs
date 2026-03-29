@@ -26,6 +26,7 @@ namespace MediaOrchestrator
         private TimeSpan _totalTime;
         private bool _wasKilled = false;
         private DateTime _progressStartTime;
+        private DateTime _lastProgressTime;
         private double _lastProgressDurationSeconds;
         internal Analytics.Models.ExecutionResourceMetrics LastExecutionResourceMetrics { get; private set; }
 
@@ -340,9 +341,11 @@ namespace MediaOrchestrator
 
         private ConversionProgressEventArgs CreateEnhancedProgressArgs(TimeSpan duration, TimeSpan totalLength, int processId, string ffmpegOutputLine)
         {
+            var now = DateTime.UtcNow;
             if (_progressStartTime == DateTime.MinValue)
             {
-                _progressStartTime = DateTime.UtcNow;
+                _progressStartTime = now;
+                _lastProgressTime = now;
                 _lastProgressDurationSeconds = 0;
             }
 
@@ -353,7 +356,7 @@ namespace MediaOrchestrator
             if (duration.TotalSeconds > 0 && _lastProgressDurationSeconds > 0)
             {
                 var progressDelta = duration.TotalSeconds - _lastProgressDurationSeconds;
-                var timeDelta = (DateTime.UtcNow - _progressStartTime).TotalSeconds;
+                var timeDelta = (now - _lastProgressTime).TotalSeconds;
 
                 if (progressDelta > 0 && timeDelta > 0)
                 {
@@ -371,6 +374,7 @@ namespace MediaOrchestrator
                 }
             }
 
+            _lastProgressTime = now;
             _lastProgressDurationSeconds = duration.TotalSeconds;
 
             if (totalLength.TotalSeconds > 0)
