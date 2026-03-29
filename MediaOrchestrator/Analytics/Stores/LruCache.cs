@@ -81,7 +81,7 @@ namespace MediaOrchestrator.Analytics.Stores
                         _lock.ExitWriteLock();
                     }
                     value = default;
-                    return true;
+                    return false;
                 }
 
                 value = default;
