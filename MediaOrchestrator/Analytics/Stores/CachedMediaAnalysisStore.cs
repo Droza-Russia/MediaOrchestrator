@@ -107,7 +107,50 @@ namespace MediaOrchestrator.Analytics.Stores
 
         internal async Task FlushPendingAsync(CancellationToken cancellationToken = default)
         {
-            await FlushDirtyEntriesAsync(cancellationToken).ConfigureAwait(false);
+            bool acquired = false;
+            try
+            {
+                acquired = await _flushGate.WaitAsync(cancellationToken).ConfigureAwait(false);
+                if (!acquired)
+                {
+                    return;
+                }
+
+                var dirtyRecords = new List<MediaAnalysisRecord>();
+                foreach (var pair in _cache.GetAll())
+                {
+                    if (pair.Value?.Dirty == true && pair.Value?.Record != null)
+                    {
+                        dirtyRecords.Add(pair.Value.Record);
+                    }
+                }
+
+                foreach (var record in dirtyRecords)
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+                    await _persistentStore.SaveAsync(record, cancellationToken).ConfigureAwait(false);
+                    if (_cache.TryGet(record.AnalysisKey, out var cachedEntry))
+                    {
+                        cachedEntry.Dirty = false;
+                        _cache.Put(record.AnalysisKey, cachedEntry);
+                    }
+                }
+            }
+            catch (OperationCanceledException)
+            {
+                Trace.TraceWarning("FlushPendingAsync cancelled");
+            }
+            catch (Exception ex)
+            {
+                Trace.TraceError("FlushPendingAsync failed: {0}", ex.Message);
+            }
+            finally
+            {
+                if (acquired)
+                {
+                    _flushGate.Release();
+                }
+            }
         }
 
         private void ScheduleLazyFlush()

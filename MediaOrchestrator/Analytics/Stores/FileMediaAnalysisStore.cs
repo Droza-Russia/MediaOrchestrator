@@ -24,6 +24,8 @@ namespace MediaOrchestrator.Analytics.Stores
         private volatile bool _isDisposed;
 
         private static readonly ConcurrentDictionary<string, string> _hashCache = new ConcurrentDictionary<string, string>();
+        private const int MaxHashCacheSize = 10000;
+        private static readonly object _hashCacheGate = new object();
 
         public FileMediaAnalysisStore(string directoryPath, bool enableCompression = false)
         {
@@ -254,13 +256,33 @@ namespace MediaOrchestrator.Analytics.Stores
 
         private static string GetCachedHash(string value)
         {
+            EnsureHashCacheSizeLimit();
             return _hashCache.GetOrAdd(value, v => ComputeHashInternal(v));
         }
 
         private static string GetCachedHash(string value, bool useCompression)
         {
+            EnsureHashCacheSizeLimit();
             var key = useCompression ? value + "_compressed" : value;
             return _hashCache.GetOrAdd(key, k => ComputeHashInternal(k.Replace("_compressed", "")));
+        }
+
+        private static void EnsureHashCacheSizeLimit()
+        {
+            if (_hashCache.Count > MaxHashCacheSize)
+            {
+                lock (_hashCacheGate)
+                {
+                    if (_hashCache.Count > MaxHashCacheSize)
+                    {
+                        var keysToRemove = _hashCache.Keys.Take(_hashCache.Count / 2).ToList();
+                        foreach (var key in keysToRemove)
+                        {
+                            _hashCache.TryRemove(key, out _);
+                        }
+                    }
+                }
+            }
         }
 
         private static string ComputeHashInternal(string value)

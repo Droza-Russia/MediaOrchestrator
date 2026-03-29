@@ -413,16 +413,15 @@ namespace MediaOrchestrator
             CancellationToken linkedToken = default)
         {
             var adaptiveTimeout = OperationDurationCache.GetEstimatedTimeout(operationKey, defaultTimeout);
-            var timeoutCts = new CancellationTokenSource(adaptiveTimeout);
 
             if (linkedToken.CanBeCanceled)
             {
-                var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(linkedToken, timeoutCts.Token);
-                timeoutCts.Dispose();
+                var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(linkedToken);
+                linkedCts.CancelAfter(adaptiveTimeout);
                 return linkedCts;
             }
 
-            return timeoutCts;
+            return new CancellationTokenSource(adaptiveTimeout);
         }
 
         /// <summary>
