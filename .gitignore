@@ -5,3 +5,5 @@
 **/.DS_Store
 artifacts
 .vscode
+.gemini/
+gha-creds-*.json

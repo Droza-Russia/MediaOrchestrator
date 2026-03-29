@@ -318,6 +318,18 @@ dotnet build ./MediaOrchestrator/MediaOrchestrator.csproj
 dotnet test ./MediaOrchestrator/MediaOrchestrator.sln
 ```
 
+## PR Review With Gemini
+
+The repository includes a GitHub Actions workflow at [.github/workflows/gemini-code-review.yml](.github/workflows/gemini-code-review.yml) that runs Gemini Code Assist review for pull requests.
+
+Behavior:
+- automatic review on `pull_request` open, reopen, ready-for-review and new commits;
+- manual rerun from a pull request comment: `@gemini-cli /review`;
+- manual review comments are accepted only from `OWNER`, `MEMBER` or `COLLABORATOR`;
+- automatic review is skipped for forked pull requests for safety.
+
+If Gemini Code Assist is already installed for this repository in GitHub, the workflow uses it directly via `use_gemini_code_assist: true`.
+
 ## Notes
 
 - The repository folder names are still in transition in a few places, but the product-facing API and package identity are `MediaOrchestrator`.
