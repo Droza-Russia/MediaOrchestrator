@@ -3,11 +3,10 @@
 ## High Priority
 
 ### Architecture Improvements
-- [ ] Split into modular NuGet packages
+- [ ] Define modular NuGet package structure
   - MediaOrchestrator.Core - main SDK
-  - MediaOrchestrator.HandBrake - HandBrake CLI wrapper
-  - MediaOrchestrator.Data - database analytics stores (SQL Server, PostgreSQL, MySQL)
-  - MediaOrchestrator.Cloud - cloud storage adapters (S3, GCS, Azure Blob)
+  - MediaOrchestrator.Data - database analytics stores
+  - MediaOrchestrator.Cloud - cloud storage adapters
 - [ ] Replace static configuration with DI container (Microsoft.Extensions.DependencyInjection)
 - [ ] Add configuration interfaces for testability
 - [ ] Implement options pattern (IOptions<T>) for all settings
@@ -62,8 +61,9 @@
 
 ## Medium Priority
 
-### Analytics
+### Database & Analytics
 - [ ] Add SQLite-based media analysis store (currently file-based only)
+- [ ] Design unified database schema for all supported databases
 - [ ] Add MS SQL Server support for analytics storage
   - Connection pooling
   - Entity Framework / Dapper integration
@@ -75,9 +75,13 @@
 - [ ] Add MySQL/MariaDB support for analytics storage
   - Connection pooling
   - UTF8MB4 support for metadata
+- [ ] Add database abstraction layer (Repository pattern)
 - [ ] Add database connection string validation
+- [ ] Implement connection string builders for each database
+- [ ] Add health check for database connectivity
 - [ ] Add analytics database schema migrations
 - [ ] Add read replica support for analytics queries
+- [ ] Add database migration tool (Flyway-style)
 - [ ] Add aggregation pipeline for long-term analytics
 - [ ] Add Grafana dashboard template for metrics
 - [ ] Implement time-series forecasting for processing duration
@@ -115,16 +119,6 @@
 - [ ] Add API reference documentation
 - [ ] Add migration guide from Xabe.FFmpeg
 - [ ] Add deployment guide for containerized environments
-
-### Database Support
-- [ ] Design unified database schema for all supported databases
-- [ ] Add database abstraction layer (Repository pattern)
-- [ ] Implement connection string builders for each database
-- [ ] Add health check for database connectivity
-- [ ] Add query optimization hints for each database
-- [ ] Implement analytics aggregation stored procedures (optional)
-- [ ] Add database migration tool (Flyway-style)
-- [ ] Add database backup/restore utilities
 
 ---
 
