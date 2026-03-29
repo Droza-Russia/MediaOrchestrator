@@ -238,7 +238,7 @@ namespace MediaOrchestrator
             {
                 return;
             }
-            
+
             EnsureExecutablesLocated(cancellationToken);
         }
 

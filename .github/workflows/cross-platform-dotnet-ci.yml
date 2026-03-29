@@ -1,4 +1,4 @@
-name: .NET CI
+name: Cross-Platform .NET CI
 
 on:
   push:
@@ -10,12 +10,46 @@ env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
 
 jobs:
+  formatting:
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        shell: pwsh
+
+    env:
+      SOLUTION_PATH: MediaOrchestrator/MediaOrchestrator.sln
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Install .NET
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: 9.0.x
+
+      - name: Restore solution
+        run: dotnet restore $env:SOLUTION_PATH
+
+      - name: Verify formatting
+        run: dotnet format $env:SOLUTION_PATH --verify-no-changes --no-restore
+
   build-and-test:
-    runs-on: windows-latest
+    runs-on: ${{ matrix.os }}
+    needs: formatting
 
     strategy:
+      fail-fast: false
       matrix:
+        os: [windows-latest, ubuntu-latest, macos-latest]
         configuration: [Debug, Release]
+
+    defaults:
+      run:
+        shell: pwsh
 
     env:
       SOLUTION_PATH: MediaOrchestrator/MediaOrchestrator.sln
