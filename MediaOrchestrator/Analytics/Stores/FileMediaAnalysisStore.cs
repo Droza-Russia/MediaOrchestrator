@@ -195,22 +195,15 @@ namespace MediaOrchestrator.Analytics.Stores
 
                 File.Move(tempPath, path);
 
-                string oldCompressed = path + ".gz";
-                if (File.Exists(oldCompressed))
+                string oldPath = _enableCompression 
+                    ? Path.ChangeExtension(path, null) 
+                    : path + ".gz";
+                if (File.Exists(oldPath))
                 {
-                    try { File.Delete(oldCompressed); } catch { }
+                    try { File.Delete(oldPath); } catch { }
                 }
             }
-            catch (IOException)
-            {
-                string tempPath = path + ".tmp";
-                if (File.Exists(tempPath))
-                {
-                    try { File.Delete(tempPath); } catch { }
-                }
-                throw;
-            }
-            catch (UnauthorizedAccessException)
+            catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException)
             {
                 string tempPath = path + ".tmp";
                 if (File.Exists(tempPath))
