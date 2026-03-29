@@ -30,12 +30,11 @@ namespace MediaOrchestrator
             if (_detectionCache.TryGetValue(cacheKey, out var cachedProfile))
             {
                 profile = cachedProfile;
-                return profile != null;
+                return true;
             }
 
             if (!TryGetSupportedHwaccels(ffmpegExecutablePath, cancellationToken, out var supported))
             {
-                _detectionCache.TryAdd(cacheKey, null);
                 return false;
             }
 
@@ -52,7 +51,6 @@ namespace MediaOrchestrator
                 return profile != null;
             }
 
-            _detectionCache.TryAdd(cacheKey, null);
             return false;
         }
 

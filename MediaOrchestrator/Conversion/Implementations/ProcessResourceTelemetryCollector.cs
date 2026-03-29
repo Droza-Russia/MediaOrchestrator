@@ -45,9 +45,11 @@ namespace MediaOrchestrator
             }
             catch (OperationCanceledException)
             {
+                Trace.TraceWarning("ProcessResourceTelemetryCollector stop cancelled");
             }
-            catch (Exception)
+            catch (Exception ex)
             {
+                Trace.TraceError("ProcessResourceTelemetryCollector stop failed: {0}", ex.Message);
             }
 
             return new ExecutionResourceMetrics

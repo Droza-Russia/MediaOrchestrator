@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics;
 
 namespace MediaOrchestrator.Analytics
 {
@@ -29,8 +30,9 @@ namespace MediaOrchestrator.Analytics
                     var store = MediaOrchestrator.MediaAnalysisStore as Analytics.Stores.CachedMediaAnalysisStore;
                     return store?.Count ?? 0;
                 }
-                catch
+                catch (Exception ex)
                 {
+                    Trace.TraceWarning("MediaAnalysisCacheCount failed: {0}", ex.Message);
                     return 0;
                 }
             }
@@ -125,8 +127,7 @@ namespace MediaOrchestrator.Analytics
                 {
                     issues.Add("FFprobe path not configured");
                 }
-
-                if (!System.IO.File.Exists(path))
+                else if (!System.IO.File.Exists(path))
                 {
                     issues.Add($"FFprobe not found at: {path}");
                 }
@@ -136,8 +137,7 @@ namespace MediaOrchestrator.Analytics
                 {
                     issues.Add("FFmpeg path not configured");
                 }
-
-                if (!System.IO.File.Exists(path))
+                else if (!System.IO.File.Exists(path))
                 {
                     issues.Add($"FFmpeg not found at: {path}");
                 }

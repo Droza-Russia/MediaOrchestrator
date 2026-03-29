@@ -59,7 +59,15 @@ namespace MediaOrchestrator.Analytics.Stores
                     if (entry.SampleCount > 0)
                     {
                         timeout = CalculateAdaptiveTimeout(entry.AverageDuration, entry.SuccessRate, entry.SampleCount);
-                        MoveToHead(entry);
+                        _lock.EnterWriteLock();
+                        try
+                        {
+                            MoveToHead(entry);
+                        }
+                        finally
+                        {
+                            _lock.ExitWriteLock();
+                        }
                         return true;
                     }
                 }

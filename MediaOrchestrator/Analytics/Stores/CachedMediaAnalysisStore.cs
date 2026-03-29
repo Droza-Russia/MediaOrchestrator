@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -125,9 +126,9 @@ namespace MediaOrchestrator.Analytics.Stores
                         await Task.Delay(_flushDelay).ConfigureAwait(false);
                         await FlushDirtyEntriesAsync(CancellationToken.None).ConfigureAwait(false);
                     }
-                    catch
+                    catch (Exception ex)
                     {
-                        // Lazy persistence must not break foreground analytics flow.
+                        Trace.TraceWarning("Scheduled flush failed (ignored): {0}", ex.Message);
                     }
                 });
             }
@@ -166,9 +167,11 @@ namespace MediaOrchestrator.Analytics.Stores
             }
             catch (OperationCanceledException)
             {
+                Trace.TraceWarning("CachedMediaAnalysisStore flush cancelled");
             }
-            catch (Exception)
+            catch (Exception ex)
             {
+                Trace.TraceError("CachedMediaAnalysisStore flush failed: {0}", ex.Message);
             }
             finally
             {

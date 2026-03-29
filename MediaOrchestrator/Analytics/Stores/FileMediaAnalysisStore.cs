@@ -99,7 +99,12 @@ namespace MediaOrchestrator.Analytics.Stores
                 return Array.Empty<MediaAnalysisRecord>();
             }
 
-            string[] files = Directory.GetFiles(_directoryPath, "*.json", SearchOption.AllDirectories);
+            var jsonFiles = Directory.GetFiles(_directoryPath, "*.json", SearchOption.AllDirectories);
+            var gzFiles = _enableCompression 
+                ? Directory.GetFiles(_directoryPath, "*.json.gz", SearchOption.AllDirectories) 
+                : Array.Empty<string>();
+            
+            var files = jsonFiles.Concat(gzFiles).ToArray();
             var result = new List<MediaAnalysisRecord>(files.Length);
 
             await _gate.WaitAsync(cancellationToken).ConfigureAwait(false);
