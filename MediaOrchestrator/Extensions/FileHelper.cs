@@ -28,18 +28,7 @@ namespace MediaOrchestrator.Extensions
                 return;
 
             SafeDeleteFile(path);
-
-            try
-            {
-                string tempWithExt = path + ".tmp";
-                if (File.Exists(tempWithExt))
-                {
-                    File.Delete(tempWithExt);
-                }
-            }
-            catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException)
-            {
-            }
+            SafeDeleteFile(path + ".tmp");
         }
 
         public static T ExecuteFileOperation<T>(Func<T> operation, T fallbackValue)
@@ -64,12 +53,23 @@ namespace MediaOrchestrator.Extensions
         {
             writeAction();
 
-            if (File.Exists(finalPath))
+            string backupPath = null;
+            try
             {
-                SafeDeleteFile(finalPath);
-            }
+                if (File.Exists(finalPath))
+                {
+                    backupPath = Path.Combine(Path.GetDirectoryName(finalPath), Path.GetRandomFileName());
+                }
 
-            File.Move(tempPath, finalPath);
+                File.Replace(tempPath, finalPath, backupPath);
+            }
+            finally
+            {
+                if (backupPath != null)
+                {
+                    SafeDeleteFile(backupPath);
+                }
+            }
         }
     }
 }

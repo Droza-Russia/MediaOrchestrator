@@ -260,7 +260,7 @@ MediaOrchestrator/
 ├── Analytics/
 │   ├── Models/          # Domain models
 │   ├── Reports/         # Reporting APIs
-│   └── Stores/          # Caching & persistence
+│   └── Stores/         # Caching & persistence
 ├── Conversion/
 │   ├── Arguments/       # FFmpeg argument builders
 │   ├── Events/          # Progress events
@@ -271,7 +271,7 @@ MediaOrchestrator/
 │   ├── Settings/        # Conversion settings
 │   └── Snippets/        # High-level operations
 ├── Examples/            # Sample code
-├── HardwareAcceleration/# HW detection & profiles
+├── HardwareAcceleration/ # HW detection & profiles
 ├── Localization/        # Multi-language support
 ├── Media/               # Universal I/O
 ├── Probe/               # MediaInfo extraction

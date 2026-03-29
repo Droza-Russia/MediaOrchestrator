@@ -260,27 +260,27 @@ MediaOrchestrator — это enterprise-grade .NET SDK для медиаобра
 MediaOrchestrator/
 ├── Analytics/
 │   ├── Models/          # Доменные модели
-│   ├── Reports/        # API отчётов
+│   ├── Reports/         # API отчётов
 │   └── Stores/         # Кэширование и персистентность
 ├── Conversion/
-│   ├── Arguments/      # Построители аргументов FFmpeg
-│   ├── Events/         # События прогресса
-│   ├── Exceptions/     # Типизированные исключения
-│   ├── Filters/       # Построители графов фильтров
-│   ├── Implementations# Основная логика конвертации
+│   ├── Arguments/       # Построители аргументов FFmpeg
+│   ├── Events/          # События прогресса
+│   ├── Exceptions/      # Типизированные исключения
+│   ├── Filters/        # Построители графов фильтров
+│   ├── Implementations/ # Основная логика конвертации
 │   ├── Interfaces/     # Контракты
-│   ├── Settings/      # Настройки конвертации
-│   └── Snippets/      # Высокоуровневые операции
-├── Examples/           # Примеры кода
-├── HardwareAcceleration/# Определение HW и профили
-├── Localization/       # Мультиязычная поддержка
-├── Media/             # Универсальный I/O
-├── Probe/             # Извлечение MediaInfo
-├── Streams/           # Модели видео/аудио/субтитров
+│   ├── Settings/       # Настройки конвертации
+│   └── Snippets/       # Высокоуровневые операции
+├── Examples/            # Примеры кода
+├── HardwareAcceleration/ # Определение HW и профили
+├── Localization/        # Мультиязычная поддержка
+├── Media/               # Универсальный I/O
+├── Probe/               # Извлечение MediaInfo
+├── Streams/             # Модели видео/аудио/субтитров
 └── Extensions/         # Утилитные расширения
 
 MediaOrchestrator.Test/
-└── *Tests.cs          # Модульные и интеграционные тесты
+└── *Tests.cs           # Модульные и интеграционные тесты
 ```
 
 ---
