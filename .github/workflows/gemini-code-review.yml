@@ -38,9 +38,44 @@ jobs:
       pull-requests: write
 
     steps:
+      - name: Resolve pull request context
+        id: pr_context
+        uses: actions/github-script@v8
+        with:
+          script: |
+            let pr;
+
+            if (context.eventName === 'pull_request') {
+              pr = context.payload.pull_request;
+            } else {
+              const response = await github.rest.pulls.get({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                pull_number: context.payload.issue.number
+              });
+              pr = response.data;
+            }
+
+            const isFork = Boolean(pr.head?.repo?.fork);
+            const isDraft = Boolean(pr.draft);
+            const shouldReview = !isFork && !isDraft;
+
+            core.setOutput('number', String(pr.number));
+            core.setOutput('head_sha', pr.head.sha);
+            core.setOutput('title', pr.title || '');
+            core.setOutput('body', pr.body || '');
+            core.setOutput('is_fork', String(isFork));
+            core.setOutput('is_draft', String(isDraft));
+            core.setOutput('should_review', String(shouldReview));
+
+      - name: Skip unsupported pull request source
+        if: ${{ steps.pr_context.outputs.should_review != 'true' }}
+        run: |
+          echo "Skipping Gemini review for draft or fork pull request."
+
       - name: Mint identity token
         id: mint_identity_token
-        if: ${{ vars.APP_ID }}
+        if: ${{ steps.pr_context.outputs.should_review == 'true' && vars.APP_ID && secrets.APP_PRIVATE_KEY }}
         uses: actions/create-github-app-token@v2
         with:
           app-id: ${{ vars.APP_ID }}
@@ -51,6 +86,7 @@ jobs:
 
       - name: Extract review context
         id: review_context
+        if: ${{ steps.pr_context.outputs.should_review == 'true' }}
         uses: actions/github-script@v8
         env:
           REQUEST_BODY: ${{ github.event.comment.body || '' }}
@@ -64,30 +100,42 @@ jobs:
             core.setOutput('additional_context', additionalContext);
 
       - name: Checkout pull request head
+        if: ${{ steps.pr_context.outputs.should_review == 'true' }}
         uses: actions/checkout@v5
         with:
           fetch-depth: 0
-          ref: ${{ github.event_name == 'issue_comment' && format('refs/pull/{0}/head', github.event.issue.number) || github.event.pull_request.head.sha }}
+          ref: ${{ steps.pr_context.outputs.head_sha }}
 
       - name: Prepare Gemini directories
+        if: ${{ steps.pr_context.outputs.should_review == 'true' }}
         run: |
           mkdir -p "$HOME/.gemini"
           mkdir -p .gemini
 
+      - name: Install pinned code review extension
+        if: ${{ steps.pr_context.outputs.should_review == 'true' }}
+        env:
+          GOOGLE_GENAI_USE_GCA: "true"
+          GEMINI_CLI_VERSION: ${{ vars.GEMINI_CLI_VERSION || '0.35.3' }}
+        run: |
+          npm install -g "@google/gemini-cli@${GEMINI_CLI_VERSION}"
+          gemini extensions install https://github.com/gemini-cli-extensions/code-review --ref dd1a10d2c9d07b2ebade866590fdfa59cd8f9d04 --consent --skip-settings
+
       - name: Run Gemini pull request review
         id: gemini_pr_review
-        uses: google-github-actions/run-gemini-cli@main
+        if: ${{ steps.pr_context.outputs.should_review == 'true' }}
+        uses: google-github-actions/run-gemini-cli@9dbec29a20fab3f35017a40ad0eb798a257d4d51
         env:
           GITHUB_TOKEN: ${{ steps.mint_identity_token.outputs.token || secrets.GITHUB_TOKEN || github.token }}
           GOOGLE_GENAI_USE_GCA: "true"
-          ISSUE_TITLE: ${{ github.event.pull_request.title || github.event.issue.title }}
-          ISSUE_BODY: ${{ github.event.pull_request.body || github.event.issue.body }}
-          PULL_REQUEST_NUMBER: ${{ github.event.pull_request.number || github.event.issue.number }}
+          ISSUE_TITLE: ${{ steps.pr_context.outputs.title }}
+          ISSUE_BODY: ${{ steps.pr_context.outputs.body }}
+          PULL_REQUEST_NUMBER: ${{ steps.pr_context.outputs.number }}
           REPOSITORY: ${{ github.repository }}
           ADDITIONAL_CONTEXT: ${{ steps.review_context.outputs.additional_context }}
         with:
           use_gemini_code_assist: true
-          gemini_cli_version: ${{ vars.GEMINI_CLI_VERSION }}
+          gemini_cli_version: ${{ vars.GEMINI_CLI_VERSION || '0.35.3' }}
           gemini_debug: ${{ fromJSON(vars.GEMINI_DEBUG || vars.ACTIONS_STEP_DEBUG || false) }}
           gemini_model: ${{ vars.GEMINI_MODEL }}
           upload_artifacts: ${{ vars.UPLOAD_ARTIFACTS }}
@@ -133,8 +181,4 @@ jobs:
                 ]
               }
             }
-          extensions: |
-            [
-              "https://github.com/gemini-cli-extensions/code-review"
-            ]
           prompt: /pr-code-review
