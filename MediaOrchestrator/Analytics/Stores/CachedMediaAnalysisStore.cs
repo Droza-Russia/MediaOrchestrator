@@ -1,6 +1,6 @@
 using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -8,7 +8,7 @@ using MediaOrchestrator.Analytics.Models;
 
 namespace MediaOrchestrator.Analytics.Stores
 {
-    internal sealed class CachedMediaAnalysisStore : IMediaAnalysisStore
+    internal sealed class CachedMediaAnalysisStore : IMediaAnalysisStore, IDisposable
     {
         private sealed class CacheEntry
         {
@@ -19,16 +19,18 @@ namespace MediaOrchestrator.Analytics.Stores
 
         private readonly IMediaAnalysisStore _persistentStore;
         private readonly TimeSpan _flushDelay;
-        private readonly ConcurrentDictionary<string, CacheEntry> _cache = new ConcurrentDictionary<string, CacheEntry>(StringComparer.Ordinal);
+        private readonly LruCache<string, CacheEntry> _cache;
         private readonly SemaphoreSlim _flushGate = new SemaphoreSlim(1, 1);
         private readonly object _scheduleSync = new object();
+        private volatile bool _isDisposed;
 
         private Task _scheduledFlushTask;
 
-        public CachedMediaAnalysisStore(IMediaAnalysisStore persistentStore, TimeSpan? flushDelay = null)
+        public CachedMediaAnalysisStore(IMediaAnalysisStore persistentStore, TimeSpan? flushDelay = null, int? cacheCapacity = null, TimeSpan? cacheTtl = null)
         {
             _persistentStore = persistentStore ?? throw new ArgumentNullException(nameof(persistentStore));
             _flushDelay = flushDelay ?? TimeSpan.FromSeconds(2);
+            _cache = new LruCache<string, CacheEntry>(cacheCapacity ?? 1000, cacheTtl);
         }
 
         public async Task<MediaAnalysisRecord> GetAsync(string analysisKey, CancellationToken cancellationToken = default)
@@ -38,7 +40,7 @@ namespace MediaOrchestrator.Analytics.Stores
                 return null;
             }
 
-            if (_cache.TryGetValue(analysisKey, out var cached))
+            if (_cache.TryGet(analysisKey, out var cached))
             {
                 return cached.Record;
             }
@@ -46,11 +48,11 @@ namespace MediaOrchestrator.Analytics.Stores
             var record = await _persistentStore.GetAsync(analysisKey, cancellationToken).ConfigureAwait(false);
             if (record != null)
             {
-                _cache[analysisKey] = new CacheEntry
+                _cache.Put(analysisKey, new CacheEntry
                 {
                     Record = record,
                     Dirty = false
-                };
+                });
             }
 
             return record;
@@ -69,7 +71,7 @@ namespace MediaOrchestrator.Analytics.Stores
                 }
             }
 
-            foreach (var pair in _cache)
+            foreach (var pair in _cache.GetAll())
             {
                 if (pair.Value?.Record != null && !string.IsNullOrWhiteSpace(pair.Key))
                 {
@@ -87,19 +89,11 @@ namespace MediaOrchestrator.Analytics.Stores
                 return Task.CompletedTask;
             }
 
-            _cache.AddOrUpdate(
-                record.AnalysisKey,
-                _ => new CacheEntry
-                {
-                    Record = record,
-                    Dirty = true
-                },
-                (_, existing) =>
-                {
-                    existing.Record = record;
-                    existing.Dirty = true;
-                    return existing;
-                });
+            _cache.Put(record.AnalysisKey, new CacheEntry
+            {
+                Record = record,
+                Dirty = true
+            });
 
             ScheduleLazyFlush();
             return Task.CompletedTask;
@@ -113,7 +107,47 @@ namespace MediaOrchestrator.Analytics.Stores
 
         internal async Task FlushPendingAsync(CancellationToken cancellationToken = default)
         {
-            await FlushDirtyEntriesAsync(cancellationToken).ConfigureAwait(false);
+            bool acquired = false;
+            try
+            {
+                await _flushGate.WaitAsync(cancellationToken).ConfigureAwait(false);
+                acquired = true;
+
+                var dirtyRecords = new List<MediaAnalysisRecord>();
+                foreach (var pair in _cache.GetAll())
+                {
+                    if (pair.Value?.Dirty == true && pair.Value?.Record != null)
+                    {
+                        dirtyRecords.Add(pair.Value.Record);
+                    }
+                }
+
+                foreach (var record in dirtyRecords)
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+                    await _persistentStore.SaveAsync(record, cancellationToken).ConfigureAwait(false);
+                    if (_cache.TryGet(record.AnalysisKey, out var cachedEntry))
+                    {
+                        cachedEntry.Dirty = false;
+                        _cache.Put(record.AnalysisKey, cachedEntry);
+                    }
+                }
+            }
+            catch (OperationCanceledException)
+            {
+                Trace.TraceWarning("FlushPendingAsync cancelled");
+            }
+            catch (Exception ex)
+            {
+                Trace.TraceError("FlushPendingAsync failed: {0}", ex.Message);
+            }
+            finally
+            {
+                if (acquired)
+                {
+                    _flushGate.Release();
+                }
+            }
         }
 
         private void ScheduleLazyFlush()
@@ -132,9 +166,9 @@ namespace MediaOrchestrator.Analytics.Stores
                         await Task.Delay(_flushDelay).ConfigureAwait(false);
                         await FlushDirtyEntriesAsync(CancellationToken.None).ConfigureAwait(false);
                     }
-                    catch
+                    catch (Exception ex)
                     {
-                        // Lazy persistence must not break foreground analytics flow.
+                        Trace.TraceWarning("Scheduled flush failed (ignored): {0}", ex.Message);
                     }
                 });
             }
@@ -142,27 +176,64 @@ namespace MediaOrchestrator.Analytics.Stores
 
         private async Task FlushDirtyEntriesAsync(CancellationToken cancellationToken)
         {
-            await _flushGate.WaitAsync(cancellationToken).ConfigureAwait(false);
+            bool acquired = false;
             try
             {
-                List<MediaAnalysisRecord> dirtyRecords = _cache
-                    .Where(pair => pair.Value.Dirty && pair.Value.Record != null)
-                    .Select(pair => pair.Value.Record)
-                    .ToList();
+                await _flushGate.WaitAsync(0, cancellationToken).ConfigureAwait(false);
+                acquired = true;
+
+                var dirtyRecords = new List<MediaAnalysisRecord>();
+                foreach (var pair in _cache.GetAll())
+                {
+                    if (pair.Value?.Dirty == true && pair.Value?.Record != null)
+                    {
+                        dirtyRecords.Add(pair.Value.Record);
+                    }
+                }
 
                 foreach (var record in dirtyRecords)
                 {
                     cancellationToken.ThrowIfCancellationRequested();
                     await _persistentStore.SaveAsync(record, cancellationToken).ConfigureAwait(false);
-                    if (_cache.TryGetValue(record.AnalysisKey, out var entry))
+                    if (_cache.TryGet(record.AnalysisKey, out var cachedEntry))
                     {
-                        entry.Dirty = false;
+                        cachedEntry.Dirty = false;
+                        _cache.Put(record.AnalysisKey, cachedEntry);
                     }
                 }
             }
+            catch (OperationCanceledException)
+            {
+                Trace.TraceWarning("CachedMediaAnalysisStore flush cancelled");
+            }
+            catch (Exception ex)
+            {
+                Trace.TraceError("CachedMediaAnalysisStore flush failed: {0}", ex.Message);
+            }
             finally
             {
-                _flushGate.Release();
+                if (acquired)
+                {
+                    _flushGate.Release();
+                }
+            }
+        }
+
+        public int Count => _cache.Count;
+
+        public void Dispose()
+        {
+            if (_isDisposed)
+            {
+                return;
+            }
+
+            _isDisposed = true;
+            _flushGate.Dispose();
+
+            if (_persistentStore is IDisposable disposable)
+            {
+                disposable.Dispose();
             }
         }
     }

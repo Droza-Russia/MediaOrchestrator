@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
@@ -8,16 +9,28 @@ using System.Threading.Tasks;
 namespace MediaOrchestrator
 {
     /// <summary>
-    ///     Автовыбор аппаратного ускорения по списку ffmpeg -hwaccels и ОС (NVIDIA / Intel / AMD / VAAPI / Video Toolbox).
+    ///     Автовыбор аппарантного ускорения по списку ffmpeg -hwaccels и ОС (NVIDIA / Intel / AMD / VAAPI / Video Toolbox).
     /// </summary>
     internal static class HardwareAccelerationAutoDetector
     {
+        private static readonly ConcurrentDictionary<string, HardwareAccelerationProfile> _detectionCache =
+            new ConcurrentDictionary<string, HardwareAccelerationProfile>();
+
+        private const int DefaultCacheLifetimeMinutes = 30;
+
         internal static bool TryDetect(string ffmpegExecutablePath, OperatingSystem os, CancellationToken cancellationToken, out HardwareAccelerationProfile profile)
         {
             profile = null;
             if (string.IsNullOrWhiteSpace(ffmpegExecutablePath) || !System.IO.File.Exists(ffmpegExecutablePath))
             {
                 return false;
+            }
+
+            var cacheKey = ffmpegExecutablePath + "_" + os;
+            if (_detectionCache.TryGetValue(cacheKey, out var cachedProfile))
+            {
+                profile = cachedProfile;
+                return true;
             }
 
             if (!TryGetSupportedHwaccels(ffmpegExecutablePath, cancellationToken, out var supported))
@@ -34,6 +47,7 @@ namespace MediaOrchestrator
                 }
 
                 profile = CreateProfileForHwaccel(name, os);
+                _detectionCache.TryAdd(cacheKey, profile);
                 return profile != null;
             }
 
@@ -174,6 +188,11 @@ namespace MediaOrchestrator
             }
 
             return supported.Count > 0;
+        }
+
+        internal static void ClearCache()
+        {
+            _detectionCache.Clear();
         }
     }
 }

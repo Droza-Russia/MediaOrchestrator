@@ -6,14 +6,14 @@ using MediaOrchestrator.Analytics.Models;
 
 namespace MediaOrchestrator
 {
-    internal sealed class ProcessResourceTelemetryCollector
+    internal sealed class ProcessResourceTelemetryCollector : IDisposable
     {
         private readonly Process _process;
         private readonly string _hardwareAccelerator;
         private readonly CancellationTokenSource _cancellationTokenSource = new CancellationTokenSource();
-        private readonly Task _samplingTask;
         private readonly int _processorCount;
-        private readonly object _sync = new object();
+        private readonly Task _samplingTask;
+        private volatile bool _isDisposed;
 
         private long _peakWorkingSetBytes;
         private double _totalCpuUsagePercent;
@@ -33,6 +33,11 @@ namespace MediaOrchestrator
 
         internal ExecutionResourceMetrics Complete()
         {
+            if (_isDisposed)
+            {
+                return CreateEmptyMetrics();
+            }
+
             _cancellationTokenSource.Cancel();
             try
             {
@@ -40,20 +45,47 @@ namespace MediaOrchestrator
             }
             catch (OperationCanceledException)
             {
+                Trace.TraceWarning("ProcessResourceTelemetryCollector stop cancelled");
+            }
+            catch (Exception ex)
+            {
+                Trace.TraceError("ProcessResourceTelemetryCollector stop failed: {0}", ex.Message);
             }
 
-            lock (_sync)
+            return new ExecutionResourceMetrics
             {
-                return new ExecutionResourceMetrics
-                {
-                    PeakWorkingSetBytes = _peakWorkingSetBytes,
-                    AverageCpuUsagePercent = _cpuSamples == 0 ? 0 : _totalCpuUsagePercent / _cpuSamples,
-                    PeakCpuUsagePercent = _peakCpuUsagePercent,
-                    LogicalCoreCount = _processorCount,
-                    AverageAcceleratorUsagePercent = _acceleratorSamples == 0 ? 0 : _totalAcceleratorUsagePercent / _acceleratorSamples,
-                    PeakAcceleratorUsagePercent = _peakAcceleratorUsagePercent
-                };
+                PeakWorkingSetBytes = _peakWorkingSetBytes,
+                AverageCpuUsagePercent = _cpuSamples == 0 ? 0 : _totalCpuUsagePercent / _cpuSamples,
+                PeakCpuUsagePercent = _peakCpuUsagePercent,
+                LogicalCoreCount = _processorCount,
+                AverageAcceleratorUsagePercent = _acceleratorSamples == 0 ? 0 : _totalAcceleratorUsagePercent / _acceleratorSamples,
+                PeakAcceleratorUsagePercent = _peakAcceleratorUsagePercent
+            };
+        }
+
+        private ExecutionResourceMetrics CreateEmptyMetrics()
+        {
+            return new ExecutionResourceMetrics
+            {
+                PeakWorkingSetBytes = 0,
+                AverageCpuUsagePercent = 0,
+                PeakCpuUsagePercent = 0,
+                LogicalCoreCount = _processorCount,
+                AverageAcceleratorUsagePercent = 0,
+                PeakAcceleratorUsagePercent = 0
+            };
+        }
+
+        public void Dispose()
+        {
+            if (_isDisposed)
+            {
+                return;
             }
+
+            _isDisposed = true;
+            _cancellationTokenSource.Cancel();
+            _cancellationTokenSource.Dispose();
         }
 
         private async Task SampleLoopAsync(CancellationToken cancellationToken)
@@ -127,22 +159,26 @@ namespace MediaOrchestrator
             {
             }
 
-            lock (_sync)
+            if (_isDisposed)
             {
-                _peakWorkingSetBytes = Math.Max(_peakWorkingSetBytes, workingSetBytes);
-                if (cpuUsagePercent > 0)
-                {
-                    _totalCpuUsagePercent += cpuUsagePercent;
-                    _cpuSamples++;
-                    _peakCpuUsagePercent = Math.Max(_peakCpuUsagePercent, cpuUsagePercent);
-                }
+                return false;
+            }
 
-                if (acceleratorUsagePercent > 0)
-                {
-                    _totalAcceleratorUsagePercent += acceleratorUsagePercent;
-                    _acceleratorSamples++;
-                    _peakAcceleratorUsagePercent = Math.Max(_peakAcceleratorUsagePercent, acceleratorUsagePercent);
-                }
+            InterlockedOperations.UpdateIfGreater(ref _peakWorkingSetBytes, workingSetBytes);
+            if (cpuUsagePercent > 0)
+            {
+                InterlockedOperations.BeginUpdate(ref _totalCpuUsagePercent, ref _cpuSamples, cpuUsagePercent, out var newTotal, out var newSamples);
+                _totalCpuUsagePercent = newTotal;
+                _cpuSamples = newSamples;
+                InterlockedOperations.UpdateIfGreater(ref _peakCpuUsagePercent, cpuUsagePercent);
+            }
+
+            if (acceleratorUsagePercent > 0)
+            {
+                InterlockedOperations.BeginUpdate(ref _totalAcceleratorUsagePercent, ref _acceleratorSamples, acceleratorUsagePercent, out var newTotal, out var newSamples);
+                _totalAcceleratorUsagePercent = newTotal;
+                _acceleratorSamples = newSamples;
+                InterlockedOperations.UpdateIfGreater(ref _peakAcceleratorUsagePercent, acceleratorUsagePercent);
             }
 
             previousTotalProcessorTime = totalProcessorTime;

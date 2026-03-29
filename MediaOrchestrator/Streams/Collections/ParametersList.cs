@@ -1,8 +1,8 @@
-﻿using System.Collections;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 
-namespace MediaOrchestrator.Streams
+namespace MediaOrchestrator.Streams.Collections
 {
     internal class ParametersList<T> : IEnumerable<T>
     {

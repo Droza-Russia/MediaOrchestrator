@@ -417,10 +417,13 @@ var conversion = await FFmpeg.Conversions.FromSnippet.RemuxIfPossibleElseTransco
 - [x] Базовая typed инфраструктура проекта подготовлена
 - [x] Ошибки и исключения сведены к библиотечному контракту
 - [x] Есть high-level transcription snippet
-- [ ] Нет decision layer
-- [ ] Нет typed processing plan
-- [ ] Нет scenario-based planner
-- [ ] Нет explainability модели
+- [x] Analytics layer с MediaProcessingPlan
+- [x] Scenario-based planning (BrowserPlayback, AiTranscription, Custom)
+- [x] Adaptive learning from execution history
+- [x] Public analytics reports с breakdowns и timeline
+- [x] Circuit Breaker pattern для устойчивости
+- [x] Metrics API (MediaOrchestratorMetrics)
+- [x] Health check API
 
 ---
 

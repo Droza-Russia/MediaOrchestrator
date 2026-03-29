@@ -1,6 +1,7 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using System.Linq;
 using MediaOrchestrator.Streams;
+using MediaOrchestrator.Streams.Collections;
 using MediaOrchestrator.Streams.SubtitleStream;
 
 namespace MediaOrchestrator

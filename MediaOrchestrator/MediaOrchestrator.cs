@@ -11,13 +11,6 @@ using MediaOrchestrator.Exceptions;
 
 namespace MediaOrchestrator
 {
-    public enum FileNameFilterMethod
-    {
-        Contains,
-        Exact,
-        StartWith
-    }
-
     /// <summary> 
     ///     Обертка для MediaOrchestrator
     /// </summary>
@@ -129,6 +122,44 @@ namespace MediaOrchestrator
         {
             cancellationToken.ThrowIfCancellationRequested();
             EnsureExecutablePathsResolved(cancellationToken);
+        }
+
+        /// <summary>
+        ///     Returns the path to the FFmpeg executable. May be null if not yet resolved.
+        /// </summary>
+        public static string FFmpegExecutablePath
+        {
+            get
+            {
+                _executableConfigurationLock.EnterReadLock();
+                try
+                {
+                    return _ffmpegPath;
+                }
+                finally
+                {
+                    _executableConfigurationLock.ExitReadLock();
+                }
+            }
+        }
+
+        /// <summary>
+        ///     Returns the path to the FFprobe executable. May be null if not yet resolved.
+        /// </summary>
+        public static string FFprobeExecutablePath
+        {
+            get
+            {
+                _executableConfigurationLock.EnterReadLock();
+                try
+                {
+                    return _ffprobePath;
+                }
+                finally
+                {
+                    _executableConfigurationLock.ExitReadLock();
+                }
+            }
         }
 
         private static void EnsureExecutablePathsResolved(CancellationToken cancellationToken)
