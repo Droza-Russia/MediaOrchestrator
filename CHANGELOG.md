@@ -70,6 +70,11 @@ All notable changes to this project will be documented in this file.
   - Proper disposal on cancellation via `using` block
 
 ### Fixed
+- Fixed OperationDurationLruCache thread-safety: MoveToHead now uses write lock
+- Fixed MediaOrchestratorMetrics health check: use else if to prevent null path File.Exists
+- Fixed HardwareAccelerationAutoDetector: removed null caching (ConcurrentDictionary doesn't allow null values)
+- Fixed FileMediaAnalysisStore: GetAllAsync now includes .json.gz files when compression enabled
+- Added Trace logging to empty catch blocks for visibility
 - Fixed LruCache thread-safety: `TryGet` now properly upgrades to write lock before modifying linked list
 - Fixed SemaphoreSlim disposal in CachedMediaAnalysisStore: proper try/finally to ensure release on any exit path
 - Fixed memory leak in MediaIoBridge: `_cleanupErrors` dictionary now has max size and periodic cleanup
