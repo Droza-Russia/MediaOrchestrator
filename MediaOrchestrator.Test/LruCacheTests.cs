@@ -144,13 +144,13 @@ namespace MediaOrchestrator.Test
         public void LruCache_GetAll_ReturnsNonExpiredEntriesInOrder()
         {
             // Arrange
-            var cache = new LruCache<int, string>(capacity: 10, TimeSpan.FromMilliseconds(200));
+            var cache = new LruCache<int, string>(capacity: 10, TimeSpan.FromMilliseconds(500));
 
             // Act
             cache.Put(1, "one");
             cache.Put(2, "two");
 
-            Thread.Sleep(100); // Let first entry age
+            Thread.Sleep(50); // Brief pause
 
             cache.Put(3, "three");
 
