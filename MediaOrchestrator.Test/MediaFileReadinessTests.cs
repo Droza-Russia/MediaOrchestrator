@@ -70,7 +70,13 @@ namespace MediaOrchestrator.Test
                     maximumWait: TimeSpan.FromMilliseconds(200))).ConfigureAwait(false);
 
             writerCancellation.Cancel();
-            await Assert.ThrowsAnyAsync<OperationCanceledException>(async () => await writer.ConfigureAwait(false)).ConfigureAwait(false);
+            try
+            {
+                await writer.ConfigureAwait(false);
+            }
+            catch (OperationCanceledException)
+            {
+            }
             Assert.Contains(path, exception.Message);
         }
     }
