@@ -6,3 +6,5 @@
 artifacts
 .vscode
 gha-creds-*.json
+MediaOrchestrator/.vs
+SEMANTIC_COMMIT_TEMPLATE.md

@@ -274,33 +274,7 @@ namespace MediaOrchestrator
                 throw new AudioStreamNotFoundException(global::MediaOrchestrator.ErrorMessages.InputFileDoesNotContainAudioStream, nameof(inputPath));
             }
 
-            var boundaries = timecodes
-                .Distinct()
-                .OrderBy(x => x)
-                .ToList();
-
-            if (!boundaries.Any() || boundaries.First() > TimeSpan.Zero)
-            {
-                boundaries.Insert(0, TimeSpan.Zero);
-            }
-
-            if (boundaries.Last() < info.Duration)
-            {
-                boundaries.Add(info.Duration);
-            }
-
-            if (boundaries.Count < 2)
-            {
-                throw new ArgumentException(ErrorMessages.AtLeastTwoTimeBoundaries, nameof(timecodes));
-            }
-
-            foreach (TimeSpan timecode in boundaries)
-            {
-                if (timecode < TimeSpan.Zero || timecode > info.Duration)
-                {
-                    throw new ArgumentOutOfRangeException(nameof(timecodes), string.Format(ErrorMessages.TimecodeOutOfRange, timecode));
-                }
-            }
+            var boundaries = BuildAudioSplitBoundaries(timecodes, info.Duration);
 
             Directory.CreateDirectory(outputDirectory);
 
@@ -333,6 +307,116 @@ namespace MediaOrchestrator
             return result;
         }
 
+        internal static async Task<IConversion> SplitAudioByTimecodesOnePassAsync(
+            string inputPath,
+            string outputDirectory,
+            IEnumerable<TimeSpan> timecodes,
+            AudioCodec audioCodec = AudioCodec.mp3,
+            long bitrate = 192000,
+            int sampleRate = 44100,
+            int channels = 1,
+            CancellationToken cancellationToken = default)
+        {
+            if (timecodes == null)
+            {
+                throw new ArgumentNullException(nameof(timecodes));
+            }
+
+            if (bitrate <= 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(bitrate), ErrorMessages.BitrateMustBeGreaterThanZero);
+            }
+
+            if (sampleRate <= 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(sampleRate), ErrorMessages.SampleRateMustBeGreaterThanZero);
+            }
+
+            if (channels <= 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(channels), ErrorMessages.ChannelsMustBeGreaterThanZero);
+            }
+
+            IMediaInfo info = await MediaOrchestrator.GetMediaInfo(inputPath, cancellationToken).ConfigureAwait(false);
+            IAudioStream sourceAudio = info.AudioStreams.FirstOrDefault();
+            if (sourceAudio == null)
+            {
+                throw new AudioStreamNotFoundException(global::MediaOrchestrator.ErrorMessages.InputFileDoesNotContainAudioStream, nameof(inputPath));
+            }
+
+            var boundaries = BuildAudioSplitBoundaries(timecodes, info.Duration);
+            var segmentTimes = boundaries.Skip(1).Take(boundaries.Count - 2).ToList();
+
+            Directory.CreateDirectory(outputDirectory);
+
+            string extension = GetAudioExtension(audioCodec);
+            string fileName = Path.GetFileNameWithoutExtension(inputPath);
+            string outputPattern = Path.Combine(outputDirectory, $"{fileName}_%03d.{extension}");
+
+            var conversion = New(suppressGlobalOutputLimits: true)
+                .AddInput(inputPath)
+                .MapAudioStream()
+                .DisableVideo()
+                .DisableSubtitles()
+                .SetAudioCodec(audioCodec)
+                .SetAudioBitrate(bitrate)
+                .SetAudioSampleRate(sampleRate)
+                .SetAudioChannels(channels)
+                .AddParameter("-f segment")
+                .AddParameter($"-segment_start_number 1")
+                .AddParameter($"-segment_format {GetAudioContainerFormat(audioCodec)}")
+                .AddParameter("-reset_timestamps 1")
+                .SetOutput(outputPattern);
+
+            if (segmentTimes.Any())
+            {
+                conversion.AddParameter($"-segment_times {string.Join(",", segmentTimes.Select(x => x.ToFFmpeg()))}");
+            }
+
+            return conversion;
+        }
+
+        private static List<TimeSpan> BuildAudioSplitBoundaries(IEnumerable<TimeSpan> timecodes, TimeSpan duration)
+        {
+            var boundaries = timecodes
+                .Distinct()
+                .OrderBy(x => x)
+                .ToList();
+
+            if (!boundaries.Any() || boundaries.First() > TimeSpan.Zero)
+            {
+                boundaries.Insert(0, TimeSpan.Zero);
+            }
+
+            if (boundaries.Last() < duration)
+            {
+                boundaries.Add(duration);
+            }
+
+            if (boundaries.Count < 2)
+            {
+                throw new ArgumentException(ErrorMessages.AtLeastTwoTimeBoundaries, nameof(timecodes));
+            }
+
+            foreach (TimeSpan timecode in boundaries)
+            {
+                if (timecode < TimeSpan.Zero || timecode > duration)
+                {
+                    throw new ArgumentOutOfRangeException(nameof(timecodes), string.Format(ErrorMessages.TimecodeOutOfRange, timecode));
+                }
+            }
+
+            for (int i = 0; i < boundaries.Count - 1; i++)
+            {
+                if (boundaries[i + 1] <= boundaries[i])
+                {
+                    throw new ArgumentException(ErrorMessages.TimecodesMustDefineIncreasingRanges, nameof(timecodes));
+                }
+            }
+
+            return boundaries;
+        }
+
         private static string GetAudioExtension(AudioCodec audioCodec)
         {
             switch (audioCodec)
@@ -341,6 +425,27 @@ namespace MediaOrchestrator
                     return "aac";
                 case AudioCodec.mp3:
                     return "mp3";
+                default:
+                    return audioCodec.ToString();
+            }
+        }
+
+        private static string GetAudioContainerFormat(AudioCodec audioCodec)
+        {
+            switch (audioCodec)
+            {
+                case AudioCodec.aac:
+                    return "aac";
+                case AudioCodec.mp3:
+                    return "mp3";
+                case AudioCodec.libvorbis:
+                    return "ogg";
+                case AudioCodec.pcm_s16le:
+                    return "wav";
+                case AudioCodec.flac:
+                    return "flac";
+                case AudioCodec.libopus:
+                    return "opus";
                 default:
                     return audioCodec.ToString();
             }

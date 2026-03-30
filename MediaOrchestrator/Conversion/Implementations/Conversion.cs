@@ -270,6 +270,12 @@ namespace MediaOrchestrator
                     {
                     }
                 }
+
+                if (_internalCts != null)
+                {
+                    _internalCts.Dispose();
+                    _internalCts = null;
+                }
             }
 
             var result = new ConversionResult
@@ -279,13 +285,6 @@ namespace MediaOrchestrator
                 Arguments = parameters
             };
             await ReportAnalyticsExecutionAsync(parameters, result.StartTime, result.EndTime, succeeded: true, failureType: null).ConfigureAwait(false);
-
-            if (_internalCts != null)
-            {
-                _internalCts.Dispose();
-                _internalCts = null;
-            }
-
             return result;
         }
 
@@ -1517,3 +1516,4 @@ namespace MediaOrchestrator
         }
     }
 }
+

@@ -25,7 +25,6 @@ namespace MediaOrchestrator.Analytics.Stores
         private volatile bool _isDisposed;
 
         private static readonly ConcurrentDictionary<string, string> _hashCache = new ConcurrentDictionary<string, string>();
-        private const int MaxHashCacheSize = 10000;
         private static readonly object _hashCacheGate = new object();
 
         public FileMediaAnalysisStore(string directoryPath, bool enableCompression = false)
@@ -53,7 +52,7 @@ namespace MediaOrchestrator.Analytics.Stores
                 return null;
             }
 
-            string path = GetRecordPath(analysisKey);
+            string path = GetRecordPath(analysisKey, createDirectory: false);
             if (!File.Exists(path))
             {
                 return null;
@@ -67,27 +66,7 @@ namespace MediaOrchestrator.Analytics.Stores
                     return null;
                 }
 
-                string json;
-                if (_enableCompression && IsCompressedFile(path))
-                {
-                    using (var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read, _bufferSize, useAsync: true))
-                    using (var decompressStream = new GZipStream(stream, CompressionMode.Decompress))
-                    using (var reader = new StreamReader(decompressStream, Encoding.UTF8))
-                    {
-                        json = await reader.ReadToEndAsync().ConfigureAwait(false);
-                    }
-                }
-                else
-                {
-                    using (var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read, _bufferSize, useAsync: true))
-                    using (var reader = new StreamReader(stream, Encoding.UTF8))
-                    {
-                        cancellationToken.ThrowIfCancellationRequested();
-                        json = await reader.ReadToEndAsync().ConfigureAwait(false);
-                    }
-                }
-
-                return JsonSerializer.Deserialize<MediaAnalysisRecord>(json, _jsonSerializerOptions);
+                return await TryReadRecordAsync(path, cancellationToken).ConfigureAwait(false);
             }
             finally
             {
@@ -102,50 +81,23 @@ namespace MediaOrchestrator.Analytics.Stores
                 return Array.Empty<MediaAnalysisRecord>();
             }
 
-            var jsonFiles = Directory.GetFiles(_directoryPath, "*.json", SearchOption.AllDirectories);
+            var jsonFiles = Directory.EnumerateFiles(_directoryPath, "*.json", SearchOption.AllDirectories);
             var gzFiles = _enableCompression
-                ? Directory.GetFiles(_directoryPath, "*.json.gz", SearchOption.AllDirectories)
-                : Array.Empty<string>();
+                ? Directory.EnumerateFiles(_directoryPath, "*.json.gz", SearchOption.AllDirectories)
+                : Enumerable.Empty<string>();
 
             var files = jsonFiles.Concat(gzFiles).ToArray();
             var result = new List<MediaAnalysisRecord>(files.Length);
 
-            await _gate.WaitAsync(cancellationToken).ConfigureAwait(false);
-            try
+            foreach (var path in files)
             {
-                foreach (var path in files)
+                cancellationToken.ThrowIfCancellationRequested();
+
+                var record = await TryReadRecordAsync(path, cancellationToken).ConfigureAwait(false);
+                if (record != null)
                 {
-                    cancellationToken.ThrowIfCancellationRequested();
-
-                    string json;
-                    if (_enableCompression && IsCompressedFile(path))
-                    {
-                        using (var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read, _bufferSize, useAsync: true))
-                        using (var decompressStream = new GZipStream(stream, CompressionMode.Decompress))
-                        using (var reader = new StreamReader(decompressStream, Encoding.UTF8))
-                        {
-                            json = await reader.ReadToEndAsync().ConfigureAwait(false);
-                        }
-                    }
-                    else
-                    {
-                        using (var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read, _bufferSize, useAsync: true))
-                        using (var reader = new StreamReader(stream, Encoding.UTF8))
-                        {
-                            json = await reader.ReadToEndAsync().ConfigureAwait(false);
-                        }
-                    }
-
-                    var record = JsonSerializer.Deserialize<MediaAnalysisRecord>(json, _jsonSerializerOptions);
-                    if (record != null)
-                    {
-                        result.Add(record);
-                    }
+                    result.Add(record);
                 }
-            }
-            finally
-            {
-                _gate.Release();
             }
 
             return result;
@@ -159,7 +111,7 @@ namespace MediaOrchestrator.Analytics.Stores
             }
 
             Directory.CreateDirectory(_directoryPath);
-            string path = GetRecordPath(record.AnalysisKey);
+            string path = GetRecordPath(record.AnalysisKey, createDirectory: true);
             string json = JsonSerializer.Serialize(record, _jsonSerializerOptions);
 
             await _gate.WaitAsync(cancellationToken).ConfigureAwait(false);
@@ -230,13 +182,58 @@ namespace MediaOrchestrator.Analytics.Stores
             }
         }
 
-        private string GetRecordPath(string analysisKey)
+        private async Task<MediaAnalysisRecord> TryReadRecordAsync(string path, CancellationToken cancellationToken)
+        {
+            try
+            {
+                return await ReadRecordAsync(path, cancellationToken).ConfigureAwait(false);
+            }
+            catch (FileNotFoundException)
+            {
+                return null;
+            }
+            catch (DirectoryNotFoundException)
+            {
+                return null;
+            }
+        }
+
+        private async Task<MediaAnalysisRecord> ReadRecordAsync(string path, CancellationToken cancellationToken)
+        {
+            string json;
+            if (_enableCompression && IsCompressedFile(path))
+            {
+                using (var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read, _bufferSize, useAsync: true))
+                using (var decompressStream = new GZipStream(stream, CompressionMode.Decompress))
+                using (var reader = new StreamReader(decompressStream, Encoding.UTF8))
+                {
+                    json = await reader.ReadToEndAsync().ConfigureAwait(false);
+                }
+            }
+            else
+            {
+                using (var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read, _bufferSize, useAsync: true))
+                using (var reader = new StreamReader(stream, Encoding.UTF8))
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+                    json = await reader.ReadToEndAsync().ConfigureAwait(false);
+                }
+            }
+
+            return JsonSerializer.Deserialize<MediaAnalysisRecord>(json, _jsonSerializerOptions);
+        }
+
+        private string GetRecordPath(string analysisKey, bool createDirectory)
         {
             string hash = GetCachedHash(analysisKey);
             string shardLevelOne = hash.Substring(0, 2);
             string shardLevelTwo = hash.Substring(2, 2);
             string directory = Path.Combine(_directoryPath, shardLevelOne, shardLevelTwo);
-            Directory.CreateDirectory(directory);
+            if (createDirectory)
+            {
+                Directory.CreateDirectory(directory);
+            }
+
             string extension = _enableCompression ? ".json.gz" : ".json";
             return Path.Combine(directory, hash + extension);
         }
@@ -247,27 +244,25 @@ namespace MediaOrchestrator.Analytics.Stores
             return _hashCache.GetOrAdd(value, v => ComputeHashInternal(v));
         }
 
-        private static string GetCachedHash(string value, bool useCompression)
-        {
-            EnsureHashCacheSizeLimit();
-            var key = useCompression ? value + "_compressed" : value;
-            return _hashCache.GetOrAdd(key, k => ComputeHashInternal(k.Replace("_compressed", "")));
-        }
-
         private static void EnsureHashCacheSizeLimit()
         {
-            if (_hashCache.Count > MaxHashCacheSize)
+            var maxHashCacheSize = MediaOrchestrator.CurrentRuntimeOptions.MaxAnalyticsHashCacheSize;
+            if (maxHashCacheSize <= 0 || _hashCache.Count <= maxHashCacheSize)
             {
-                lock (_hashCacheGate)
+                return;
+            }
+
+            lock (_hashCacheGate)
+            {
+                if (_hashCache.Count <= maxHashCacheSize)
                 {
-                    if (_hashCache.Count > MaxHashCacheSize)
-                    {
-                        var keysToRemove = _hashCache.Keys.Take(_hashCache.Count / 2).ToList();
-                        foreach (var key in keysToRemove)
-                        {
-                            _hashCache.TryRemove(key, out _);
-                        }
-                    }
+                    return;
+                }
+
+                var keysToRemove = _hashCache.Keys.Take(_hashCache.Count - maxHashCacheSize).ToList();
+                foreach (var key in keysToRemove)
+                {
+                    _hashCache.TryRemove(key, out _);
                 }
             }
         }

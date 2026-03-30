@@ -143,8 +143,8 @@ namespace MediaOrchestrator
         {
             await MediaFileSignatureValidator.ValidateOrThrowAsync(filePath, cancellationToken).ConfigureAwait(false);
             var mediaInfo = new MediaInfo(filePath);
-            var wrapper = new MediaProbeRunner();
-            return await wrapper.SetProperties(mediaInfo, cancellationToken).ConfigureAwait(false);
+            var probeRunner = new MediaProbeRunner();
+            return await probeRunner.SetProperties(mediaInfo, cancellationToken).ConfigureAwait(false);
         }
 
         private static bool TryGetFromCache(string key, out IMediaInfo mediaInfo)

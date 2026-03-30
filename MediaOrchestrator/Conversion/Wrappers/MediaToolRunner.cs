@@ -16,7 +16,7 @@ namespace MediaOrchestrator
 
     /// <inheritdoc />
     /// <summary>
-    ///     Обертка для MediaOrchestrator
+    ///     Основной фасад MediaOrchestrator
     /// </summary>
     internal class MediaToolRunner : MediaOrchestrator
     {
@@ -83,32 +83,13 @@ namespace MediaOrchestrator
                 {
                     process.ErrorDataReceived += (sender, e) => ProcessOutputData(e, args, processId);
                     process.BeginErrorReadLine();
+                    Task videoDataTask = null;
                     if (pipedOutput)
                     {
-                        Task.Run(() => ProcessVideoData(process, cancellationToken), cancellationToken);
+                        videoDataTask = Task.Run(() => ProcessVideoData(process, cancellationToken), CancellationToken.None);
                     }
 
-                    var ctr = cancellationToken.Register(async () =>
-                    {
-                        if (Environment.OSVersion.Platform != PlatformID.Win32NT)
-                        {
-                            try
-                            {
-                                process.StandardInput.Write("q");
-                                await Task.Delay(1000 * 5);
-
-                                if (!process.HasExited)
-                                {
-                                    process.CloseMainWindow();
-                                    process.Kill();
-                                    _wasKilled = true;
-                                }
-                            }
-                            catch (InvalidOperationException)
-                            {
-                            }
-                        }
-                    });
+                    var ctr = cancellationToken.Register(() => RequestProcessStop(process));
 
                     using (ctr)
                     {
@@ -133,6 +114,7 @@ namespace MediaOrchestrator
                         }
 
                         EnsureProcessFullyExited(process);
+                        AwaitBackgroundTask(videoDataTask);
                         LastExecutionResourceMetrics = resourceCollector.Complete();
                         inputCopyTask?.GetAwaiter().GetResult();
 
@@ -147,7 +129,7 @@ namespace MediaOrchestrator
                             return false;
                         }
 
-                        var output = string.Join(Environment.NewLine, _outputLog.ToArray());
+                        var output = string.Join(Environment.NewLine, _outputLog);
                         var exceptionsCatcher = new MediaToolExceptionCatcher();
                         exceptionsCatcher.CatchFFmpegErrors(output, args);
 
@@ -173,6 +155,53 @@ namespace MediaOrchestrator
         /// <summary>
         ///     Дожидается завершения процесса после Kill, чтобы файлы и pipe не оставались заблокированными.
         /// </summary>
+        private void RequestProcessStop(Process process)
+        {
+            if (process == null || process.HasExited)
+            {
+                return;
+            }
+
+            try
+            {
+                if (Environment.OSVersion.Platform != PlatformID.Win32NT)
+                {
+                    TrySendQuitCommand(process);
+                    if (process.WaitForExit(5000))
+                    {
+                        return;
+                    }
+                }
+
+                process.CloseMainWindow();
+                if (process.WaitForExit(2000))
+                {
+                    return;
+                }
+
+                process.Kill();
+                _wasKilled = true;
+            }
+            catch (InvalidOperationException)
+            {
+            }
+            catch (NotSupportedException)
+            {
+            }
+        }
+
+        private static void TrySendQuitCommand(Process process)
+        {
+            try
+            {
+                process.StandardInput.Write("q");
+                process.StandardInput.Flush();
+            }
+            catch (InvalidOperationException)
+            {
+            }
+        }
+
         private static void EnsureProcessFullyExited(Process process)
         {
             if (process.HasExited)
@@ -189,6 +218,28 @@ namespace MediaOrchestrator
             }
         }
 
+        private static void AwaitBackgroundTask(Task task)
+        {
+            if (task == null)
+            {
+                return;
+            }
+
+            try
+            {
+                task.GetAwaiter().GetResult();
+            }
+            catch (OperationCanceledException)
+            {
+            }
+            catch (IOException)
+            {
+            }
+            catch (ObjectDisposedException)
+            {
+            }
+        }
+
         private void ProcessOutputData(DataReceivedEventArgs e, string args, int processId)
         {
             if (e.Data == null)
@@ -199,6 +250,11 @@ namespace MediaOrchestrator
             OnDataReceived?.Invoke(this, e);
 
             _outputLog.Add(e.Data);
+            var maxOutputLogLines = CurrentRuntimeOptions.MaxProcessOutputLogLines;
+            if (maxOutputLogLines > 0 && _outputLog.Count > maxOutputLogLines)
+            {
+                _outputLog.RemoveAt(0);
+            }
 
             if (OnProgress == null)
             {
@@ -210,15 +266,17 @@ namespace MediaOrchestrator
 
         private void ProcessVideoData(Process process, CancellationToken cancellationToken)
         {
-            var br = new BinaryReader(process.StandardOutput.BaseStream);
-            byte[] buffer;
-
-            while ((buffer = br.ReadBytes(4096)).Length > 0)
+            using (var br = new BinaryReader(process.StandardOutput.BaseStream))
             {
-                var args = new VideoDataEventArgs(buffer);
-                OnVideoDataReceived?.Invoke(this, args);
+                byte[] buffer;
 
-                cancellationToken.ThrowIfCancellationRequested();
+                while ((buffer = br.ReadBytes(4096)).Length > 0)
+                {
+                    var args = new VideoDataEventArgs(buffer);
+                    OnVideoDataReceived?.Invoke(this, args);
+
+                    cancellationToken.ThrowIfCancellationRequested();
+                }
             }
         }
 
@@ -432,3 +490,5 @@ namespace MediaOrchestrator
         }
     }
 }
+
+

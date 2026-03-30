@@ -2,9 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
-## [Unreleased] - YYYY-MM-DD
+## [Unreleased] - 2026-03-30
 
 ### Added
+- Added `Configuration/MediaOrchestratorRuntimeOptions.cs` - runtime configuration options for MediaOrchestrator
+- Added `Examples/MediaOrchestratorRuntimeConfiguration.ru.md` - Russian documentation for runtime configuration examples
+- Added `TODO.md` - project task and improvement tracking document
 - Added Circuit Breaker pattern (`Conversion/Implementations/CircuitBreaker.cs`)
   - Prevents cascading failures when FFmpeg operations fail repeatedly
   - States: Closed (normal), Open (blocked), Half-Open (testing recovery)
@@ -70,6 +73,12 @@ All notable changes to this project will be documented in this file.
   - Proper disposal on cancellation via `using` block
 
 ### Fixed
+- Fixed code review issues:
+  - `AtomicWriteWithCleanup`: use `File.Replace` for atomic operation instead of manual copy/delete
+  - `SafeDeleteTempFiles`: reuse `SafeDeleteFile` method to follow DRY principle
+  - `ARCHITECTURE.md`: fixed alignment in project structure documentation
+  - `ARCHITECTURE.ru.md`: fixed alignment in Russian project structure documentation
+
 - Fixed OperationDurationLruCache thread-safety: MoveToHead now uses write lock
 - Fixed MediaOrchestratorMetrics health check: use else if to prevent null path File.Exists
 - Fixed HardwareAccelerationAutoDetector: removed null caching (ConcurrentDictionary doesn't allow null values)

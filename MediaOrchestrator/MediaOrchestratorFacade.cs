@@ -15,7 +15,7 @@ using MediaOrchestrator.Streams.SubtitleStream;
 namespace MediaOrchestrator
 {
     /// <summary> 
-    ///     Обертка для MediaOrchestrator
+    ///     Основной фасад MediaOrchestrator
     /// </summary>
     public abstract partial class MediaOrchestrator
     {
@@ -904,6 +904,39 @@ namespace MediaOrchestrator
             CancellationToken cancellationToken = default)
         {
             return await Conversion.SplitAudioByTimecodesAsync(inputPath, outputDirectory, timecodes, audioCodec, bitrate, sampleRate, cancellationToken);
+        }
+
+        /// <summary>
+        ///     Разделяет медиафайл на части по таймкодам за один проход ffmpeg через segment muxer.
+        ///     Работает с файлами как с видеорядом, так и без него, при наличии аудиодорожки.
+        /// </summary>
+        /// <param name="inputPath">Путь к входному файлу.</param>
+        /// <param name="outputDirectory">Директория для выходных частей.</param>
+        /// <param name="timecodes">Таймкоды разделения.</param>
+        /// <param name="audioCodec">Аудиокодек выхода.</param>
+        /// <param name="bitrate">Битрейт аудио в битах.</param>
+        /// <param name="sampleRate">Частота дискретизации в Гц.</param>
+        /// <param name="channels">Количество каналов.</param>
+        /// <returns>Одна конвертация, формирующая весь пакет аудиофайлов.</returns>
+        public async Task<IConversion> SplitAudioByTimecodesOnePass(
+            string inputPath,
+            string outputDirectory,
+            IEnumerable<TimeSpan> timecodes,
+            AudioCodec audioCodec = AudioCodec.mp3,
+            long bitrate = 192000,
+            int sampleRate = 44100,
+            int channels = 1,
+            CancellationToken cancellationToken = default)
+        {
+            return await Conversion.SplitAudioByTimecodesOnePassAsync(
+                inputPath,
+                outputDirectory,
+                timecodes,
+                audioCodec,
+                bitrate,
+                sampleRate,
+                channels,
+                cancellationToken).ConfigureAwait(false);
         }
 
         public Task<IReadOnlyList<IConversion>> SplitAudioByTimecodes(
