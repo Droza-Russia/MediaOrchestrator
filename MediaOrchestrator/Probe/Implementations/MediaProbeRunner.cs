@@ -17,7 +17,7 @@ namespace MediaOrchestrator
     internal sealed class MediaProbeRunner : MediaOrchestrator
     {
         internal static Func<MediaProbeRunner, string, CancellationToken, Task<string>> ProbeCommandExecutor { get; set; } =
-            (wrapper, args, cancellationToken) => wrapper.RunProbeProcessAsync(args, cancellationToken);
+            (probeRunner, args, cancellationToken) => probeRunner.RunProbeProcessAsync(args, cancellationToken);
 
         private readonly JsonSerializerOptions _defaultSerializerOptions = new JsonSerializerOptions
         {

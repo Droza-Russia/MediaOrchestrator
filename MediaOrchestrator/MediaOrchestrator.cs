@@ -7,12 +7,13 @@ using System.Linq;
 using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Threading;
+using MediaOrchestrator.Configuration;
 using MediaOrchestrator.Exceptions;
 
 namespace MediaOrchestrator
 {
     /// <summary> 
-    ///     Обертка для MediaOrchestrator
+    ///     Основной фасад MediaOrchestrator
     /// </summary>
     public abstract partial class MediaOrchestrator
     {
@@ -35,6 +36,8 @@ namespace MediaOrchestrator
         private static string _executablesPath;
         private static FileNameFilterMethod _filterMethod;
         private static IFormatProvider _formatProvider = CultureInfo.CurrentCulture;
+        private static readonly object _runtimeOptionsGate = new object();
+        private static MediaOrchestratorRuntimeOptions _runtimeOptions = MediaOrchestratorRuntimeOptions.CreateDefault();
 
         private static string _ffmpegExecutableName = "ffmpeg";
         private static string _ffprobeExecutableName = "ffprobe";
@@ -103,6 +106,46 @@ namespace MediaOrchestrator
         ///     Целевой аудиокодек по умолчанию для транскодирования.
         /// </summary>
         public static AudioCodec DefaultTranscodeAudioCodec { get; set; } = AudioCodec.aac;
+
+
+        /// <summary>
+        ///     Current runtime limits used by diagnostics and internal caches.
+        /// </summary>
+        public static MediaOrchestratorRuntimeOptions RuntimeOptions
+        {
+            get
+            {
+                lock (_runtimeOptionsGate)
+                {
+                    return _runtimeOptions.Clone();
+                }
+            }
+        }
+
+        internal static MediaOrchestratorRuntimeOptions CurrentRuntimeOptions
+        {
+            get
+            {
+                lock (_runtimeOptionsGate)
+                {
+                    return _runtimeOptions;
+                }
+            }
+        }
+
+        /// <summary>
+        ///     Configures runtime hardening limits. If options are not provided, defaults and environment variables are used.
+        /// </summary>
+        public static void ConfigureRuntime(MediaOrchestratorRuntimeOptions options = null)
+        {
+            var effectiveOptions = (options ?? MediaOrchestratorRuntimeOptions.CreateDefault()).Clone();
+            effectiveOptions.Normalize();
+
+            lock (_runtimeOptionsGate)
+            {
+                _runtimeOptions = effectiveOptions;
+            }
+        }
 
         /// <summary>
         ///     Инициализирует новый MediaOrchestrator. Ищет MediaOrchestrator и FFprobe в PATH

@@ -229,12 +229,27 @@ namespace MediaOrchestrator.Analytics.Stores
             }
 
             _isDisposed = true;
-            _flushGate.Dispose();
 
-            if (_persistentStore is IDisposable disposable)
+            try
             {
-                disposable.Dispose();
+                _scheduledFlushTask?.GetAwaiter().GetResult();
+                FlushPendingAsync(CancellationToken.None).GetAwaiter().GetResult();
+            }
+            catch (Exception ex)
+            {
+                Trace.TraceWarning("CachedMediaAnalysisStore dispose flush failed: {0}", ex.Message);
+            }
+            finally
+            {
+                _flushGate.Dispose();
+
+                if (_persistentStore is IDisposable disposable)
+                {
+                    disposable.Dispose();
+                }
             }
         }
     }
 }
+
+

@@ -2,6 +2,7 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Globalization;
 using System.Threading;
 using System.Threading.Tasks;
@@ -46,9 +47,20 @@ namespace MediaOrchestrator
                     continue;
                 }
 
-                profile = CreateProfileForHwaccel(name, os);
+                var candidateProfile = CreateProfileForHwaccel(name, os);
+                if (candidateProfile == null)
+                {
+                    continue;
+                }
+
+                if (!CanUseHardwareProfile(ffmpegExecutablePath, candidateProfile, cancellationToken))
+                {
+                    continue;
+                }
+
+                profile = candidateProfile;
                 _detectionCache.TryAdd(cacheKey, profile);
-                return profile != null;
+                return true;
             }
 
             return false;
@@ -91,6 +103,124 @@ namespace MediaOrchestrator
                     return new HardwareAccelerationProfile("vdpau", "h264", "libx264", "libx265");
                 default:
                     return new HardwareAccelerationProfile(hwaccel, "h264", "libx264", "libx265");
+            }
+        }
+
+        private static bool CanUseHardwareProfile(string ffmpegPath, HardwareAccelerationProfile profile, CancellationToken cancellationToken)
+        {
+            return CanEncodeWithProfile(ffmpegPath, profile, cancellationToken) &&
+                   CanDecodeWithHardwareAcceleration(ffmpegPath, profile, cancellationToken);
+        }
+
+        private static bool CanEncodeWithProfile(string ffmpegPath, HardwareAccelerationProfile profile, CancellationToken cancellationToken)
+        {
+            string arguments = $"-hide_banner -loglevel error -f lavfi -i color=c=black:s=16x16:d=0.1 -frames:v 1 -c:v {profile.H264Encoder} -f null -";
+            return TryRunFfmpegCommand(ffmpegPath, arguments, cancellationToken);
+        }
+
+        private static bool CanDecodeWithHardwareAcceleration(string ffmpegPath, HardwareAccelerationProfile profile, CancellationToken cancellationToken)
+        {
+            string sampleFilePath = Path.Combine(Path.GetTempPath(), $"mo_hwaccel_probe_{Guid.NewGuid():N}.mp4");
+            try
+            {
+                string createSampleArguments = $"-hide_banner -loglevel error -f lavfi -i color=c=black:s=16x16:d=0.1 -frames:v 1 -pix_fmt yuv420p -c:v libx264 -y \"{sampleFilePath}\"";
+                if (!TryRunFfmpegCommand(ffmpegPath, createSampleArguments, cancellationToken))
+                {
+                    return false;
+                }
+
+                string decodeArguments = $"-hide_banner -loglevel error -hwaccel {profile.Hwaccel} -i \"{sampleFilePath}\" -frames:v 1 -f null -";
+                return TryRunFfmpegCommand(ffmpegPath, decodeArguments, cancellationToken);
+            }
+            finally
+            {
+                try
+                {
+                    if (File.Exists(sampleFilePath))
+                    {
+                        File.Delete(sampleFilePath);
+                    }
+                }
+                catch
+                {
+                    // ignore cleanup failures
+                }
+            }
+        }
+
+        private static bool TryRunFfmpegCommand(string ffmpegPath, string arguments, CancellationToken cancellationToken)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            try
+            {
+                using (var p = new Process
+                {
+                    StartInfo =
+                    {
+                        FileName = ffmpegPath,
+                        Arguments = arguments,
+                        UseShellExecute = false,
+                        RedirectStandardOutput = true,
+                        RedirectStandardError = true,
+                        CreateNoWindow = true,
+                    }
+                })
+                {
+                    using (cancellationToken.Register(() =>
+                           {
+                               try
+                               {
+                                   if (!p.HasExited)
+                                   {
+                                       p.Kill();
+                                   }
+                               }
+                               catch
+                               {
+                                   // ignore
+                               }
+                           }))
+                    {
+                        p.Start();
+                        var stdoutTask = Task.Run(() => p.StandardOutput.ReadToEnd(), CancellationToken.None);
+                        var stderrTask = Task.Run(() => p.StandardError.ReadToEnd(), CancellationToken.None);
+
+                        const int timeoutMs = 15000;
+                        var sw = Stopwatch.StartNew();
+                        while (!p.WaitForExit(50))
+                        {
+                            cancellationToken.ThrowIfCancellationRequested();
+                            if (sw.ElapsedMilliseconds > timeoutMs)
+                            {
+                                try
+                                {
+                                    if (!p.HasExited)
+                                    {
+                                        p.Kill();
+                                    }
+                                }
+                                catch
+                                {
+                                    // ignore
+                                }
+
+                                return false;
+                            }
+                        }
+
+                        cancellationToken.ThrowIfCancellationRequested();
+                        Task.WaitAll(stdoutTask, stderrTask);
+                        return p.ExitCode == 0;
+                    }
+                }
+            }
+            catch (OperationCanceledException)
+            {
+                throw;
+            }
+            catch
+            {
+                return false;
             }
         }
 

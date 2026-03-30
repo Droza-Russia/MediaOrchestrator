@@ -18,8 +18,8 @@ namespace MediaOrchestrator
         /// <inheritdoc />
         public Task<string> Start(string args, CancellationToken cancellationToken = default)
         {
-            var wrapper = new MediaProbeRunner();
-            return wrapper.Start(args, cancellationToken);
+            var probeRunner = new MediaProbeRunner();
+            return probeRunner.Start(args, cancellationToken);
         }
     }
 }
