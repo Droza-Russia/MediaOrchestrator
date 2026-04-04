@@ -79,10 +79,61 @@ namespace MediaOrchestrator
             }
 
             // Remove trailing commas before closing brackets/braces
-            // This simple regex handles ,}, and ,] patterns
-            output = System.Text.RegularExpressions.Regex.Replace(output, @",\s*([\]}])", "$1");
+            // Only matches commas OUTSIDE of quoted strings to avoid corrupting metadata values
+            output = RemoveTrailingCommas(output);
 
             return output;
+        }
+
+        private static string RemoveTrailingCommas(string json)
+        {
+            var sb = new System.Text.StringBuilder(json.Length);
+            bool inString = false;
+            bool escaped = false;
+
+            for (int i = 0; i < json.Length; i++)
+            {
+                char c = json[i];
+
+                if (escaped)
+                {
+                    sb.Append(c);
+                    escaped = false;
+                    continue;
+                }
+
+                if (c == '\\' && inString)
+                {
+                    escaped = true;
+                    sb.Append(c);
+                    continue;
+                }
+
+                if (c == '"')
+                {
+                    inString = !inString;
+                    sb.Append(c);
+                    continue;
+                }
+
+                if (!inString && c == ',')
+                {
+                    // Look ahead for closing bracket/brace, skipping whitespace
+                    int j = i + 1;
+                    while (j < json.Length && char.IsWhiteSpace(json[j]))
+                        j++;
+
+                    if (j < json.Length && (json[j] == '}' || json[j] == ']'))
+                    {
+                        // Skip the trailing comma
+                        continue;
+                    }
+                }
+
+                sb.Append(c);
+            }
+
+            return sb.ToString();
         }
 
         private double GetVideoFramerate(ProbeModel.Stream vid)
