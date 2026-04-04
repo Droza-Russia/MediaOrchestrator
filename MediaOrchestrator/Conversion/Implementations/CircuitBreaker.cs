@@ -48,7 +48,7 @@ namespace MediaOrchestrator
                             if (DateTime.UtcNow >= _lastFailureTime.AddSeconds(_recoveryTimeoutSeconds))
                             {
                                 _state = CircuitState.HalfOpen;
-                                _halfOpenProbeSent = false;
+                                _halfOpenProbeSent = true;
                                 return true;
                             }
                             return false;
