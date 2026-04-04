@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -16,8 +17,14 @@ namespace MediaOrchestrator
     // ReSharper disable once InheritdocConsiderUsage
     internal sealed class MediaProbeRunner : MediaOrchestrator
     {
+        private const string VideoCodecType = "video";
+        private const string AudioCodecType = "audio";
+        private const string SubtitleCodecType = "subtitle";
+
         internal static Func<MediaProbeRunner, string, CancellationToken, Task<string>> ProbeCommandExecutor { get; set; } =
             (probeRunner, args, cancellationToken) => probeRunner.RunProbeProcessAsync(args, cancellationToken);
+
+        private static readonly TimeSpan ProbeTimeout = TimeSpan.FromSeconds(30);
 
         private readonly JsonSerializerOptions _defaultSerializerOptions = new JsonSerializerOptions
         {
@@ -31,7 +38,8 @@ namespace MediaOrchestrator
             var stringResult = await Start(
                 $"-v panic -print_format json=c=1 -show_streams -show_entries format=format_name,size,duration,bit_rate:format_tags {videoPath}",
                 cancellationToken);
-            if (string.IsNullOrEmpty(stringResult))
+            
+            if (string.IsNullOrWhiteSpace(stringResult))
             {
                 return new ProbeModel
                 {
@@ -39,16 +47,54 @@ namespace MediaOrchestrator
                 };
             }
 
-            return JsonSerializer.Deserialize<ProbeModel>(stringResult, _defaultSerializerOptions) ?? new ProbeModel
+            // Sanitize: trim whitespace and BOM, extract JSON block, remove trailing commas
+            stringResult = SanitizeFfprobeOutput(stringResult);
+
+            try
             {
-                Streams = Array.Empty<ProbeModel.Stream>()
-            };
+                var probeData = JsonSerializer.Deserialize<ProbeModel>(stringResult, _defaultSerializerOptions);
+                return probeData ?? new ProbeModel
+                {
+                    Streams = Array.Empty<ProbeModel.Stream>()
+                };
+            }
+            catch (JsonException ex)
+            {
+                Debug.WriteLine(string.Format(ErrorMessages.FfprobeJsonParsingError, ex.Message));
+                throw new InvalidOperationException(string.Format(ErrorMessages.FfprobeOutputParseFailed, videoPath.Unescape()), ex);
+            }
+        }
+
+        private static string SanitizeFfprobeOutput(string output)
+        {
+            // Trim whitespace and UTF-8 BOM if present
+            output = output.Trim().TrimStart('\uFEFF');
+
+            // Extract JSON block (first '{' to last '}')
+            int firstBrace = output.IndexOf('{');
+            int lastBrace = output.LastIndexOf('}');
+            if (firstBrace >= 0 && lastBrace > firstBrace)
+            {
+                output = output.Substring(firstBrace, lastBrace - firstBrace + 1);
+            }
+
+            // Remove trailing commas before closing brackets/braces
+            // This simple regex handles ,}, and ,] patterns
+            output = System.Text.RegularExpressions.Regex.Replace(output, @",\s*([\]}])", "$1");
+
+            return output;
         }
 
         private double GetVideoFramerate(ProbeModel.Stream vid)
         {
             var frameCount = GetFrameCount(vid);
             var duration = vid.Duration;
+            
+            if (string.IsNullOrWhiteSpace(vid.RFrameRate))
+            {
+                return frameCount > 0 && duration > 0 ? Math.Round(frameCount / duration, 3) : 0;
+            }
+            
             var fr = vid.RFrameRate.Split('/');
 
             if (frameCount > 0)
@@ -96,18 +142,12 @@ namespace MediaOrchestrator
             return videoDuration;
         }
 
-        private int GetGcd(int width, int height)
+        private static int GetGcd(int a, int b)
         {
-            width = Math.Abs(width);
-            height = Math.Abs(height);
-            while (height != 0)
-            {
-                var remainder = width % height;
-                width = height;
-                height = remainder;
-            }
-
-            return width;
+            a = Math.Abs(a);
+            b = Math.Abs(b);
+            while (b != 0) (a, b) = (b, a % b);
+            return a;
         }
 
         public Task<string> Start(string args, CancellationToken cancellationToken = default)
@@ -117,28 +157,59 @@ namespace MediaOrchestrator
 
         private async Task<string> RunProbeProcessAsync(string args, CancellationToken cancellationToken)
         {
-            using (Process process = RunProcess(args, FFprobePath, null, standardOutput: true))
+            using (Process process = RunProcess(args, FFprobePath, null, standardOutput: true, standardError: true))
             {
                 var processExited = false;
                 using (cancellationToken.Register(() =>
                 {
                     try
                     {
-                        if (!processExited && !process.HasExited)
-                        {
-                            process.CloseMainWindow();
-                            process.Kill();
-                        }
+                        if (processExited || process.HasExited) return;
+                        process.CloseMainWindow();
+                        process.Kill();
                     }
                     catch
                     {
+                        // ignored
                     }
                 }))
                 {
-                    var output = await process.StandardOutput.ReadToEndAsync().ConfigureAwait(false);
-                    process.WaitForExit();
+                    var outputTask = process.StandardOutput.ReadToEndAsync();
+                    var errorTask = process.StandardError.ReadToEndAsync();
+                    var timeoutTask = Task.Delay(ProbeTimeout, cancellationToken);
+                    
+                    var completedTask = await Task.WhenAny(outputTask, timeoutTask).ConfigureAwait(false);
+                    
+                    if (completedTask == timeoutTask)
+                    {
+                        try
+                        {
+                            if (!process.HasExited)
+                            {
+                                process.CloseMainWindow();
+                                process.Kill();
+                            }
+                        }
+                        catch
+                        {
+                            // ignored
+                        }
+
+                        throw new TimeoutException(string.Format(ErrorMessages.FfprobeTimeout, ProbeTimeout.TotalSeconds));
+                    }
+                    
+                    var output = await outputTask.ConfigureAwait(false);
+                    var error = await errorTask.ConfigureAwait(false);
+                    
+                    await Task.Run(process.WaitForExit, cancellationToken).ConfigureAwait(false);
                     processExited = true;
                     cancellationToken.ThrowIfCancellationRequested();
+                    
+                    if (process.ExitCode != 0 && !string.IsNullOrWhiteSpace(error))
+                    {
+                        Debug.WriteLine(string.Format(ErrorMessages.FfprobeProcessError, process.ExitCode, error));
+                    }
+                    
                     return output;
                 }
             }
@@ -152,6 +223,12 @@ namespace MediaOrchestrator
         /// <returns>Properties</returns>
         internal async Task<MediaInfo> SetProperties(MediaInfo mediaInfo, CancellationToken cancellationToken)
         {
+            var unescapedPath = mediaInfo.Path.Unescape();
+            if (!File.Exists(unescapedPath))
+            {
+                throw new FileNotFoundException(string.Format(ErrorMessages.InvalidFileUnableToLoad, unescapedPath), unescapedPath);
+            }
+            
             var path = mediaInfo.Path.Escape();
             ProbeModel probeData = await GetProbeData(path, cancellationToken).ConfigureAwait(false);
             ProbeModel.Stream[] streams = probeData.Streams ?? Array.Empty<ProbeModel.Stream>();
@@ -162,9 +239,9 @@ namespace MediaOrchestrator
 
             var format = probeData.Format;
             MediaFileSignatureValidator.ValidateDeclaredFormatOrThrow(mediaInfo.Path, format?.FormatName);
-            if (format?.Size != null)
+            if (format?.Size != null && long.TryParse(format.Size, out var size))
             {
-                mediaInfo.Size = long.Parse(format.Size);
+                mediaInfo.Size = size;
             }
 
             mediaInfo.FormatName = format?.FormatName ?? string.Empty;
@@ -176,9 +253,9 @@ namespace MediaOrchestrator
                 mediaInfo.CreationTime = creationdate.UtcDateTime;
             }
 
-            mediaInfo.VideoStreams = PrepareVideoStreams(path, streams.Where(x => x.CodecType == "video"), format);
-            mediaInfo.AudioStreams = PrepareAudioStreams(path, streams.Where(x => x.CodecType == "audio"));
-            mediaInfo.SubtitleStreams = PrepareSubtitleStreams(path, streams.Where(x => x.CodecType == "subtitle"));
+            mediaInfo.VideoStreams = PrepareVideoStreams(path, streams.Where(x => x.CodecType == VideoCodecType), format);
+            mediaInfo.AudioStreams = PrepareAudioStreams(path, streams.Where(x => x.CodecType == AudioCodecType));
+            mediaInfo.SubtitleStreams = PrepareSubtitleStreams(path, streams.Where(x => x.CodecType == SubtitleCodecType));
 
             mediaInfo.Duration = CalculateDuration(mediaInfo.VideoStreams, mediaInfo.AudioStreams);
             return mediaInfo;
