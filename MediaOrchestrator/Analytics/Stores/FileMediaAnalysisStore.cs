@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
 using System.Security.Cryptography;
@@ -24,8 +25,8 @@ namespace MediaOrchestrator.Analytics.Stores
         private readonly bool _enableCompression;
         private volatile bool _isDisposed;
 
-        private static readonly ConcurrentDictionary<string, string> _hashCache = new ConcurrentDictionary<string, string>();
-        private static readonly object _hashCacheGate = new object();
+        private readonly ConcurrentDictionary<string, string> _hashCache;
+        private readonly object _hashCacheGate = new object();
 
         public FileMediaAnalysisStore(string directoryPath, bool enableCompression = false)
         {
@@ -37,6 +38,7 @@ namespace MediaOrchestrator.Analytics.Stores
             _directoryPath = Path.GetFullPath(directoryPath);
             _bufferSize = 81920;
             _enableCompression = enableCompression;
+            _hashCache = new ConcurrentDictionary<string, string>();
 
             _jsonSerializerOptions = new JsonSerializerOptions
             {
@@ -81,12 +83,21 @@ namespace MediaOrchestrator.Analytics.Stores
                 return Array.Empty<MediaAnalysisRecord>();
             }
 
-            var jsonFiles = Directory.EnumerateFiles(_directoryPath, "*.json", SearchOption.AllDirectories);
-            var gzFiles = _enableCompression
-                ? Directory.EnumerateFiles(_directoryPath, "*.json.gz", SearchOption.AllDirectories)
-                : Enumerable.Empty<string>();
+            string[] files;
+            await _gate.WaitAsync(cancellationToken).ConfigureAwait(false);
+            try
+            {
+                var jsonFiles = Directory.EnumerateFiles(_directoryPath, "*.json", SearchOption.AllDirectories).ToArray();
+                var gzFiles = _enableCompression
+                    ? Directory.EnumerateFiles(_directoryPath, "*.json.gz", SearchOption.AllDirectories).ToArray()
+                    : Array.Empty<string>();
+                files = jsonFiles.Concat(gzFiles).ToArray();
+            }
+            finally
+            {
+                _gate.Release();
+            }
 
-            var files = jsonFiles.Concat(gzFiles).ToArray();
             var result = new List<MediaAnalysisRecord>(files.Length);
 
             foreach (var path in files)
@@ -220,7 +231,15 @@ namespace MediaOrchestrator.Analytics.Stores
                 }
             }
 
-            return JsonSerializer.Deserialize<MediaAnalysisRecord>(json, _jsonSerializerOptions);
+            try
+            {
+                return JsonSerializer.Deserialize<MediaAnalysisRecord>(json, _jsonSerializerOptions);
+            }
+            catch (JsonException ex)
+            {
+                Debug.WriteLine($"Corrupted analytics file {path}: {ex.Message}");
+                return null;
+            }
         }
 
         private string GetRecordPath(string analysisKey, bool createDirectory)
@@ -238,13 +257,13 @@ namespace MediaOrchestrator.Analytics.Stores
             return Path.Combine(directory, hash + extension);
         }
 
-        private static string GetCachedHash(string value)
+        private string GetCachedHash(string value)
         {
             EnsureHashCacheSizeLimit();
             return _hashCache.GetOrAdd(value, v => ComputeHashInternal(v));
         }
 
-        private static void EnsureHashCacheSizeLimit()
+        private void EnsureHashCacheSizeLimit()
         {
             var maxHashCacheSize = MediaOrchestrator.CurrentRuntimeOptions.MaxAnalyticsHashCacheSize;
             if (maxHashCacheSize <= 0 || _hashCache.Count <= maxHashCacheSize)
