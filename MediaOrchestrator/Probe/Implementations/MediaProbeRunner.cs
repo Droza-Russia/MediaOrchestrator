@@ -201,6 +201,31 @@ namespace MediaOrchestrator
             return a;
         }
 
+        private static bool IsUriPath(string path)
+        {
+            if (string.IsNullOrWhiteSpace(path))
+            {
+                return false;
+            }
+
+            var schemeEnd = path.IndexOf("://", StringComparison.Ordinal);
+            if (schemeEnd > 0 && schemeEnd < 10)
+            {
+                var scheme = path.Substring(0, schemeEnd);
+                foreach (var c in scheme)
+                {
+                    if (!char.IsLetter(c) && c != '+' && c != '-' && c != '.')
+                    {
+                        return false;
+                    }
+                }
+
+                return true;
+            }
+
+            return false;
+        }
+
         public Task<string> Start(string args, CancellationToken cancellationToken = default)
         {
             return ProbeCommandExecutor(this, args, cancellationToken);
@@ -227,7 +252,9 @@ namespace MediaOrchestrator
                 {
                     var outputTask = process.StandardOutput.ReadToEndAsync();
                     var errorTask = process.StandardError.ReadToEndAsync();
-                    var timeoutTask = Task.Delay(ProbeTimeout, cancellationToken);
+                    // Use CancellationToken.None so that caller cancellation
+                    // throws OperationCanceledException, not TimeoutException.
+                    var timeoutTask = Task.Delay(ProbeTimeout, CancellationToken.None);
 
                     var completedTask = await Task.WhenAny(outputTask, timeoutTask).ConfigureAwait(false);
 
@@ -275,7 +302,8 @@ namespace MediaOrchestrator
         internal async Task<MediaInfo> SetProperties(MediaInfo mediaInfo, CancellationToken cancellationToken)
         {
             var unescapedPath = mediaInfo.Path.Unescape();
-            if (!File.Exists(unescapedPath))
+            // Only check local file existence — skip for URIs (http, rtsp, rtmp, etc.)
+            if (!IsUriPath(unescapedPath) && !File.Exists(unescapedPath))
             {
                 throw new FileNotFoundException(string.Format(ErrorMessages.InvalidFileUnableToLoad, unescapedPath), unescapedPath);
             }
