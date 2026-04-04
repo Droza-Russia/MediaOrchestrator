@@ -13,8 +13,8 @@ namespace MediaOrchestrator.Analytics.Stores
         private sealed class CacheEntry
         {
             public MediaAnalysisRecord Record { get; set; }
-
             public bool Dirty { get; set; }
+            public int Version { get; set; }
         }
 
         private readonly IMediaAnalysisStore _persistentStore;
@@ -23,6 +23,7 @@ namespace MediaOrchestrator.Analytics.Stores
         private readonly SemaphoreSlim _flushGate = new SemaphoreSlim(1, 1);
         private readonly object _scheduleSync = new object();
         private volatile bool _isDisposed;
+        private int _nextVersion = 0;
 
         private Task _scheduledFlushTask;
 
@@ -71,13 +72,13 @@ namespace MediaOrchestrator.Analytics.Stores
                 }
             }
 
-            foreach (var pair in _cache.GetAll())
+            _cache.ForEach((key, entry) =>
             {
-                if (pair.Value?.Record != null && !string.IsNullOrWhiteSpace(pair.Key))
+                if (entry?.Record != null && !string.IsNullOrWhiteSpace(key))
                 {
-                    merged[pair.Key] = pair.Value.Record;
+                    merged[key] = entry.Record;
                 }
-            }
+            });
 
             return merged.Values.ToList();
         }
@@ -92,11 +93,17 @@ namespace MediaOrchestrator.Analytics.Stores
             _cache.Put(record.AnalysisKey, new CacheEntry
             {
                 Record = record,
-                Dirty = true
+                Dirty = true,
+                Version = GetNextVersion()
             });
 
             ScheduleLazyFlush();
             return Task.CompletedTask;
+        }
+
+        private int GetNextVersion()
+        {
+            return System.Threading.Interlocked.Increment(ref _nextVersion);
         }
 
         public async Task ClearAsync(CancellationToken cancellationToken = default)
@@ -113,23 +120,23 @@ namespace MediaOrchestrator.Analytics.Stores
                 await _flushGate.WaitAsync(cancellationToken).ConfigureAwait(false);
                 acquired = true;
 
-                var dirtyRecords = new List<MediaAnalysisRecord>();
-                foreach (var pair in _cache.GetAll())
+                var dirtyEntries = new List<(CacheEntry Entry, string Key)>();
+                _cache.ForEach((key, entry) =>
                 {
-                    if (pair.Value?.Dirty == true && pair.Value?.Record != null)
+                    if (entry?.Dirty == true && entry?.Record != null)
                     {
-                        dirtyRecords.Add(pair.Value.Record);
+                        dirtyEntries.Add((entry, key));
                     }
-                }
+                });
 
-                foreach (var record in dirtyRecords)
+                foreach (var (entry, key) in dirtyEntries)
                 {
                     cancellationToken.ThrowIfCancellationRequested();
+                    var record = entry.Record;
                     await _persistentStore.SaveAsync(record, cancellationToken).ConfigureAwait(false);
-                    if (_cache.TryGet(record.AnalysisKey, out var cachedEntry))
+                    if (_cache.TryGet(key, out var currentEntry) && currentEntry.Version == entry.Version)
                     {
-                        cachedEntry.Dirty = false;
-                        _cache.Put(record.AnalysisKey, cachedEntry);
+                        entry.Dirty = false;
                     }
                 }
             }
@@ -182,23 +189,23 @@ namespace MediaOrchestrator.Analytics.Stores
                 await _flushGate.WaitAsync(0, cancellationToken).ConfigureAwait(false);
                 acquired = true;
 
-                var dirtyRecords = new List<MediaAnalysisRecord>();
-                foreach (var pair in _cache.GetAll())
+                var dirtyEntries = new List<(CacheEntry Entry, string Key)>();
+                _cache.ForEach((key, entry) =>
                 {
-                    if (pair.Value?.Dirty == true && pair.Value?.Record != null)
+                    if (entry?.Dirty == true && entry?.Record != null)
                     {
-                        dirtyRecords.Add(pair.Value.Record);
+                        dirtyEntries.Add((entry, key));
                     }
-                }
+                });
 
-                foreach (var record in dirtyRecords)
+                foreach (var (entry, key) in dirtyEntries)
                 {
                     cancellationToken.ThrowIfCancellationRequested();
+                    var record = entry.Record;
                     await _persistentStore.SaveAsync(record, cancellationToken).ConfigureAwait(false);
-                    if (_cache.TryGet(record.AnalysisKey, out var cachedEntry))
+                    if (_cache.TryGet(key, out var currentEntry) && currentEntry.Version == entry.Version)
                     {
-                        cachedEntry.Dirty = false;
-                        _cache.Put(record.AnalysisKey, cachedEntry);
+                        entry.Dirty = false;
                     }
                 }
             }

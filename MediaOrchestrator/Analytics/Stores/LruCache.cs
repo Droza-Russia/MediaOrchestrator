@@ -211,6 +211,28 @@ namespace MediaOrchestrator.Analytics.Stores
             }
         }
 
+        public void ForEach(Action<TKey, TValue> action)
+        {
+            if (action == null) throw new ArgumentNullException(nameof(action));
+            _lock.EnterReadLock();
+            try
+            {
+                var current = _head;
+                while (current != null)
+                {
+                    if (!current.IsExpired)
+                    {
+                        action(current.Key, current.Value);
+                    }
+                    current = current.Next;
+                }
+            }
+            finally
+            {
+                _lock.ExitReadLock();
+            }
+        }
+
         private void AddToHead(CacheNode node)
         {
             node.Next = _head;

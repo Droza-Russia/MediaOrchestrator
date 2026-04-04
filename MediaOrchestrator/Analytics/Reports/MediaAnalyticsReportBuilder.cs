@@ -31,6 +31,9 @@ namespace MediaOrchestrator.Analytics.Reports
                 AverageAcceleratorUsagePercent = Average(samples.Select(sample => sample.Sample.AverageAcceleratorUsagePercent)),
                 PeakAcceleratorUsagePercent = Max(samples.Select(sample => sample.Sample.PeakAcceleratorUsagePercent)),
                 TotalInputDurationSeconds = samples.Sum(sample => sample.Sample.InputDurationSeconds),
+                // Sum all processed input sizes — each sample represents one real execution.
+                // Do NOT deduplicate by AnalysisKey: it is a scenario+probe-signature bucket,
+                // not a file identifier, so distinct files with similar traits collapse into one key.
                 TotalInputSizeBytes = samples.Sum(sample => sample.Record.ProbeSnapshot?.InputSizeBytes ?? 0),
                 ByScenario = BuildBreakdown(samples, sample => sample.Record.Scenario.ToString()),
                 ByStrategy = BuildBreakdown(samples, sample => sample.Sample.Strategy.ToString()),

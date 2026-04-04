@@ -102,8 +102,7 @@ namespace MediaOrchestrator
                 }
             }
 
-            LogCleanupError(finalPath, lastException);
-            throw new IOException("Failed to write stream to temp file after " + MaxRetryAttempts + " attempts", lastException);
+            throw lastException ?? new InvalidOperationException("No attempts made");
         }
 
         private static async Task<string> CreateTempFileFromBytesAsync(MediaSource source, CancellationToken cancellationToken)
@@ -162,8 +161,7 @@ namespace MediaOrchestrator
                 }
             }
 
-            LogCleanupError(finalPath, lastException);
-            throw new IOException("Failed to write bytes to temp file after " + MaxRetryAttempts + " attempts", lastException);
+            throw lastException ?? new InvalidOperationException("No attempts made");
         }
 
         private static void ValidateWrittenFile(string path)

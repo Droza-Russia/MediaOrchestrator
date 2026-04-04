@@ -266,8 +266,9 @@ namespace MediaOrchestrator
                     {
                         await _onFinallyAsync().ConfigureAwait(false);
                     }
-                    catch
+                    catch (Exception ex)
                     {
+                        Debug.WriteLine($"[MediaOrchestrator] Exception in OnFinallyAsync cleanup: {ex.GetType().Name}: {ex.Message}");
                     }
                 }
 

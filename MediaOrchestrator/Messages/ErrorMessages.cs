@@ -109,6 +109,16 @@ namespace MediaOrchestrator
             Get("Файл '{0}' не соответствует ожидаемой сигнатуре исполняемого файла для текущей ОС.", "File '{0}' does not match the expected executable signature for the current OS.", "Die Datei '{0}' entspricht nicht der erwarteten Signatur einer ausführbaren Datei für das aktuelle Betriebssystem.");
         internal static string InputFileSignatureMismatch =>
             Get("Сигнатура входного файла '{0}' не соответствует заявленному типу '{1}'.", "Input file signature mismatch for '{0}'. Declared type '{1}' is not valid for this content.", "Die Signatur der Eingabedatei '{0}' entspricht nicht dem angegebenen Typ '{1}'.");
+
+        // FFprobe logging messages
+        internal static string FfprobeJsonParsingError =>
+            Get("Ошибка парсинга JSON ffprobe: {0}", "FFprobe JSON parsing error: {0}", "FFprobe JSON-Parsing-Fehler: {0}");
+        internal static string FfprobeProcessError =>
+            Get("Ошибка ffprobe (код выхода {0}): {1}", "FFprobe error (exit code {0}): {1}", "FFprobe-Fehler (Exit-Code {0}): {1}");
+        internal static string FfprobeTimeout =>
+            Get("Выполнение ffprobe превысило таймаут в {0} секунд.", "FFprobe execution exceeded {0} seconds timeout.", "FFprobe-Ausführung überschritt Zeitlimit von {0} Sekunden.");
+        internal static string FfprobeOutputParseFailed =>
+            Get("Не удалось распарсить вывод ffprobe для {0}. Файл может быть поврежден или в неподдерживаемом формате.", "Failed to parse ffprobe output for {0}. The file may be corrupted or in an unsupported format.", "FFprobe-Ausgabe für {0} konnte nicht geparst werden. Die Datei ist möglicherweise beschädigt oder in einem nicht unterstützten Format.");
         internal static string InsufficientDiskSpace =>
             Get(
                 "Недостаточно места на диске для завершения операции. Освободите место или выберите другой выходной путь.",

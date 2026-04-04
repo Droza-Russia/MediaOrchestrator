@@ -134,7 +134,7 @@ namespace MediaOrchestrator
         ///     Получает новый экземпляр Conversion.
         /// </summary>
         /// <returns>Объект IConversion.</returns>
-        public static Conversions Conversions = new Conversions();
+        public static Conversions Conversions { get; } = new Conversions();
 
         /// <summary>
         ///     Слой аналитики и выбора сценариев обработки.
@@ -195,23 +195,11 @@ namespace MediaOrchestrator
             }
         }
 
-        /// <summary>
-        ///     Устанавливает путь к директории, содержащей MediaOrchestrator и FFprobe
-        /// </summary>
-        /// <param name="directoryWithFFmpegAndFFprobe"></param>
-        /// <param name="ffmpegExeutableName">Имя исполняемого файла MediaOrchestrator</param>
+        /// <param name="ffmpegExecutableName">Имя исполняемого файла MediaOrchestrator</param>
         /// <param name="ffprobeExecutableName">Имя исполняемого файла FFprobe</param>
-        /// <param name="filteringMethod">Выбирает метод сравнения имен файлов</param>
-        /// <param name="formatprovider">Провайдер формата для сравнения строк</param>
-        /// <param name="language">Язык локализации сообщений исключений</param>
-        /// <param name="maxOutputVideoFrameRate">Необязательный лимит частоты кадров выходного видео (максимум).</param>
-        /// <param name="maxOutputAudioSampleRate">Необязательный лимит частоты дискретизации выходного аудио в Гц (максимум).</param>
-        /// <param name="maxOutputAudioChannels">Необязательный лимит числа каналов выходного аудио (максимум).</param>
-        /// <param name="tryDetectHardwareAcceleration">Если true — выполняется <c>ffmpeg -hwaccels</c> и выбирается ускоритель с учётом ОС (NVIDIA, Intel QSV, AMD AMF через D3D11, VAAPI, Video Toolbox).</param>
-        /// <param name="cancellationToken">Отмена во время автоопределения HW (процесс ffmpeg -hwaccels).</param>
         public static void SetExecutablesPath(
             string directoryWithFFmpegAndFFprobe,
-            string ffmpegExeutableName = "ffmpeg",
+            string ffmpegExecutableName = "ffmpeg",
             string ffprobeExecutableName = "ffprobe",
             FileNameFilterMethod filteringMethod = FileNameFilterMethod.Contains,
             IFormatProvider formatprovider = null,
@@ -228,7 +216,7 @@ namespace MediaOrchestrator
                 _executablesPath = directoryWithFFmpegAndFFprobe == null ? null : new DirectoryInfo(directoryWithFFmpegAndFFprobe).FullName;
                 _filterMethod = filteringMethod;
                 _formatProvider = formatprovider ?? CultureInfo.CurrentCulture;
-                _ffmpegExecutableName = ffmpegExeutableName;
+                _ffmpegExecutableName = ffmpegExecutableName;
                 _ffprobeExecutableName = ffprobeExecutableName;
                 _lastExecutablePathMarker = null;
                 _lastHardwareAccelerationDetectionMarker = null;
@@ -257,6 +245,7 @@ namespace MediaOrchestrator
 
         /// <summary>
         ///     Задаёт глобальные лимиты параметров выхода (без смены пути к MediaOrchestrator). Null сбрасывает соответствующий лимит.
+        ///     Эти лимиты применяются только к новым экземплярам Conversion; существующие экземпляры не обновляются.
         /// </summary>
         /// <param name="maxOutputVideoFrameRate">Максимальная частота кадров видео.</param>
         /// <param name="maxOutputAudioSampleRate">Максимальная частота дискретизации аудио (Гц).</param>

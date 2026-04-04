@@ -89,7 +89,10 @@ namespace MediaOrchestrator.Analytics.Stores
             if (successRate < 0.8)
                 safetyMargin *= 1.5;
 
-            var calculatedTimeout = TimeSpan.FromMilliseconds(baseTimeout.TotalMilliseconds * safetyMargin);
+            // Adjust safety margin based on confidence: less samples → larger margin
+            var adjustedMargin = safetyMargin * (2.0 - confidenceFactor);
+
+            var calculatedTimeout = TimeSpan.FromMilliseconds(baseTimeout.TotalMilliseconds * adjustedMargin);
 
             var minTimeout = TimeSpan.FromSeconds(30);
             var maxTimeout = TimeSpan.FromMinutes(30);
@@ -241,11 +244,11 @@ namespace MediaOrchestrator.Analytics.Stores
             double? videoDurationSeconds = null,
             bool usesHardwareAcceleration = false)
         {
-            var pathHash = (inputPath ?? string.Empty).GetHashCode() ^ (outputPath ?? string.Empty).GetHashCode();
+            var pathHash = GetStableHashCode(inputPath ?? string.Empty) ^ GetStableHashCode(outputPath ?? string.Empty);
 
             return string.Join("|", new[]
             {
-                "op:" + pathHash.GetHashCode(),
+                "op:" + GetStableHashCode(pathHash.ToString()),
                 "scenario:" + scenario,
                 "strategy:" + strategy,
                 "vcodec:" + (videoCodec ?? "none"),
@@ -253,6 +256,23 @@ namespace MediaOrchestrator.Analytics.Stores
                 "duration:" + (videoDurationSeconds?.ToString("F1") ?? "unknown"),
                 "hw:" + usesHardwareAcceleration
             });
+        }
+
+        private static int GetStableHashCode(string str)
+        {
+            unchecked
+            {
+                int hash1 = 5381;
+                int hash2 = hash1;
+                for (int i = 0; i < str.Length && i + 1 < str.Length; i += 2)
+                {
+                    hash1 = ((hash1 << 5) + hash1) ^ str[i];
+                    hash2 = ((hash2 << 5) + hash2) ^ str[i + 1];
+                }
+                if (str.Length % 2 != 0)
+                    hash2 = ((hash2 << 5) + hash2) ^ str[str.Length - 1];
+                return hash1 + (hash2 * 1566083941);
+            }
         }
 
         public IDictionary<string, TimeSpan> GetAllEstimatedTimeouts()
