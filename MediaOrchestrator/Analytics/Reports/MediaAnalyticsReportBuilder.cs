@@ -31,9 +31,10 @@ namespace MediaOrchestrator.Analytics.Reports
                 AverageAcceleratorUsagePercent = Average(samples.Select(sample => sample.Sample.AverageAcceleratorUsagePercent)),
                 PeakAcceleratorUsagePercent = Max(samples.Select(sample => sample.Sample.PeakAcceleratorUsagePercent)),
                 TotalInputDurationSeconds = samples.Sum(sample => sample.Sample.InputDurationSeconds),
-                // Deduplicate by AnalysisKey to avoid counting the same file multiple times.
-                TotalInputSizeBytes = samples.GroupBy(s => s.Record.AnalysisKey, StringComparer.Ordinal)
-                                             .Sum(g => g.First().Record.ProbeSnapshot?.InputSizeBytes ?? 0),
+                // Sum all processed input sizes — each sample represents one real execution.
+                // Do NOT deduplicate by AnalysisKey: it is a scenario+probe-signature bucket,
+                // not a file identifier, so distinct files with similar traits collapse into one key.
+                TotalInputSizeBytes = samples.Sum(sample => sample.Record.ProbeSnapshot?.InputSizeBytes ?? 0),
                 ByScenario = BuildBreakdown(samples, sample => sample.Record.Scenario.ToString()),
                 ByStrategy = BuildBreakdown(samples, sample => sample.Sample.Strategy.ToString()),
                 ByFileType = BuildBreakdown(samples, sample => sample.Record.ProbeSnapshot?.ContainerHint ?? string.Empty),
@@ -105,8 +106,7 @@ namespace MediaOrchestrator.Analytics.Reports
                     AverageAcceleratorUsagePercent = Average(group.Select(item => item.Sample.AverageAcceleratorUsagePercent)),
                     PeakAcceleratorUsagePercent = Max(group.Select(item => item.Sample.PeakAcceleratorUsagePercent)),
                     TotalInputDurationSeconds = group.Sum(item => item.Sample.InputDurationSeconds),
-                    TotalInputSizeBytes = group.GroupBy(item => item.Record.AnalysisKey, StringComparer.Ordinal)
-                                               .Sum(g => g.First().Record.ProbeSnapshot?.InputSizeBytes ?? 0)
+                    TotalInputSizeBytes = group.Sum(item => item.Record.ProbeSnapshot?.InputSizeBytes ?? 0)
                 })
                 .OrderByDescending(item => item.Attempts)
                 .ThenBy(item => item.Key, StringComparer.Ordinal)
