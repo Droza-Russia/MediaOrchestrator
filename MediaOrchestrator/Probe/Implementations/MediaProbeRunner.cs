@@ -38,7 +38,7 @@ namespace MediaOrchestrator
             var stringResult = await Start(
                 $"-v panic -print_format json=c=1 -show_streams -show_entries format=format_name,size,duration,bit_rate:format_tags {videoPath}",
                 cancellationToken);
-            
+
             if (string.IsNullOrWhiteSpace(stringResult))
             {
                 return new ProbeModel
@@ -89,12 +89,12 @@ namespace MediaOrchestrator
         {
             var frameCount = GetFrameCount(vid);
             var duration = vid.Duration;
-            
+
             if (string.IsNullOrWhiteSpace(vid.RFrameRate))
             {
                 return frameCount > 0 && duration > 0 ? Math.Round(frameCount / duration, 3) : 0;
             }
-            
+
             var fr = vid.RFrameRate.Split('/');
 
             if (frameCount > 0)
@@ -177,9 +177,9 @@ namespace MediaOrchestrator
                     var outputTask = process.StandardOutput.ReadToEndAsync();
                     var errorTask = process.StandardError.ReadToEndAsync();
                     var timeoutTask = Task.Delay(ProbeTimeout, cancellationToken);
-                    
+
                     var completedTask = await Task.WhenAny(outputTask, timeoutTask).ConfigureAwait(false);
-                    
+
                     if (completedTask == timeoutTask)
                     {
                         try
@@ -197,19 +197,19 @@ namespace MediaOrchestrator
 
                         throw new TimeoutException(string.Format(ErrorMessages.FfprobeTimeout, ProbeTimeout.TotalSeconds));
                     }
-                    
+
                     var output = await outputTask.ConfigureAwait(false);
                     var error = await errorTask.ConfigureAwait(false);
-                    
+
                     await Task.Run(process.WaitForExit, cancellationToken).ConfigureAwait(false);
                     processExited = true;
                     cancellationToken.ThrowIfCancellationRequested();
-                    
+
                     if (process.ExitCode != 0 && !string.IsNullOrWhiteSpace(error))
                     {
                         Debug.WriteLine(string.Format(ErrorMessages.FfprobeProcessError, process.ExitCode, error));
                     }
-                    
+
                     return output;
                 }
             }
@@ -228,7 +228,7 @@ namespace MediaOrchestrator
             {
                 throw new FileNotFoundException(string.Format(ErrorMessages.InvalidFileUnableToLoad, unescapedPath), unescapedPath);
             }
-            
+
             var path = mediaInfo.Path.Escape();
             ProbeModel probeData = await GetProbeData(path, cancellationToken).ConfigureAwait(false);
             ProbeModel.Stream[] streams = probeData.Streams ?? Array.Empty<ProbeModel.Stream>();
