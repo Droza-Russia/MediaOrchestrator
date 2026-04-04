@@ -3,7 +3,7 @@ using System.Threading;
 
 namespace MediaOrchestrator
 {
-    internal sealed class CircuitBreaker : IDisposable
+    internal sealed class CircuitBreaker
     {
         private const int DefaultFailureThreshold = 3;
         private const int DefaultRecoveryTimeoutSeconds = 30;
@@ -15,6 +15,7 @@ namespace MediaOrchestrator
         private int _failureCount;
         private CircuitState _state;
         private DateTime _lastFailureTime;
+        private bool _halfOpenProbeSent;
 
         internal enum CircuitState
         {
@@ -47,12 +48,18 @@ namespace MediaOrchestrator
                             if (DateTime.UtcNow >= _lastFailureTime.AddSeconds(_recoveryTimeoutSeconds))
                             {
                                 _state = CircuitState.HalfOpen;
+                                _halfOpenProbeSent = false;
                                 return true;
                             }
                             return false;
 
                         case CircuitState.HalfOpen:
-                            return true;
+                            if (!_halfOpenProbeSent)
+                            {
+                                _halfOpenProbeSent = true;
+                                return true;
+                            }
+                            return false;
 
                         default:
                             return false;
@@ -67,6 +74,7 @@ namespace MediaOrchestrator
             {
                 _failureCount = 0;
                 _state = CircuitState.Closed;
+                _halfOpenProbeSent = false;
             }
         }
 
@@ -80,6 +88,7 @@ namespace MediaOrchestrator
                 if (_state == CircuitState.HalfOpen)
                 {
                     _state = CircuitState.Open;
+                    _halfOpenProbeSent = false;
                 }
                 else if (_failureCount >= _failureThreshold)
                 {
@@ -103,12 +112,13 @@ namespace MediaOrchestrator
             }
         }
 
-        public void Dispose()
+        public void ResetState()
         {
             lock (_sync)
             {
                 _failureCount = 0;
                 _state = CircuitState.Closed;
+                _halfOpenProbeSent = false;
             }
         }
     }
