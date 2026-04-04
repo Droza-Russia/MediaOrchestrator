@@ -83,20 +83,13 @@ namespace MediaOrchestrator.Analytics.Stores
                 return Array.Empty<MediaAnalysisRecord>();
             }
 
-            string[] files;
-            await _gate.WaitAsync(cancellationToken).ConfigureAwait(false);
-            try
-            {
-                var jsonFiles = Directory.EnumerateFiles(_directoryPath, "*.json", SearchOption.AllDirectories).ToArray();
-                var gzFiles = _enableCompression
-                    ? Directory.EnumerateFiles(_directoryPath, "*.json.gz", SearchOption.AllDirectories).ToArray()
-                    : Array.Empty<string>();
-                files = jsonFiles.Concat(gzFiles).ToArray();
-            }
-            finally
-            {
-                _gate.Release();
-            }
+            // Enumeration is read-only and safe without the lock.
+            // Individual file reads are protected by TryReadRecordAsync.
+            var jsonFiles = Directory.EnumerateFiles(_directoryPath, "*.json", SearchOption.AllDirectories).ToArray();
+            var gzFiles = _enableCompression
+                ? Directory.EnumerateFiles(_directoryPath, "*.json.gz", SearchOption.AllDirectories).ToArray()
+                : Array.Empty<string>();
+            var files = jsonFiles.Concat(gzFiles).ToArray();
 
             var result = new List<MediaAnalysisRecord>(files.Length);
 
